@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2020 The python-scsi Authors
+#
+# SPDX-License-Identifier: MIT
+
+*.pyc
+*~
+/*.egg-info/
+/.mypy_cache/
+/build/
+/dist/
+__pycache__/

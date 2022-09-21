@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2020 The python-scsi Authors
+#
+# SPDX-License-Identifier: MIT
+
+dist: xenial
+
+language: python
+
+matrix:
+  include:
+    - python: 3.7
+    - python: 3.8
+      env: PYTEST_MYPY=--mypy
+    - python: 3.9-dev
+
+install:
+  - pip install .[dev]
+
+script:
+  - py.test -vvv $PYTEST_MYPY
