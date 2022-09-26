@@ -8,13 +8,16 @@ from pydiskcmd.pynvme.nvme_device import NVMeDevice
 class NVMe(object):
     def __init__(self, dev):
         self.device = dev
+        ## the identify information
+        ret = self.id_ctrl(False)
+        self.__ctrl_identify_info = ret.data
     
     def __call__(self,
                  dev):
         """
         call the instance again with new device
 
-        :param dev: a SCSIDevice or ISCSIDevice object
+        :param dev: a NVMeDevice object
         """
         self.device = dev
 
@@ -27,11 +30,16 @@ class NVMe(object):
                  exc_tb):
         self.device.close()
 
+    @property
+    def ctrl_identify_info(self):
+        return self.__ctrl_identify_info
+
     def execute(self, cmd):
         """
-        wrapper method to call the SCSIDevice.execute method
+        wrapper method to call the NVMeDevice.execute method
 
-        :param cmd: a SCSICommand object
+        :param cmd: a nvme CmdStructure object
+        :return: CommandDecoder type
         """
         ret = None
         try:
@@ -40,14 +48,15 @@ class NVMe(object):
             raise e
         return ret
     
-    def id_ctrl(self):
+    def id_ctrl(self, check_status=True):
         ## build command
         cmd_struc = CmdStructure(opcode=0x06,
                                  data_len=4096,
                                  cdw10=0x01,)
         ##
         ret = self.execute(cmd_struc)
-        ret.check_status()
+        if check_status:
+            ret.check_status()
         return ret
 
     def id_ns(self, ns_id=1):
@@ -96,5 +105,60 @@ class NVMe(object):
         ret = self.execute(cmd_struc)
         ret.check_status()
         return ret
+
+    def error_log_entry(self):
+        ## get the max number log entries
+        max_number = self.__ctrl_identify_info[262] + 1
+        number_bytes = max_number * 64
+        NUMDL = number_bytes & 0xFFFF
+        NUMDU = (number_bytes >> 16) & 0xFFFF
+        ### build command
+        cdw10 = 0
+        cdw11 = 0
+        cdw12 = 0
+        cdw13 = 0
+        #
+        cdw10 += 1  # Log ID
+        NUMDL = number_bytes & 0xFFFF
+        cdw10 += (NUMDL << 16)
+        #
+        cdw11 += NUMDU
+        ##
+        cmd_struc = CmdStructure(opcode=0x02,
+                                 data_len=number_bytes,
+                                 cdw10=cdw10,
+                                 cdw11=cdw11,
+                                 cdw12=cdw12,
+                                 cdw13=cdw13,)
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
+
+    def smart_log(self):
+        ### build command
+        cdw10 = 0
+        cdw11 = 0
+        cdw12 = 0
+        cdw13 = 0
+        #
+        cdw10 += 2  # Log ID
+        cdw10 += (512 << 16)
+        ##
+        cmd_struc = CmdStructure(opcode=0x02,
+                                 nsid=0xFFFFFFFF,
+                                 data_len=4096,
+                                 cdw10=cdw10,
+                                 cdw11=cdw11,
+                                 cdw12=cdw12,
+                                 cdw13=cdw13,)
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
+
+
+
+
 
 

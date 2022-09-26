@@ -7,7 +7,8 @@ SPDX-License-Identifier: LGPL-2.1-or-later
 pydiskcmd
 ===========
 pydiskcmd is a disk command interface for python3. This is a linux tool
-to send command to SATA/SAS/NVMe disk. 
+to send command to SATA/SAS/NVMe disk. I develop this tool to familiarize
+the command set specs(sata,nvme).
 
 You can get help about how to use it from examples and scripts.
 

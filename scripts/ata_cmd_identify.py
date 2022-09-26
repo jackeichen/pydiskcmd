@@ -21,7 +21,8 @@ def main(device):
         print ('issuing identify command')
         print ("%s:" % device._file_name)
         print ('==========================================\n')
-        data = s.identify().result
+        cmd = s.identify()
+        data = cmd.result
         for k,v in data.items():
             type = Identify_Element_Type.get(k)
             if type == 'string':

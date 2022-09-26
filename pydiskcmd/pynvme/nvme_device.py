@@ -57,7 +57,7 @@ class NVMeDevice(object):
 
         :param dev:
         :param read_write:
-        :return:
+        :return: None
         """
         self._file = open(self._file_name,
                           'w+b' if self._read_write else 'rb')
@@ -69,10 +69,11 @@ class NVMeDevice(object):
 
     def execute(self, cmd_t, cmd):
         """
-        execute a nvme command
+        execute a nvme command (admin, IO)
 
         :param cmd_t: cmd type, 0-> admin cmd, 1-> io cmd
         :param cmd: a NVMe Command Structure
+        :return: CommandDecoder type
         """
         if self._detect_replugged and self._is_replugged():
             try:
