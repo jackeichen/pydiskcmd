@@ -32,11 +32,11 @@ The module(source) is hosted at xxx
 
 You can use git to checkout the latest version of the source code using:
 
-    $ git clone git@github.com:xxx
+    $ git clone git@github.com:jackeichen/pydiskcmd.git
 
 It is also available as a downloadable zip archive from:
 
-    xxx
+    https://github.com/jackeichen/pydiskcmd/archive/master.zip
 
 
 Building and installing
@@ -50,7 +50,6 @@ You can avoid installing the optional dependencies by omitting the "extras":
 
     $ pip install .
 
+You can uninstall it by run:
 
-Mailinglist
-===========
-xxxx
+    $ pip uninstall pydiskcmd
