@@ -49,6 +49,15 @@ def scsi_ba_to_int(ba, byteorder='big'):
     else:
         return sum(ba[i] << (i * 8) for i in range(len(ba)))
 
+def ba_to_ascii_string(ba, dummy_char="."):
+    ascii_string = ""
+    for v in ba:
+        if (31 < v < 127):
+            ascii_string += chr(v)
+        else:
+            ascii_string += dummy_char
+    return ascii_string
+
 def decode_bits(data,
                 check_dict,
                 result_dict):

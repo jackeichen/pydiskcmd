@@ -43,7 +43,95 @@ nvme_smart_bit_mask = {"Critical Warning": ('b', 0, 1),
                        }
 
 
-nvme_id_ctrl_bit_mask = {}
+nvme_id_ctrl_bit_mask = {"VID": ('b', 0, 2),
+                         "SSVID": ('b', 2, 2),
+                         "SN": ('b', 4, 20),
+                         "MN": ('b', 24, 40),
+                         "FR": ('b', 64, 8),
+                         "RAB": ('b', 72, 1),
+                         "IEEE": ('b', 73, 3),
+                         "CMIC": ('b', 76, 1),
+                         "MDTS": ('b', 77, 1),
+                         "CNTLID": ('b', 78, 2),
+                         "VER": ('b', 80, 4),
+                         "RTD3R": ('b', 84, 4),
+                         "RTD3E": ('b', 88, 4),
+                         "OAES": ('b', 92, 4),
+                         "CTRATT": ('b', 96, 4),
+                         "RRLS": ('b', 100, 2),
+                         "CNTRLTYPE": ('b', 111, 1),
+                         "FGUID": ('b', 112, 16),
+                         "CRDT1": ('b', 128, 2),
+                         "CRDT2": ('b', 130, 2),
+                         "CRDT3": ('b', 132, 2),
+                         "OACS": ('b', 256, 2),           ## Optional Admin Command Support
+                         "ACL": ('b', 258, 1),            ## Abort Command Limit
+                         "AERL": ('b', 259, 1),           ## Asynchronous Event Request Limit
+                         "FRMW": ('b', 260, 1),           ## Firmware Updates
+                         "LPA": ('b', 261, 1),            ## Log Page Attributes
+                         "ELPE": ('b', 262, 1),           ## Error Log Page Entries
+                         "NPSS": ('b', 263, 1),           ## Number of Power States Support
+                         "AVSCC": ('b', 264, 1),          ## Admin Vendor Specific Command Configuration
+                         "APSTA": ('b', 265, 1),          ## Autonomous Power State Transition Attributes
+                         "WCTEMP": ('b', 266, 2),         ## Warning Composite Temperature Threshold
+                         "CCTEMP": ('b', 268, 2),         ## Critical Composite Temperature Threshold
+                         "MTFA": ('b', 270, 2),           ## Maximum Time for Firmware Activation
+                         "HMPRE": ('b', 272, 4),          ## Host Memory Buffer Preferred Size
+                         "HMMIN": ('b', 276, 4),          ## Host Memory Buffer Minimum Size
+                         "TNVMCAP": ('b', 280, 16),       ## Total NVM Capacity
+                         "UNVMCAP": ('b', 296, 16),       ## Unallocated NVM Capacity
+                         "RPMBS": ('b', 312, 4),          ## Replay Protected Memory Block Support
+                         "EDSTT": ('b', 316, 2),          ## Extended Device Self-test Time
+                         "DSTO": ('b', 318, 1),           ## Device Self-test Options
+                         "FWUG": ('b', 319, 1),           ## Firmware Update Granularity
+                         "KAS": ('b', 320, 2),            ## Keep Alive Support
+                         "HCTMA": ('b', 322, 2),          ## Host Controlled Thermal Management Attributes
+                         "MNTMT": ('b', 324, 2),          ## Minimum Thermal Management Temperature
+                         "MXTMT": ('b', 326, 2),          ## Maximum Thermal Management Temperature
+                         "SANICAP": ('b', 328, 4),        ## Sanitize Capabilities
+                         "HMMINDS": ('b', 332, 4),        ## Host Memory Buffer Minimum Descriptor Entry Size
+                         "HMMAXD": ('b', 336, 2),         ## Host Memory Maximum Descriptors Entries
+                         "NSETIDMAX": ('b', 338, 2),      ## NVM Set Identifier Maximum
+                         "ENDGIDMAX": ('b', 340, 2),      ## Endurance Group Identifier Maximum
+                         "ANATT": ('b', 342, 1),          ## ANA Transition Time
+                         "ANACAP": ('b', 343, 1),         ## Asymmetric Namespace Access Capabilities
+                         "ANAGRPMAX": ('b', 344, 4),      ## ANA Group Identifier Maximum
+                         "NANAGRPID": ('b', 348, 4),      ## Number of ANA Group Identifiers
+                         "PELS": ('b', 352, 4),           ## Persistent Event Log Size
+                         "SQES": ('b', 512, 1),           ## Submission Queue Entry Size
+                         "CQES": ('b', 513, 1),           ## Completion Queue Entry Size
+                         "MAXCMD": ('b', 514, 2),         ## Maximum Outstanding Commands
+                         "NN": ('b', 516, 4),             ## Number of Namespaces
+                         "ONCS": ('b', 520, 2),           ## Optional NVM Command Support
+                         "FUSES": ('b', 522, 2),          ## Fused Operation Support
+                         "FNA": ('b', 524, 1),            ## Format NVM Attributes
+                         "VWC": ('b', 525, 1),            ## Volatile Write Cache
+                         "AWUN": ('b', 526, 2),           ## Atomic Write Unit Normal
+                         "AWUPF": ('b', 528, 2),          ## Atomic Write Unit Power Fail
+                         "NVSCC": ('b', 530, 1),          ## NVM Vendor Specific Command Configuration
+                         "NWPC": ('b', 531, 1),           ## Namespace Write Protection Capabilities
+                         "ACWU": ('b', 532, 2),           ## Atomic Compare & Write Unit
+                         "SGLS": ('b', 536, 4),           ## SGL Support
+                         "MNAN": ('b', 540, 4),           ## Maximum Number of Allowed Namespaces
+                         "SUBNQN": ('b', 768, 256),       ## NVM Subsystem NVMe Qualified Name
+                       }
+
+nvme_id_ctrl_ps_bit_mask = {"MP": ('b', 0, 2),            ## Maximum Power
+                            "MXPS": [0x01, 3],            ## Max Power Scale
+                            "NOPS": [0x02, 3],            ## Non-Operational State
+                            "ENLAT": ('b', 4, 4),         ## Entry Latency
+                            "EXLAT": ('b', 8, 4),         ## Exit Latency
+                            "RRT": [0x1F, 12],            ## Relative Read Throughput
+                            "RRL": [0x1F, 13],            ## Relative Read Latency
+                            "RWT": [0x1F, 14],            ## Relative Write Throughput
+                            "RWL": [0x1F, 15],            ## Relative Write Latency
+                            "IDLP": ('b', 16, 2),         ## Idle Power
+                            "IPS": [0xC0, 18],            ## Idle Power Scale
+                            "ACTP": ('b', 20, 2),         ## Active Power
+                            "APW": [0x07, 22],            ## Active Power Workload
+                            "APS": [0xC0, 22],            ## Active Power Scale
+                           }
+
 
 
 def format_dump_bytes(data, offset=0, end=None, ascii_str=True):
@@ -86,7 +174,7 @@ def format_dump_bytes(data, offset=0, end=None, ascii_str=True):
             temp_ascii_string = ""
             if ascii_str:
                 for i in range(16):
-                    if (31 < data[offset+i] < 127):
+                    if (offset+i) < len(data) and (31 < data[offset+i] < 127):
                         temp_ascii_string += chr(data[offset+i])
                     else:
                         temp_ascii_string +="." 
@@ -108,3 +196,18 @@ def nvme_smart_decode(data):
     result = {}
     decode_bits(data, nvme_smart_bit_mask, result)
     return result
+
+def nvme_id_ctrl_decode(data):
+    result = {}
+    decode_bits(data, nvme_id_ctrl_bit_mask, result)
+    ## power state
+    for i in range(32):
+        key = "PSD%s" % i
+        _offset = 2048 + 32*i
+        _data = data[_offset:(_offset+32)]
+        power_state = {}
+        decode_bits(_data, nvme_id_ctrl_ps_bit_mask, power_state)
+        if power_state.get("MP") != b'\x00\x00':
+            result[key] = power_state
+    return result
+
