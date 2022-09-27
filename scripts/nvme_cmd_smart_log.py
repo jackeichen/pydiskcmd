@@ -4,7 +4,8 @@ import sys,os
 import optparse
 from pydiskcmd.pynvme.nvme import NVMe
 import pydiskcmd.utils
-from pydiskcmd.utils.format_print import format_dump_bytes
+from pydiskcmd.utils.format_print import format_dump_bytes,nvme_smart_decode
+from pydiskcmd.utils.converter import scsi_ba_to_int
 
 Version = '0.01'
 
@@ -12,7 +13,7 @@ Version = '0.01'
 def GetOptions():
     usage="usage: %prog <device> [OPTION args...]"
     parser = optparse.OptionParser(usage,version="%prog "+Version)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary"],default="binary",
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary"],default="normal",
         help="Output format: normal|binary")
 
     (options, args) = parser.parse_args()
@@ -21,7 +22,6 @@ def GetOptions():
     if not os.path.exists(dev):
         raise RuntimeError("Device not support!")
     return dev,options
-
 
 def main():
     '''
@@ -33,7 +33,17 @@ def main():
         cmd = d.smart_log()
         ## para return data
         #print (cmd.data)
+    if options.output_format == "binary":
         format_dump_bytes(cmd.data, end=511)
+    elif options.output_format == "normal":
+        result = nvme_smart_decode(cmd.data)
+        for k,v in result.items():
+            if k == "Composite Temperature":
+                print ("%-40s: %.2f" % ("%s(C)" % k,scsi_ba_to_int(v, 'little')-273.15))
+            elif k in ("Critical Warning",):
+                print ("%-40s: %#x" % (k,scsi_ba_to_int(v, 'little')))
+            else:
+                print ("%-40s: %s" % (k,scsi_ba_to_int(v, 'little')))
 
 if __name__ == "__main__":
     main()

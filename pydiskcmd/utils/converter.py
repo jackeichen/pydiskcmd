@@ -35,16 +35,19 @@ def scsi_int_to_ba(to_convert=0,
     return bytearray((to_convert >> i * 8) & 0xff for i in reversed(range(array_size)))
 
 
-def scsi_ba_to_int(ba):
+def scsi_ba_to_int(ba, byteorder='big'):
     """
-    This function converts a bytearray  in BigEndian byte order
+    This function converts a bytearray  in BigEndian Or LittleEndian byte order
     to an integer.
 
     :param ba: a bytearray
+    :param byteorder: 'big'|'little'
     :return: an integer
     """
-    return sum(ba[i] << ((len(ba) - 1 - i) * 8) for i in range(len(ba)))
-
+    if byteorder == 'big':
+        return sum(ba[i] << ((len(ba) - 1 - i) * 8) for i in range(len(ba)))
+    else:
+        return sum(ba[i] << (i * 8) for i in range(len(ba)))
 
 def decode_bits(data,
                 check_dict,

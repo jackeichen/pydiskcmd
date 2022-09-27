@@ -4,6 +4,9 @@ import sys,os
 import optparse
 from pydiskcmd.pynvme.nvme import NVMe
 import pydiskcmd.utils
+from pydiskcmd.utils.format_print import format_dump_bytes,nvme_smart_decode
+from pydiskcmd.utils.converter import scsi_ba_to_int
+
 
 Version = '0.01'
 
@@ -29,7 +32,11 @@ def main():
     device = pydiskcmd.utils.init_device(dev)
     with NVMe(device) as d:
         cmd = d.id_ctrl()
-        print (cmd.data)
+        #print (cmd.data)
+    if options.output_format == "binary":
+        format_dump_bytes(cmd.data)
+    elif options.output_format == "normal":
+        pass
 
 if __name__ == "__main__":
     main()
