@@ -31,6 +31,12 @@ class NVMe(object):
                  exc_tb):
         self.device.close()
 
+    def _set_ba_value(self, ba, bit_mask, value):
+        # bit_mask:
+        # If the length is 2 we have the legacy notation [bitmask, offset]
+        # Example: 'sync': [0x10, 7],
+        pass
+
     @property
     def ctrl_identify_info(self):
         return self.__ctrl_identify_info
@@ -210,3 +216,32 @@ class NVMe(object):
         if RC == 0:
             print ("Firmware Download Success")
         return RC
+
+    def nvme_fw_commit(self, fw_slot, action, bpid=None):
+        ### build command
+        cdw10 = 0
+        #
+        if fw_slot in range(8):
+            cdw10 += fw_slot          # Firmware Slot
+        else:
+            print ("fw_slot should be 0-7")
+            return 1
+        if action in range(8):
+            cdw10 += (action << 3)    # Commit Action
+        else:
+            print ("action should be 0-7")
+            return 1
+        if bpid in (0,1):
+            cdw10 += (bpid << 31)
+        elif bpid is None:
+            pass
+        else:
+            print ("bpid should be 0|1")
+            return 1
+        ##
+        cmd_struc = CmdStructure(opcode=0x10,
+                                 cdw10=cdw10)
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
