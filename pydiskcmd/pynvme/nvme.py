@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2014 The python-scsi Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+import os
 from pydiskcmd.pynvme.command_structure import CmdStructure
 from pydiskcmd.pynvme.nvme_device import NVMeDevice
 
@@ -157,8 +158,55 @@ class NVMe(object):
         ret.check_status()
         return ret
 
-
-
-
-
-
+    def nvme_fw_download(self, fw_path, xfer=0, offset=0):
+        if not os.path.isfile(fw_path):
+            print ("Not Exist Firmware File in %s" % fw_path)
+            return 1
+        ## Get FWUG
+        fwug = self.__ctrl_identify_info[319] & 0xFF
+        if fwug == 0 or fwug == 0xFF:
+            fwug = 4096     # fwug 
+        else:
+            fwug = fwug * 4096  # fwug 
+        # check numd
+        if xfer == 0:
+            xfer = fwug
+        elif xfer and (xfer % fwug):
+            xfer = fwug
+        # check offset
+        if (offset*4) % fwug != 0:
+            print ("warning: offset is not matched with FWUG in Identify, it may failed with status of Invalid Field in Command.")
+        ## Firmware Image Download
+        RC = 0
+        with open(fw_path, "rb") as f:
+            ##
+            cycle = 0
+            while True:
+                fw_data = f.read(xfer)
+                if fw_data:
+                    ### build command
+                    cdw10 = 0
+                    cdw11 = 0
+                    ##
+                    cdw10 += int(((xfer / 4) - 1))
+                    ##
+                    cdw11 += int((offset + xfer*cycle/4))
+                    ###
+                    cmd_struc = CmdStructure(opcode=0x11,
+                                             data_len=xfer,
+                                             data_in=fw_data,
+                                             cdw10=cdw10,
+                                             cdw11=cdw11)
+                    ##
+                    ret = self.execute(cmd_struc)
+                    sc,sct = ret.check_status(hint=False)
+                    if sc:
+                        print ("Firmware Download failed(SC=%s,SCT=%s)" % (sc,sct))
+                        RC = 2
+                        break
+                else:
+                    break
+                cycle += 1
+        if RC == 0:
+            print ("Firmware Download Success")
+        return RC

@@ -36,6 +36,7 @@ class CmdStructure(LittleEndianStructure):
         addr=None,      ## Data Pointer
         metadata_len=0, ##
         data_len=0,     ## used to create data buffer
+        data_in=None,    ## used to init data_buf
         cdw10=0,   ## cdw10
         cdw11=0,   ## cdw11
         cdw12=0,   ## cdw12
@@ -63,7 +64,10 @@ class CmdStructure(LittleEndianStructure):
         if addr is None:
             if data_len > 0:
                 # Keep a reference alive in pure python.
-                self._data_buf = create_string_buffer(data_len)
+                if data_in is None:
+                    self._data_buf = create_string_buffer(data_len)
+                else:
+                    self._data_buf = create_string_buffer(data_in, data_len)
                 self.addr = c_uint64(addressof(self._data_buf))
             else:
                 self._data_buf = None
