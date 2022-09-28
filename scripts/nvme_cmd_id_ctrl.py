@@ -42,6 +42,8 @@ def main():
                 print ("%-10s: %#x" % (k,scsi_ba_to_int(v, 'little')))
             elif k in ("SN", "MN", "FR", "SUBNQN"):
                 print ("%-10s: %s" % (k,ba_to_ascii_string(v, "")))
+            elif k in ("IEEE",):
+                print ("%-10s: %x" % (k,scsi_ba_to_int(v, 'little')))
             elif k.startswith("PSD"):
                 print ("%-10s:" % k)
                 for m,n in result[k].items():

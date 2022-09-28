@@ -133,6 +133,47 @@ nvme_id_ctrl_ps_bit_mask = {"MP": ('b', 0, 2),            ## Maximum Power
                            }
 
 
+nvme_id_ns_bit_mask = {"NSZE": ('b', 0, 8),               ## Namespace Size
+                       "NCAP": ('b', 8, 8),               ## Namespace Capacity
+                       "NUSE": ('b', 16, 8),              ## Namespace Utilization
+                       "NSFEAT": ('b', 24, 1),            ## Namespace Features
+                       "NLBAF": ('b', 25, 1),             ## Number of LBA Formats
+                       "FLBAS": ('b', 26, 1),             ## Formatted LBA Size
+                       "MC": ('b', 27, 1),                ## Metadata Capabilities
+                       "DPC": ('b', 28, 1),               ## End-to-end Data Protection Capabilities
+                       "DPS": ('b', 29, 1),               ## End-to-end Data Protection Type Settings
+                       "NMIC": ('b', 30, 1),              ## Namespace Multi-path I/O and Namespace Sharing Capabilities
+                       "RESCAP": ('b', 31, 1),            ## Reservation Capabilities
+                       "FPI": ('b', 32, 1),               ## Format Progress Indicator
+                       "DLFEAT": ('b', 33, 1),            ## Deallocate Logical Block Features
+                       "NAWUN": ('b', 34, 2),             ## Namespace Atomic Write Unit Normal
+                       "NAWUPF": ('b', 36, 2),            ## Namespace Atomic Write Unit Power Fail
+                       "NACWU": ('b', 38, 2),             ## Namespace Atomic Compare & Write Unit
+                       "NABSN": ('b', 40, 2),             ## Namespace Atomic Boundary Size Normal
+                       "NABO": ('b', 42, 2),              ## Namespace Atomic Boundary Offset
+                       "NABSPF": ('b', 44, 2),            ## Namespace Atomic Boundary Size Power Fail
+                       "NOIOB": ('b', 46, 2),             ## Namespace Optimal I/O Boundary 
+                       "NVMCAP": ('b', 48, 16),           ## NVM Capacity
+                       "NPWG": ('b', 64, 2),              ## Namespace Preferred Write Granularity 
+                       "NPWA": ('b', 66, 2),              ## Namespace Preferred Write Alignment
+                       "NPDG": ('b', 68, 2),              ## Namespace Preferred Deallocate Granularity
+                       "NPDA": ('b', 70, 2),              ## Namespace Preferred Deallocate Alignment
+                       "NOWS": ('b', 72, 2),              ## Namespace Optimal Write Size
+                       "ANAGRPID": ('b', 92, 4),          ## ANA Group Identifier
+                       "NSATTR": ('b', 99, 1),            ## Namespace Size
+                       "NVMSETID": ('b', 100, 2),         ## NVM Set Identifier
+                       "ENDGID": ('b', 102, 2),           ## Endurance Group Identifier
+                       "NGUID": ('b', 104, 16),            ## Namespace Globally Unique Identifier
+                       "EUI64": ('b', 120, 8),             ## Number of LBA Formats
+                      }
+
+
+nvme_id_ns_lbaf_bit_mask = {"MS": ('b', 0, 2),               ## Metadata Size
+                            "LBADS": ('b', 2, 1),            ## LBA Data Size
+                            "RP": [0x03, 3],                 ## Relative Performance
+                           }
+
+
 
 def format_dump_bytes(data, offset=0, end=None, ascii_str=True):
     def my_func(d0, d1):
@@ -209,5 +250,19 @@ def nvme_id_ctrl_decode(data):
         decode_bits(_data, nvme_id_ctrl_ps_bit_mask, power_state)
         if power_state.get("MP") != b'\x00\x00':
             result[key] = power_state
+    return result
+
+def nvme_id_ns_decode(data):
+    result = {}
+    decode_bits(data, nvme_id_ns_bit_mask, result)
+    ## lba format
+    for i in range(16):
+        key = "LBAF%s" % i
+        _offset = 128 + 4*i
+        _data = data[_offset:(_offset+4)]
+        lba_format = {}
+        decode_bits(_data, nvme_id_ns_lbaf_bit_mask, lba_format)
+        if lba_format.get("LBADS") != b'\x00':
+            result[key] = lba_format
     return result
 
