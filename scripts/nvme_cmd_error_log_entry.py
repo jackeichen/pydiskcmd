@@ -4,6 +4,7 @@ import sys,os
 import optparse
 from pydiskcmd.pynvme.nvme import NVMe
 import pydiskcmd.utils
+from pydiskcmd.utils.format_print import format_dump_bytes
 
 Version = '0.01'
 
@@ -26,7 +27,7 @@ class ErrorInfomationLogEntryUnit(object):
 def GetOptions():
     usage="usage: %prog <device> [OPTION args...]"
     parser = optparse.OptionParser(usage,version="%prog "+Version)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary"],default="binary",
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
         help="Output format: normal|binary")
 
     (options, args) = parser.parse_args()
@@ -46,6 +47,9 @@ def main():
     with NVMe(device) as d:
         cmd = d.error_log_entry()
         ## para return data
+    if options.output_format == "binary":
+        format_dump_bytes(cmd.data)
+    elif options.output_format == "normal":
         error_log_entry_list = []
         offset = 0
         while True:
@@ -71,6 +75,9 @@ def main():
             print ('cs              : %s' % unit.command_spec_info)
             print ('trtype_spec_info: %s' % unit.transport_type_spec_info)
             print ('.................')
+    else:
+        print (cmd.data)
+
 
 
 if __name__ == "__main__":
