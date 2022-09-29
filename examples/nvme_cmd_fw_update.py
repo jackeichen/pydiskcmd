@@ -3,7 +3,7 @@
 import sys,os
 import optparse
 from pydiskcmd.pynvme.nvme import NVMe
-import pydiskcmd.utils
+from pydiskcmd.utils import init_device
 
 Version = '0.01'
 
@@ -43,7 +43,7 @@ def main():
     Now trim is must 4k aligned.
     '''
     dev,options = GetOptions()
-    device = pydiskcmd.utils.init_device(dev)
+    device = init_device(dev)
     with NVMe(device) as d:
         if options.behavior & 0x01:
             rc = d.nvme_fw_download(options.fw_path, xfer=options.xfer, offset=options.offset)

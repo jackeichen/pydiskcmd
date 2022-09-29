@@ -3,25 +3,11 @@
 import sys,os
 import optparse
 from pydiskcmd.pynvme.nvme import NVMe
-import pydiskcmd.utils
+from pydiskcmd.pynvme.nvme_spec import nvme_error_log_decode
+from pydiskcmd.utils import init_device
 from pydiskcmd.utils.format_print import format_dump_bytes
 
 Version = '0.01'
-
-class ErrorInfomationLogEntryUnit(object):
-    def __init__(self, data):
-        self.error_count = int.from_bytes(data[0:8], byteorder='little', signed=False)
-        self.sqid = int.from_bytes(data[8:10], byteorder='little', signed=False)
-        self.cid = int.from_bytes(data[10:12], byteorder='little', signed=False)
-        self.phase_tag = data[12] & 0x01
-        self.status_field = ((data[12] >> 1) & 0x7F) + (data[13] << 15)
-        self.para_error_location = int.from_bytes(data[14:16], byteorder='little', signed=False)
-        self.lba = int.from_bytes(data[16:24], byteorder='little', signed=False)
-        self.ns = int.from_bytes(data[24:28], byteorder='little', signed=False)
-        self.vendor_spec_info_ava = data[28]
-        self.transport_type = data[29]
-        self.command_spec_info = data[32:40]
-        self.transport_type_spec_info = data[40:42]
 
 
 def GetOptions():
@@ -43,20 +29,14 @@ def main():
     Now trim is must 4k aligned.
     '''
     dev,options = GetOptions()
-    device = pydiskcmd.utils.init_device(dev)
+    device = init_device(dev)
     with NVMe(device) as d:
         cmd = d.error_log_entry()
         ## para return data
     if options.output_format == "binary":
         format_dump_bytes(cmd.data)
     elif options.output_format == "normal":
-        error_log_entry_list = []
-        offset = 0
-        while True:
-            if offset >= len(cmd.data):
-                break
-            error_log_entry_list.insert(0, ErrorInfomationLogEntryUnit(cmd.data[offset:(offset+64)]))
-            offset += 64
+        error_log_entry_list = nvme_error_log_decode(cmd.data)
         if error_log_entry_list:
             print ('Error Log Entries for device:%s entries:%s' % (dev, len(error_log_entry_list)))
             print ('.................')
@@ -77,8 +57,6 @@ def main():
             print ('.................')
     else:
         print (cmd.data)
-
-
 
 if __name__ == "__main__":
     main()

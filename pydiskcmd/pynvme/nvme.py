@@ -4,6 +4,8 @@
 import os
 from pydiskcmd.pynvme.command_structure import CmdStructure
 from pydiskcmd.pynvme.nvme_device import NVMeDevice
+from pydiskcmd.pynvme.nvme_spec import nvme_id_ns_decode,nvme_id_ctrl_decode
+from pydiskcmd.utils.converter import scsi_ba_to_int
 
 
 class NVMe(object):
@@ -12,6 +14,7 @@ class NVMe(object):
         ## the identify information
         ret = self.id_ctrl(False)
         self.__ctrl_identify_info = ret.data
+        self.__id_ns_info = {}
     
     def __call__(self,
                  dev):
@@ -37,6 +40,12 @@ class NVMe(object):
         # Example: 'sync': [0x10, 7],
         pass
 
+    def get_ns_info_by_ns_id(self, ns_id):
+        if ns_id not in self.__id_ns_info:
+            ret = self.id_ns(ns_id=ns_id)
+            self.__id_ns_info[ns_id] = nvme_id_ns_decode(ret.data)
+        return self.__id_ns_info.get(ns_id)
+
     @property
     def ctrl_identify_info(self):
         return self.__ctrl_identify_info
@@ -54,7 +63,21 @@ class NVMe(object):
         except Exception as e:
             raise e
         return ret
-    
+
+    def execute_io(self, cmd):
+        """
+        wrapper method to call the NVMeDevice.execute method
+
+        :param cmd: a nvme CmdStructure object
+        :return: CommandDecoder type
+        """
+        ret = None
+        try:
+            ret = self.device.execute(1, cmd)
+        except Exception as e:
+            raise e
+        return ret
+
     def id_ctrl(self, check_status=True):
         ## build command
         cmd_struc = CmdStructure(opcode=0x06,
@@ -243,5 +266,46 @@ class NVMe(object):
                                  cdw10=cdw10)
         ###
         ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
+
+    def nvme_read(self, 
+                  nsid,
+                  start_lba, 
+                  lba_count,
+                  protection_info_field,
+                  fua,
+                  limit_retry,
+                  dataset_management,
+                  eilbrt,
+                  elbat,
+                  elbatm):
+        ## get lba_format
+        ns_info = self.get_ns_info_by_ns_id(nsid)
+        index = ns_info.get("FLBAS") & 0x0F
+        lbaf = ns_info.get("LBAF%s" % index)
+        metadata_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
+        lbads = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
+        lba_size = pow(2, lbads)
+        print (metadata_size, lba_size)
+        return
+        ### build command
+        cdw10 = 0
+        cdw11 = 0
+        cdw12 = 0
+        cdw13 = 0
+        #
+        cdw10 += 2  # Log ID
+        cdw10 += (512 << 16)
+        ##
+        cmd_struc = CmdStructure(opcode=0x02,
+                                 nsid=nsid,
+                                 data_len=4096,
+                                 cdw10=cdw10,
+                                 cdw11=cdw11,
+                                 cdw12=cdw12,
+                                 cdw13=cdw13,)
+        ###
+        ret = self.execute_io(cmd_struc)
         ret.check_status()
         return ret

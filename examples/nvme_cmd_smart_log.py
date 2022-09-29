@@ -3,8 +3,9 @@
 import sys,os
 import optparse
 from pydiskcmd.pynvme.nvme import NVMe
-import pydiskcmd.utils
-from pydiskcmd.utils.format_print import format_dump_bytes,nvme_smart_decode
+from pydiskcmd.pynvme.nvme_spec import nvme_smart_decode
+from pydiskcmd.utils import init_device
+from pydiskcmd.utils.format_print import format_dump_bytes
 from pydiskcmd.utils.converter import scsi_ba_to_int
 
 Version = '0.01'
@@ -28,7 +29,7 @@ def main():
     Now trim is must 4k aligned.
     '''
     dev,options = GetOptions()
-    device = pydiskcmd.utils.init_device(dev)
+    device = init_device(dev)
     with NVMe(device) as d:
         cmd = d.smart_log()
         ## para return data
