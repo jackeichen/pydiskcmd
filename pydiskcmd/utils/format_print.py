@@ -23,19 +23,19 @@ int_to_hex_map = {0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7'
                   8: '8', 9: '9', 10: 'a', 11: 'b', 12: 'c', 13: 'd', 14: 'e', 15: 'f'}
 
 
-def format_dump_bytes(data, offset=0, end=None, ascii_str=True):
+def format_dump_bytes(data, offset=0, end=None, byteorder='little', ascii_str=True, ascii_str_mask='.'):
     def my_func(d0, d1):
         t = ''
-        if isinstance(d1, int):
-            t += int_to_hex_map[(d1 >> 4) & 0x0F]
-            t += int_to_hex_map[d1 & 0x0F]
+        if byteorder == 'little':
+            data = (d1, d0)
         else:
-            t += d1
-        if isinstance(d0, int):
-            t += int_to_hex_map[(d0 >> 4) & 0x0F]
-            t += int_to_hex_map[d0 & 0x0F]
-        else:
-            t += d0
+            data = (d0, d1)
+        for d in data:
+            if isinstance(d, int):
+                t += int_to_hex_map[(d >> 4) & 0x0F]
+                t += int_to_hex_map[d & 0x0F]
+            else:
+                t += d
         return t
     def get_data(data, index):
         if index < len(data):
@@ -51,6 +51,10 @@ def format_dump_bytes(data, offset=0, end=None, ascii_str=True):
     if ascii_str:
         show_ascii_string = "ASCII String"
     #
+    print ('Start: %s' % offset)
+    print ('End: %s' % end)
+    print ('Byte Order: %s' % byteorder)
+    print ('')
     print (format_str % ("offset", "0x00", "0x02", "0x04", "0x06", "0x08", "0x0A", "0x0C", "0x0E", show_ascii_string))
     print ('')
     while True:
@@ -62,11 +66,16 @@ def format_dump_bytes(data, offset=0, end=None, ascii_str=True):
                 index_offset += 4
             temp_ascii_string = ""
             if ascii_str:
-                for i in range(16):
-                    if (offset+i) < len(data) and (31 < data[offset+i] < 127):
-                        temp_ascii_string += chr(data[offset+i])
+                for i in range(0, 16, 2):
+                    if byteorder == 'little':
+                        _offset = (i+1, i)
                     else:
-                        temp_ascii_string +="." 
+                        _offset = (i, i+1)
+                    for k in _offset:
+                        if (offset+k) < len(data) and (31 < data[offset+k] < 127):
+                            temp_ascii_string += chr(data[offset+k])
+                        else:
+                            temp_ascii_string += ascii_str_mask
             print (format_str % (index, 
                                  my_func(get_data(data, offset), get_data(data, offset+1)), 
                                  my_func(get_data(data, offset+2), get_data(data, offset+3)), 

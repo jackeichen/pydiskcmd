@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: 2014 The python-scsi Authors
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+SMART_KEY = {'normalizedEraseCount': ['b',386,1],
+             'worstValueForRawRdErrorRate': ['b',387,1],
+             'BadBlocksBufferUpdated': ['b',388,1],
+             'nandChanBistTestResult': ['b',389,1],
+             'selfTestBB': ['b',390,2],
+             'factoryTestBB': ['b',392,2],
+             'reserved1': ['b',394,2],
+             'factoryBadBlocks': ['b',396,4],
+             'grownBadBlocks': ['b',400,4],
+             'pendingBadBlocks': ['b',404,4],
+             'totalHardwareResets': ['b',408,4],
+             'eccOverLimitCount': ['b',416,8],
+             'nvWrAuCount': ['b',424,8],
+             'programFailureCount': ['b',432,4],
+             'eraseFailureCount': ['b',436,4],
+             'hostReadSectorCount': ['b',440,8],
+             'nvRdCountSave': ['b',448,8],
+             'numSpareBlocks': ['b',456,4],
+             'sparePercent': ['b',460,4],
+             'writeAmp': ['b',464,4],
+             'reserved468': ['b',468,4],
+             'autoSaveTimerID': ['b',472,4],
+             'pOfflineQ': ['b',476,4],
+             'erase2WrRatio': ['b',480,4],
+             'reserved484': ['b',484,4],
+             'hostUEccCount': ['b',488,8],
+             'lastUncorrectablePaa': ['b',496,4],
+             'lastUncorrectablePOS': ['b',500,4],
+             'auPerPage': ['b',504,1],
+             'numOfDie': ['b',505,1],
+             'vendorSpecific4[5]': ['b',506,5]}
+
+SMART_ATTR = {'1':'Raw_Read_Error_Rate',                     # Not
+              '5':'Reallocated_Sector_Ct',
+              '9':'Power_On_Hours',
+              '12':'Power_Cycle_Count',
+              '100':'Unknown_Attribute',                     # not
+              '101':'Unknown_Attribute',                     #
+              '170':'Unknown_Attribute',
+              '171':'Unknown_Attribute',
+              '172':'Unknown_Attribute',
+              '174':'Unknown_Attribute',
+              '175':'Program_Fail_Count_Chip',
+              '176':'Erase_Fail_Count_Chip',
+              '177':'Wear_Leveling_Count',
+              '178':'Used_Rsvd_Blk_Cnt_Chip',
+              '180':'Unused_Rsvd_Blk_Cnt_Tot',
+              '183':'Runtime_Bad_Block',
+              '187':'Reported_Uncorrect',
+              '194':'Temperature_Celsius',
+              '195':'Hardware_ECC_Recovered',
+              '196':'Reallocated_Event_Count',
+              '197':'Current_Pending_Sector',
+              '199':'UDMA_CRC_Error_Count',
+              '201':'Unknown_SSD_Attribute',
+              '204':'Soft_ECC_Correction',
+              '231':'Temperature_Celsius',
+              '233':'Media_Wearout_Indicator',
+              '234':'Unknown_Attribute',
+              '241':'Total_LBAs_Written',
+              '242':'Total_LBAs_Read',
+              '250':'Read_Error_Retry_Rate', }
+
+Identify_Element_Type = {"FW": 'string',
+                         "SerialNo": 'string',
+                         "Capacity": 'int',
+                         "Model": 'string'}
+
