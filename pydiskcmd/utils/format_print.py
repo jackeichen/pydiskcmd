@@ -23,10 +23,10 @@ int_to_hex_map = {0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7'
                   8: '8', 9: '9', 10: 'a', 11: 'b', 12: 'c', 13: 'd', 14: 'e', 15: 'f'}
 
 
-def format_dump_bytes(data, offset=0, end=None, byteorder='little', ascii_str=True, ascii_str_mask='.'):
+def format_dump_bytes(data, offset=0, end=None, byteorder='reversed', ascii_str=True, ascii_str_mask='.'):
     def my_func(d0, d1):
         t = ''
-        if byteorder == 'little':
+        if byteorder == 'reversed':
             data = (d1, d0)
         else:
             data = (d0, d1)
@@ -67,7 +67,7 @@ def format_dump_bytes(data, offset=0, end=None, byteorder='little', ascii_str=Tr
             temp_ascii_string = ""
             if ascii_str:
                 for i in range(0, 16, 2):
-                    if byteorder == 'little':
+                    if byteorder == 'reversed':
                         _offset = (i+1, i)
                     else:
                         _offset = (i, i+1)

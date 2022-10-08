@@ -40,6 +40,9 @@ from pydiskcmd.pyscsi.scsi_cdb_writesame16 import WriteSame16
 from pydiskcmd.pyscsi.scsi_enum_command import mmc, sbc, smc, spc, ssc
 from pydiskcmd.utils.converter import get_opcode
 
+###
+code_version = "0.0.1"
+###
 
 class SCSI(object):
     """
