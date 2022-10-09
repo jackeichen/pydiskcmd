@@ -6,8 +6,8 @@ import optparse
 from pydiskcmd.pynvme.nvme import code_version as nvme_version
 from pydiskcmd.pysata.sata import code_version as ata_version
 from pydiskcmd.pyscsi.scsi import code_version as scsi_version
-from pydiskcmd.utils.bash_completion import update_pydiskcmd_completion
-
+from pydiskcmd.system.bash_completion import update_pydiskcmd_completion
+from pydiskcmd.system.pydiskhealth_daemon import enable_systemd_pydiskhealthd
 
 ToolVersion = "0.1.1"
 
@@ -16,8 +16,8 @@ def pydiskcmd():
     parser = optparse.OptionParser(usage,version="pydiskcmd " + ToolVersion)
     parser.add_option("", "--en_completion", dest="enable_completion", action="store_true", default=False,
         help="Enable pynvme/pysata bash completion")
-    parser.add_option("", "--en_smartd_systemctl", dest="enable_smartd_systemctl", action="store_true", default=False,
-        help="Enable pysmartd systemctl ")
+    parser.add_option("", "--en_diskhealth_daemon", dest="en_diskhealth_daemon", action="store_true", default=False,
+        help="Enable pysmartd systemctl diskhealth daemon")
     parser.add_option("", "--code_version", dest="code_version", action="store",default="pydiskcmd",
         help="Check code version: pydiskcmd|nvme|ata|scsi, default pydiskcmd")
 
@@ -25,8 +25,8 @@ def pydiskcmd():
     ##
     if options.enable_completion:
         update_pydiskcmd_completion()
-    elif options.enable_smartd_systemctl:
-        print ("Not support now!")
+    elif options.en_diskhealth_daemon:
+        enable_systemd_pydiskhealthd()
     elif options.code_version:
         if options.code_version == "pydiskcmd":
             print ('')

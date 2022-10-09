@@ -1,0 +1,11 @@
+[Unit]
+Description=Disk Health Monitoring and Reporting Daemon
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/sysconfig/pydiskhealthd
+ExecStart=/usr/local/bin/pydiskhealthd $CheckInterval
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
