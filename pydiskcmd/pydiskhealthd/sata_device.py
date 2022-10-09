@@ -51,7 +51,7 @@ class ATADevice(object):
 
     def get_smart_once(self):
         ## 
-        cmd = self.ata_device.smart()
+        cmd = self.ata_device.smart_read_data()
         smart = cmd.result
         ## 
         return smart
