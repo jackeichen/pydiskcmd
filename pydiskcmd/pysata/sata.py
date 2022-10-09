@@ -9,7 +9,7 @@ from pydiskcmd.utils.converter import get_opcode
 from pydiskcmd.pyscsi.scsi_cdb_inquiry import Inquiry
 ## cover before
 from pydiskcmd.pysata.ata_cdb_AccessibleMaxAddress import AccessibleMaxAddressCfg
-from pydiskcmd.pysata.ata_cdb_smart import Smart,SmartExeOffLineImm
+from pydiskcmd.pysata.ata_cdb_smart import SmartReadData,SmartReadThresh,SmartExeOffLineImm
 from pydiskcmd.pysata.ata_cdb_readDMAEXT16 import ReadDMAEXT16
 from pydiskcmd.pysata.ata_cdb_writeDMAEXT16 import WriteDMAEXT16
 from pydiskcmd.pysata.ata_cdb_dsm import DSM
@@ -136,19 +136,25 @@ class SATA(object):
         self.execute(cmd)   # information need be reported in sense data
         return cmd
     
-    def smart(self,smart_key=None):
+    def smart_read_data(self, smart_key=None):
         opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = Smart(opcode, self.blocksize, smart_key)
+        cmd = SmartReadData(opcode, self.blocksize, smart_key)
         self.execute(cmd)
         cmd.unmarshall()
         return cmd
-    
+
+    def smart_read_thresh(self):
+        opcode = self.device.opcodes.PASS_THROUGH_16
+        cmd = SmartReadThresh(opcode, self.blocksize)
+        self.execute(cmd)
+        return cmd
+
     def smart_exe_offline_imm(self, subcommand):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = SmartExeOffLineImm(opcode, self.blocksize, subcommand)
         self.execute(cmd)
         return cmd
-    
+
     def read_DMAEXT16(self, 
                    lba,
                    tl,):
@@ -310,4 +316,3 @@ class SATA(object):
         cmd = ExecuteDeviceDiagnostic(opcode, self.blocksize)
         self.execute(cmd)
         return cmd
-    

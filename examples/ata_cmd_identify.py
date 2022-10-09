@@ -5,11 +5,8 @@ import binascii
 #from pyscsi.utils.converter import translocate_bytearray,bytearray2string,bytearray2int
 import pydiskcmd.pysata.sata
 import pydiskcmd.utils
+from pydiskcmd.pysata.sata_spec import Identify_Element_Type
 
-Identify_Element_Type = {"FW": 'string',
-                         "SerialNo": 'string',
-                         "Capacity": 'int',
-                         "Model": 'string'}
 
 def usage():
     print('Usage: identify.py <device>')

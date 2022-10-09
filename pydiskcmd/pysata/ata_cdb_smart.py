@@ -17,61 +17,16 @@
 from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
 from pydiskcmd.pyscsi.scsi_cdb_passthrough12 import PassThrough12
 import pydiskcmd.utils.converter as convert
+from pydiskcmd.pysata.sata_spec import SMART_KEY
 
 
-class Smart(PassThrough16):
+class SmartReadData(PassThrough16):
     """
     A class to send smart command to a ATA device
     """
     # 386~510  用户定义
-    _standard_bits =                     {'smartRevision': ['b', 0, 2],
-                                          'smartInfo': ['b', 2, 360],
-                                          'offlineStatus': ['b', 362, 1],
-                                          'selfTestStatus': ['b', 363, 1],
-                                          'offlineDataCollectionTimeInSec': ['b', 364, 2],
-                                          'smartFlags':['b', 366, 1],
-                                          'offlineDataCollectionCapabilities':['b', 367, 1],
-                                          'smart capability':['b', 368, 2],
-                                          'Error logging capability':['b', 370, 1],
-                                          'VendorSpecific1':['b', 371, 1],
-                                          'ShortSelftestPollingTimeInMin':['b', 372, 1],
-                                          'longSelftestPollingTimeInMin':['b', 373, 1], #如果是0xFF，用375~376() minutes.
-                                          'convSelftestPollingtimeInMin':['b', 374, 1], #() minutes.
-                                          'extSelftestPollingTimeInMin':['b', 375, 2],
-                                          'reserved[9]':['b', 377, 9],
-                                          'normalizedEraseCount': ['b',386,1],
-                                          'worstValueForRawRdErrorRate': ['b',387,1],
-                                          'BadBlocksBufferUpdated': ['b',388,1],
-                                          'nandChanBistTestResult': ['b',389,1],
-                                          'selfTestBB': ['b',390,2],
-                                          'factoryTestBB': ['b',392,2],
-                                          'reserved1': ['b',394,2],
-                                          'factoryBadBlocks': ['b',396,4],
-                                          'grownBadBlocks': ['b',400,4],
-                                          'pendingBadBlocks': ['b',404,4],
-                                          'totalHardwareResets': ['b',408,4],
-                                          'eccOverLimitCount': ['b',416,8],
-                                          'nvWrAuCount': ['b',424,8],
-                                          'programFailureCount': ['b',432,4],
-                                          'eraseFailureCount': ['b',436,4],
-                                          'hostReadSectorCount': ['b',440,8],
-                                          'nvRdCountSave': ['b',448,8],
-                                          'numSpareBlocks': ['b',456,4],
-                                          'sparePercent': ['b',460,4],
-                                          'writeAmp': ['b',464,4],
-                                          'reserved468': ['b',468,4],
-                                          'autoSaveTimerID': ['b',472,4],
-                                          'pOfflineQ': ['b',476,4],
-                                          'erase2WrRatio': ['b',480,4],
-                                          'reserved484': ['b',484,4],
-                                          'hostUEccCount': ['b',488,8],
-                                          'lastUncorrectablePaa': ['b',496,4],
-                                          'lastUncorrectablePOS': ['b',500,4],
-                                          'auPerPage': ['b',504,1],
-                                          'numOfDie': ['b',505,1],
-                                          'vendorSpecific4[5]': ['b',506,5],
-                                          'checkSum':['b', 511, 1],}
-    
+    _standard_bits = SMART_KEY
+
     def __init__(self,
                  opcode,
                  blocksize,
@@ -88,8 +43,8 @@ class Smart(PassThrough16):
                              0xB0,        # command
                              ck_cond=1)
         if smart_key:
-            self._standard_bits = self._standard_bits.update(smart_key)
-    
+            Smart._standard_bits.update(smart_key)
+
     @classmethod
     def unmarshall_datain(cls, data):
         """
@@ -103,6 +58,26 @@ class Smart(PassThrough16):
                             cls._standard_bits,
                             result)
         return result
+
+
+class SmartReadThresh(PassThrough16):
+    """
+    A class to send smart command to a ATA device
+    """
+    def __init__(self,
+                 opcode,
+                 blocksize,):
+        PassThrough16.__init__(self,
+                             opcode,
+                             blocksize,
+                             0xC24F << 8, # lba
+                             0x4,         # protocal
+                             2,           # t_length
+                             1,           # t_dir
+                             0xD1,        # features
+                             0x1,         # sector_count
+                             0xB0,        # command
+                             ck_cond=1)
 
 
 class SmartExeOffLineImm(PassThrough16):

@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.sata_spec import Identify_Info
 import pydiskcmd.utils.converter as convert
 
 
@@ -22,13 +23,8 @@ class Identify(PassThrough16):
     """
     A class to send identify command to a ATA device
     """
-    _standard_bits =                     {'SpecificConfiguration': ['b', 0x02, 2],
-                                          'SerialNo': ['b', 0x14, 20],
-                                          'FW': ['b', 0x2e, 8],
-                                          'Model': ['b', 0x36, 40],
-                                          'Capacity': ['b', 0xc8, 4],
-                                          'Model': ['b', 0x36, 40],}
-    
+    _standard_bits =  Identify_Info
+
     def __init__(self,
                  opcode,
                  blocksize):

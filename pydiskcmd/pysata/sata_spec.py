@@ -2,7 +2,23 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-SMART_KEY = {'normalizedEraseCount': ['b',386,1],
+
+SMART_KEY = {'smartRevision': ['b', 0, 2],
+             'smartInfo': ['b', 2, 360],
+             'offlineStatus': ['b', 362, 1],
+             'selfTestStatus': ['b', 363, 1],
+             'offlineDataCollectionTimeInSec': ['b', 364, 2],
+             'smartFlags':['b', 366, 1],
+             'offlineDataCollectionCapabilities':['b', 367, 1],
+             'smart capability':['b', 368, 2],
+             'Error logging capability':['b', 370, 1],
+             'VendorSpecific1':['b', 371, 1],
+             'ShortSelftestPollingTimeInMin':['b', 372, 1],
+             'longSelftestPollingTimeInMin':['b', 373, 1], #如果是0xFF，用375~376() minutes.
+             'convSelftestPollingtimeInMin':['b', 374, 1], #() minutes.
+             'extSelftestPollingTimeInMin':['b', 375, 2],
+             'reserved[9]':['b', 377, 9],
+             'normalizedEraseCount': ['b',386,1],
              'worstValueForRawRdErrorRate': ['b',387,1],
              'BadBlocksBufferUpdated': ['b',388,1],
              'nandChanBistTestResult': ['b',389,1],
@@ -32,7 +48,9 @@ SMART_KEY = {'normalizedEraseCount': ['b',386,1],
              'lastUncorrectablePOS': ['b',500,4],
              'auPerPage': ['b',504,1],
              'numOfDie': ['b',505,1],
-             'vendorSpecific4[5]': ['b',506,5]}
+             'vendorSpecific4[5]': ['b',506,5],
+             'checkSum':['b', 511, 1], }
+
 
 SMART_ATTR = {'1':'Raw_Read_Error_Rate',                     # Not
               '5':'Reallocated_Sector_Ct',
@@ -65,8 +83,61 @@ SMART_ATTR = {'1':'Raw_Read_Error_Rate',                     # Not
               '242':'Total_LBAs_Read',
               '250':'Read_Error_Retry_Rate', }
 
-Identify_Element_Type = {"FW": 'string',
-                         "SerialNo": 'string',
-                         "Capacity": 'int',
-                         "Model": 'string'}
+Identify_Info = {'GeneralConfiguration': ['b',0,2],
+                 'SerialNumber': ['b',20,20],
+                 'FirmwareRevision': ['b',46,8],
+                 'ModelNumber': ['b',54,40],
+                 'Capabilities': ['b',98,4],
+                 'UltraDMAModes': ['b',176,2],
+                 'NormalEraseTime': ['b',178,2],
+                 'EnhancedEraseTime': ['b',180,2],
+                 'CurrentAPMLevel': ['b',182,2],
+                 'MasterPasswordIdentifier': ['b',184,2],
+                 'HardwareResetResult': ['b',186,2],
+                 'Capacity': ['b', 200, 4],
+                 'WorldWideName': ['b',216,8],
+                 'IntegrityWord': ['w',510,2],
+                }
 
+Identify_Element_Type = {"FirmwareRevision": 'string',
+                         "SerialNumber": 'string',
+                         "Capacity": 'int',
+                         "ModelNumber": 'string'}
+
+class SmartAttr(object):
+    def __init__(self, raw_data):
+        self.id = raw_data[0]
+        if str(self.id) in SMART_ATTR:
+            self.attr_name = SMART_ATTR[str(self.id)]
+        else:
+            self.attr_name = 'Unknown_Attribute'
+        self.flag = bytes(raw_data[1:3])
+        self.value = raw_data[3]
+        self.worst = raw_data[4]
+        self.raw_value = bytes(raw_data[5:11])
+        self.threshold = raw_data[11]
+
+
+class SmartThresh(object):
+    def __init__(self, raw_data):
+        self.id = raw_data[0]
+        self.thresh = raw_data[1]
+
+
+def decode_smart_info(smart_info_raw):
+    smart = []
+    ##
+    for i in range(0, 359, 12):
+        smart_attr = SmartAttr(smart_info_raw[i:(i+12)])
+        if smart_attr.id != 0:
+            smart.append(smart_attr)
+    return smart
+
+def decode_smart_thresh(smart_info_raw):
+    smart_thresh_map = {}
+    ##
+    for i in range(0, 359, 12):
+        smart_thresh = SmartThresh(smart_info_raw[i:(i+12)])
+        if smart_thresh.id != 0:
+            smart_thresh_map[smart_thresh.id] = smart_thresh.thresh
+    return smart_thresh_map 

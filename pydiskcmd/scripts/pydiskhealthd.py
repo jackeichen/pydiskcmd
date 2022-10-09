@@ -71,9 +71,10 @@ def pydiskhealthd():
         ##
         logger.info("Check Device ...")
         for dev_id,dev_context in dev_pool.items():
-            dev_context.get_smart_once()
-            attr_error_entry = dev_context.smart_attr.get("Number of Error Information Log Entries")
-            logger.info("dev: %s, smart error_entry_num=%s" % (dev_context.dev_path, attr_error_entry.value.current_value))
+            if dev_context.device_type == 'nvme':
+                dev_context.get_smart_once()
+                attr_error_entry = dev_context.smart_attr.get("Number of Error Information Log Entries")
+                logger.info("dev: %s, smart error_entry_num=%s" % (dev_context.dev_path, attr_error_entry.value.current_value))
         logger.info("Check done")
         time_left = options.check_interval - time.time() + start_t
         if time_left > 0:
