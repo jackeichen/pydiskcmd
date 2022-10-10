@@ -27,7 +27,7 @@ PCI Express devices and their topology.
 
 License
 =======
-Python-scsi is distributed under LGPLv2.1
+pydiskcmd is distributed under LGPLv2.1.
 Please see the LICENSE file for the full license text.
 
 

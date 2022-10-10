@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2014 The python-scsi Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+from pydiskcmd.utils.converter import decode_bits,scsi_ba_to_int
 
 
 SMART_KEY = {'smartRevision': ['b', 0, 2],
@@ -104,6 +105,15 @@ Identify_Element_Type = {"FirmwareRevision": 'string',
                          "Capacity": 'int',
                          "ModelNumber": 'string'}
 
+SmartFlagBitMap = {"Pre-fail": [0x01, 0],
+                   "OnlineBit": [0x02, 0],
+                   "PerformanceType": [0x04, 0],
+                   "ErrorRate": [0x08, 0],
+                   "Eventcount": [0x10, 0],
+                   "Selfpereserving": [0x20, 0],
+                  }
+
+
 class SmartAttr(object):
     def __init__(self, raw_data):
         self.id = raw_data[0]
@@ -115,7 +125,14 @@ class SmartAttr(object):
         self.value = raw_data[3]
         self.worst = raw_data[4]
         self.raw_value = bytes(raw_data[5:11])
-        self.threshold = raw_data[11]
+
+    @property
+    def raw_value_int(self):
+        return scsi_ba_to_int(self.raw_value,'little')
+
+    @property
+    def flag_int(self):
+        return scsi_ba_to_int(self.flag,'little')
 
 
 class SmartThresh(object):
@@ -125,12 +142,12 @@ class SmartThresh(object):
 
 
 def decode_smart_info(smart_info_raw):
-    smart = []
+    smart = {}
     ##
     for i in range(0, 359, 12):
         smart_attr = SmartAttr(smart_info_raw[i:(i+12)])
         if smart_attr.id != 0:
-            smart.append(smart_attr)
+            smart[smart_attr.id] = smart_attr
     return smart
 
 def decode_smart_thresh(smart_info_raw):
@@ -141,3 +158,8 @@ def decode_smart_thresh(smart_info_raw):
         if smart_thresh.id != 0:
             smart_thresh_map[smart_thresh.id] = smart_thresh.thresh
     return smart_thresh_map 
+
+def decode_smart_flag(raw_data):
+    result = {}
+    decode_bits(raw_data, SmartFlagBitMap, result)
+    return result

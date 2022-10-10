@@ -81,23 +81,21 @@ class NVMeDevice(object):
                              "Warning Composite Temperature Time": SmartKeyAttr("Warning Composite Temperature Time"),
                              "Critical Composite Temperature Time": SmartKeyAttr("Critical Composite Temperature Time "),
                             }
-        ## init device
-        self.nvme_device = None
-        self._init_device()
+        ## get device ID
+        self.__device_id = None
+        with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
+            result = nvme_id_ctrl_decode(d.ctrl_identify_info)
+        self.__device_id = ba_to_ascii_string(result.get("SN"), "")
 
     def __del__(self):
         ## close device when exit
         self._close()
 
-    def _init_device(self):
-        self.nvme_device = NVMe(init_device(self.dev_path, open_t="nvme"))
-        ## 
-        return
-
     def _close(self):
-        if self.nvme_device:
-            self.nvme_device.device.close()
-            self.nvme_device = None
+        '''
+        May save the smart to a file, used in next power on
+        '''
+        pass
 
     @property
     def device_type(self):
@@ -105,8 +103,7 @@ class NVMeDevice(object):
 
     @property
     def device_id(self):
-        result = nvme_id_ctrl_decode(self.nvme_device.ctrl_identify_info)
-        return ba_to_ascii_string(result.get("SN"), "")
+        return self.__device_id
 
     @property
     def smart_attr(self):
@@ -122,7 +119,8 @@ class NVMeDevice(object):
         return addr
 
     def get_smart_once(self):
-        cmd = self.nvme_device.smart_log()
+        with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
+            cmd = d.smart_log()
         smart = nvme_smart_decode(cmd.data)
         self.__smart_attr["Critical Warning"].set_value(scsi_ba_to_int(smart.get("Critical Warning"), 'little'))
         self.__smart_attr["Available Spare"].set_value(scsi_ba_to_int(smart.get("Available Spare"), 'little'))
@@ -132,4 +130,4 @@ class NVMeDevice(object):
         self.__smart_attr["Number of Error Information Log Entries"].set_value(scsi_ba_to_int(smart.get("Number of Error Information Log Entries"), 'little'))
         self.__smart_attr["Warning Composite Temperature Time"].set_value(scsi_ba_to_int(smart.get("Warning Composite Temperature Time"), 'little'))
         self.__smart_attr["Critical Composite Temperature Time"].set_value(scsi_ba_to_int(smart.get("Critical Composite Temperature Time"), 'little'))
-        return nvme_smart_decode(cmd.data)
+        return smart

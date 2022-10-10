@@ -42,8 +42,8 @@ def main(device):
           ('ID#','ATTRIBUTE_NAME','FLAG','VALUE','WORST','THRESHOLD','RAW_VALUE'))
     print ('-'*100)
     print_fomrat = '%3s %-25s %#-6x %-6s %-6s %-10s %-10s'
-    smart_list = decode_smart_info(vs_smart)
-    for s in smart_list:
+    smart_dict = decode_smart_info(vs_smart)
+    for _id,s in smart_dict.items():
         print (print_fomrat % (
                s.id,                                  # ID
                s.attr_name,                           # ATTRIBUTE_NAME
