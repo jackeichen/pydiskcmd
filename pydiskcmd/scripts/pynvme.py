@@ -10,7 +10,7 @@ from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 ##
 from pydiskcmd.pynvme.nvme_spec import *
 
-Version = '0.0.1'
+Version = '0.1.0'
 
 def version():
     print ("pynvme version %s" % Version)

@@ -9,7 +9,7 @@ from pydiskcmd.pyscsi.scsi import code_version as scsi_version
 from pydiskcmd.system.bash_completion import update_pydiskcmd_completion
 from pydiskcmd.system.pydiskhealth_daemon import enable_systemd_pydiskhealthd
 
-ToolVersion = "0.1.1"
+ToolVersion = "0.1.0"
 
 def pydiskcmd():
     usage="usage: %prog [OPTION] [args...]"

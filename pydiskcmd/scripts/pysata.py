@@ -9,7 +9,7 @@ from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
 from pydiskcmd.utils.format_print import format_dump_bytes
 
-Version = '0.0.1'
+Version = '0.1.0'
 
 def bytearray2hex_l(data,start,offset):
     a = data[start:start+offset][::-1]

@@ -11,7 +11,7 @@ from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice
 from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice
 
-tool_version = '0.0.1'
+tool_version = '0.1.0'
 
 
 def get_disk_context():

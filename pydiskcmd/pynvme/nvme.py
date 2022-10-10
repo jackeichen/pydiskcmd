@@ -7,7 +7,7 @@ from pydiskcmd.pynvme.nvme_device import NVMeDevice
 from pydiskcmd.pynvme.nvme_spec import nvme_id_ns_decode,nvme_id_ctrl_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int
 
-code_version = "0.0.1"
+code_version = "0.1.0"
 
 class NVMe(object):
     def __init__(self, dev):

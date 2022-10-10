@@ -22,7 +22,7 @@ from pydiskcmd.pysata.ata_cdb_softreset import SoftReset
 from pydiskcmd.pysata.ata_cdb_DeviceReset import DeviceReset
 from pydiskcmd.pysata.ata_cdb_executeDeviceDiagnostic import ExecuteDeviceDiagnostic
 
-code_version = "0.0.1"
+code_version = "0.1.0"
 
 class SATA(object):
     """

@@ -41,7 +41,7 @@ from pydiskcmd.pyscsi.scsi_enum_command import mmc, sbc, smc, spc, ssc
 from pydiskcmd.utils.converter import get_opcode
 
 ###
-code_version = "0.0.1"
+code_version = "0.1.0"
 ###
 
 class SCSI(object):
