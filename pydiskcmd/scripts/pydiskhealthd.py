@@ -4,6 +4,7 @@
 import re
 import time
 import optparse
+import subprocess
 from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs
 from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
@@ -53,12 +54,37 @@ def difference_set_methmod(a, b):
 def pydiskhealthd():
     usage="usage: %prog [OPTION] [args...]"
     parser = optparse.OptionParser(usage,version="pydiskhealthd " + tool_version)
-    parser.add_option("-t", "--check_interval",  type="int", dest="check_interval", action="store", default=3600,
+    parser.add_option("-t", "--check_interval", type="int", dest="check_interval", action="store", default=3600,
         help="Check inetrval time to check device health, default 1 hour.")
+    parser.add_option("", "--check_daemon_running", dest="check_daemon_running", action="store_true", default=True,
+        help="If check the pydiskheald daemon runnning, default true.")
 
     (options, args) = parser.parse_args()
     ## check parameter
-    pass
+    if options.check_daemon_running:
+        ##
+        proc = subprocess.Popen(["pgrep", "-l", "-f", "pydiskhealthd"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        proc.wait()
+        stdout = proc.stdout.read()
+        stderr = proc.stderr.read()
+        if proc.returncode == 0:
+            content_all = stdout.split("\n")
+            running_number = 0
+            for c in content_all:
+                if c:
+                    temp = c.split(' ')
+                    progress_id = temp[0]
+                    progress_name = ' '.join(temp[1:])
+                    if progress_name == "pydiskhealthd":
+                        running_number += 1
+            ## because you are running the pydiskheal, so count should be >= 2 if another is running
+            if running_number > 1:
+                print ("pydiskhealthd is running(PID %s)" % progress_id)
+                return 1
+        else:
+            print ("Run pgrep command error, return code: %s" % proc.returncode)
+            print (proc.stderr.read())
+            return 2
     ## notify
     try:
         notifier = SystemdNotify()
