@@ -84,7 +84,7 @@ pynvme_list_opts () {
 	done
 
 	if [ $nonopt_args -eq 2 ]; then
-		opts="/dev/sd* "
+		opts="/dev/nvme* "
 	fi
 
 	opts+=" "

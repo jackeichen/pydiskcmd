@@ -4,6 +4,7 @@
 import os
 import time
 from pydiskcmd.pynvme.nvme import NVMe
+from pydiskcmd.pypci.pci_lib import map_pci_device
 from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme_spec import nvme_smart_decode,nvme_id_ctrl_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
@@ -12,11 +13,13 @@ from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 PCIeMappingPath = "/sys/class/nvme/%s/address"
 ###
 
-class AttrValue(object):
-    def __init__(self):
-        self.value_list_max = 100
-        self.value_list = [None,] * self.value_list_max
-        self.value_list_head = 0
+class SmartKeyAttr(object):
+    def __init__(self, name):
+        self.__name = name
+        ##
+        self.__value_list_max = 100
+        self.value_list = [None,] * self.__value_list_max
+        self.__value_list_head = 0
         ##
         self.max_value = 0
         self.min_value = 0
@@ -25,17 +28,26 @@ class AttrValue(object):
         self.__value_number = 0
 
     @property
+    def name(self):
+        return self.__name
+
+    @property
+    def value_list_head(self):
+        if self.__value_list_head >= self.__value_list_max:
+            self.__value_list_head = 0
+        return self.__value_list_head
+
+    @property
     def current_value(self):
         return self.value_list[self.value_list_head-1]
 
+    @property
+    def initd_value(self):
+        return (self.value_list[self.value_list_head] or self.value_list[0])
+
     def set_value(self, value, detail=''):
-        info = (int(time.time()), value, detail)
-        if self.value_list_head < self.value_list_max:
-            self.value_list[self.value_list_head] = info
-        else:
-            self.value_list_head = 0
-            self.value_list[self.value_list_head] = info
-        self.value_list_head += 1
+        self.value_list[self.value_list_head] = (int(time.time()), value, detail)
+        self.__value_list_head += 1
         ##
         self.max_value = max(self.max_value, value)
         self.min_value = min(self.min_value, value)
@@ -44,21 +56,77 @@ class AttrValue(object):
         self.avg_value = (self.avg_value / self.__value_number)
 
 
-class SmartKeyAttr(object):
-    def __init__(self, name):
-        self.__name = name
-        self.__value = AttrValue()
+class PCIeReport(object): 
+    """
+    'RxErr', 'BadTLP', 'BadDLLP', 'Rollover', 'Timeout', 'NonFatalErr', 'CorrIntErr', 'HeaderOF', 'TOTAL_ERR_COR'
+    
+    'Undefined', 'DLP', 'SDES', 'TLP', 'FCP', 'CmpltTO', 'CmpltAbrt', 'UnxCmplt', 'RxOF', 'MalfTLP', 'ECRC', 'UnsupReq', 
+    'ACSViol', 'UncorrIntErr', 'BlockedTLP', 'AtomicOpBlocked', 'TLPBlockedErr', 'PoisonTLPBlocked', 'TOTAL_ERR_FATAL'
+    """
+    def __init__(self):
+        ## link status
+        self.link_report_times = {"speed": 0,
+                                  "width": 0}
+        self.last_link_status = {"speed": '',
+                                 "width": 0}
+        ## AER
+        self.aer_ce_report_times = {'RxErr': 0, 
+                                    'BadTLP': 0, 
+                                    'BadDLLP': 0, 
+                                    'Rollover': 0, 
+                                    'Timeout': 0, 
+                                    'NonFatalErr': 0, 
+                                    'CorrIntErr': 0, 
+                                    'HeaderOF': 0, 
+                                    'TOTAL_ERR_COR': 0}
+        self.aer_fatal_report_times = {'Undefined': 0, 
+                                       'DLP': 0, 
+                                       'SDES': 0, 
+                                       'TLP': 0, 
+                                       'FCP': 0, 
+                                       'CmpltTO': 0, 
+                                       'CmpltAbrt': 0, 
+                                       'UnxCmplt': 0, 
+                                       'RxOF': 0, 
+                                       'MalfTLP': 0, 
+                                       'ECRC': 0, 
+                                       'UnsupReq': 0, 
+                                       'ACSViol': 0, 
+                                       'UncorrIntErr': 0, 
+                                       'BlockedTLP': 0, 
+                                       'AtomicOpBlocked': 0, 
+                                       'TLPBlockedErr': 0, 
+                                       'PoisonTLPBlocked': 0, 
+                                       'TOTAL_ERR_FATAL': 0}
+        self.aer_nonfatal_report_times = {'Undefined': 0, 
+                                          'DLP': 0, 
+                                          'SDES': 0, 
+                                          'TLP': 0, 
+                                          'FCP': 0, 
+                                          'CmpltTO': 0, 
+                                          'CmpltAbrt': 0, 
+                                          'UnxCmplt': 0, 
+                                          'RxOF': 0, 
+                                          'MalfTLP': 0, 
+                                          'ECRC': 0, 
+                                          'UnsupReq': 0, 
+                                          'ACSViol': 0, 
+                                          'UncorrIntErr': 0, 
+                                          'BlockedTLP': 0, 
+                                          'AtomicOpBlocked': 0, 
+                                          'TLPBlockedErr': 0, 
+                                          'PoisonTLPBlocked': 0, 
+                                          'TOTAL_ERR_NONFATAL': 0}
 
-    @property
-    def name(self):
-        return self.__name
-
-    @property
-    def value(self):
-        return self.__value
-
-    def set_value(self, value):
-        self.__value.set_value(value)
+    def set_aer_report_time(self, aer_type, error):
+        if aer_type == "aer_dev_correctable" and error in self.aer_ce_report_times:
+            self.aer_ce_report_times[error] += 1
+        elif aer_type == "aer_dev_fatal" and error in self.aer_fatal_report_times:
+            self.aer_fatal_report_times[error] += 1
+        elif aer_type == "aer_dev_nonfatal" and error in self.aer_nonfatal_report_times:
+            self.aer_nonfatal_report_times[error] += 1
+        else:
+            pass
 
 
 class NVMeDevice(object):
@@ -70,7 +138,9 @@ class NVMeDevice(object):
     def __init__(self, dev_path):
         self.__device_type = 'nvme'
         self.dev_path = dev_path
-        self.bus_address = self._get_bus_addr_by_controller(dev_path)
+        bus_address = self._get_bus_addr_by_controller(dev_path)
+        self.pcie_context = map_pci_device(bus_address)
+        self.pcie_report = PCIeReport()  ## class used by pydiskhealthd
         # init smart attr
         self.__smart_attr = {"Critical Warning": SmartKeyAttr("Critical Warning"),
                              "Available Spare": SmartKeyAttr("Available Spare"),

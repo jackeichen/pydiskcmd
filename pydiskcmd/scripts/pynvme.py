@@ -36,7 +36,7 @@ def print_help():
     print ("  version               Shows the program version")
     print ("  help                  Shows the program version")
     print ("")
-    print ("See 'nvme <plugin> --help' for more information on a plugin")
+    print ("See 'pynvme <plugin> --help' for more information on a plugin")
     return 0
 
 def _list():
