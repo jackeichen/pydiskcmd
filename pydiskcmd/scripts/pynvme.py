@@ -2,10 +2,11 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import sys,os
+import re
 import optparse
 from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme import NVMe
-from pydiskcmd.utils.format_print import format_dump_bytes
+from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 ##
 from pydiskcmd.pynvme.nvme_spec import *
@@ -24,6 +25,7 @@ def print_help():
     print ("nvme block device (ex: /dev/nvme0n1).")
     print ("")
     print ("The following are all implemented sub-commands:")
+    print ("  list                  List all NVMe devices and namespaces on machine")
     print ("  smart-log             Retrieve SMART Log, show it")
     print ("  id-ctrl               Send NVMe Identify Controller")
     print ("  id-ns                 Send NVMe Identify Namespace, display structure")
@@ -36,6 +38,51 @@ def print_help():
     print ("")
     print ("See 'nvme <plugin> --help' for more information on a plugin")
     return 0
+
+def _list():
+    usage="usage: %prog smart-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal",],default="normal",
+        help="Output format: normal, default normal")
+    
+    (options, args) = parser.parse_args()
+    ##
+    print_format = "%-16s %-20s %-40s %-9s %-26s %-16s %-8s"
+    print (print_format % ("Node", "SN", "Model", "Namespace", "Usage", "Format", "FW Rev"))
+    print (print_format % ("-"*16, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
+    from pydiskcmd.system.os_tool import get_block_devs
+    blk_dev = get_block_devs(print_detail=False)
+    included_block_devices = ("nvme",)
+    for dev in blk_dev:
+        if dev.startswith(included_block_devices):
+            g = re.match(r"nvme([0-9]+)n([0-9]+)", dev)
+            ctrl_id = int(g[1])
+            ns_id = int(g[2])
+            #
+            nvme_ctrl_dev = "/dev/nvme%s" % ctrl_id
+            nvme_block_dev = "/dev/%s" % dev
+            ## send identify controller and identify namespace
+            with NVMe(init_device(nvme_ctrl_dev)) as d:
+                cmd_id_ctrl = d.id_ctrl()
+                cmd_id_ns = d.id_ns(ns_id)
+            ## para data
+            result = nvme_id_ctrl_decode(cmd_id_ctrl.data)
+            sn = ba_to_ascii_string(result.get("SN"), "")
+            mn = ba_to_ascii_string(result.get("MN"), "")
+            fw = ba_to_ascii_string(result.get("FR"), "")
+            ##
+            result = nvme_id_ns_decode(cmd_id_ns.data)
+            #
+            lbaf = result.get("LBAF%s" % scsi_ba_to_int(result.get("FLBAS"), 'little'))
+            meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
+            lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
+            _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
+            #
+            NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
+            NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
+            usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
+            if options.output_format == "normal":
+                print (print_format % (nvme_block_dev, sn, mn, ns_id, usage, _format, fw))
 
 def smart_log():
     usage="usage: %prog smart-log <device> [OPTIONS]"
@@ -274,7 +321,8 @@ def fw_commit():
         parser.print_help()
 
 
-commands_dict = {"smart-log": smart_log,
+commands_dict = {"list": _list,
+                 "smart-log": smart_log,
                  "id-ctrl": id_ctrl,
                  "id-ns": id_ns,
                  "error-log": error_log,

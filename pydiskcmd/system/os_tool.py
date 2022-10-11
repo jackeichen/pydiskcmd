@@ -18,12 +18,12 @@ def timeit(func):
         return result
     return wrap
 
-@timeit
-def get_block_devs() -> List[str]:
+def get_block_devs(print_detail=True) -> List[str]:
     """Determine the list of block devices by looking at /sys/block"""
     devs = [dev for dev in os.listdir('/sys/block')
             if not dev.startswith(excluded_block_devices)]
-    print (f'{len(devs)} devices detected')
+    if print_detail:
+        print (f'{len(devs)} devices detected')
     return devs
 
 
