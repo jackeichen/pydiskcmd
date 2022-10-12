@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: 2014 The python-scsi Authors
+# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+
 import os
 from pydiskcmd.pynvme.command_structure import CmdStructure
 from pydiskcmd.pynvme.nvme_device import NVMeDevice

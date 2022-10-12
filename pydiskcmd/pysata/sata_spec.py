@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: 2014 The python-scsi Authors
+# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+
 from pydiskcmd.utils.converter import decode_bits,scsi_ba_to_int
 
 

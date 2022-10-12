@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2014 The python-scsi Authors
+# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
@@ -173,7 +173,7 @@ class NVMeDevice(object):
 
     @property
     def device_id(self):
-        return self.__device_id
+        return self.__device_id.strip()
 
     @property
     def smart_attr(self):

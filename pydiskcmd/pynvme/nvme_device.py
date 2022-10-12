@@ -1,4 +1,8 @@
 # coding: utf-8
+# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 import os
 import traceback
 from pydiskcmd.pynvme.linux_nvme import execute_admin_cmd,execute_io_cmd

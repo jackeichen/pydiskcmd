@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: 2014 The python-scsi Authors
+# SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+
 import os
 import syslog
 import logging
@@ -27,25 +28,30 @@ class SysLog(object):
             syslog.closelog()
             self.__log_opened = False
 
-    def debug(self, message):
-        message = "Debug: " + message
-        return syslog.syslog(syslog.LOG_DEBUG, message)
+    def debug(self, *messages):
+        for message in messages:
+            message = "Debug: " + message
+            syslog.syslog(syslog.LOG_DEBUG, message)
 
-    def info(self, message):
-        message = "Info: " + message
-        return syslog.syslog(syslog.LOG_INFO, message)
+    def info(self, *messages):
+        for message in messages:
+            message = "Info: " + message
+            syslog.syslog(syslog.LOG_INFO, message)
 
-    def warning(self, message):
-        message = "Warning: " + message
-        return syslog.syslog(syslog.LOG_WARNING, message)
+    def warning(self, *messages):
+        for message in messages:
+            message = "Warning: " + message
+            syslog.syslog(syslog.LOG_WARNING, message)
 
-    def error(self, message):
-        message = "Error: " + message
-        return syslog.syslog(syslog.LOG_ERR, message)
+    def error(self, *messages):
+        for message in messages:
+            message = "Error: " + message
+            syslog.syslog(syslog.LOG_ERR, message)
 
-    def critical(self, message):
-        message = "Critical: " + message
-        return syslog.syslog(syslog.LOG_CRIT, message)
+    def critical(self, *messages):
+        for message in messages:
+            message = "Critical: " + message
+            syslog.syslog(syslog.LOG_CRIT, message)
 
 
 class RunLog(object):
@@ -71,20 +77,25 @@ class RunLog(object):
         self._file_handler.setFormatter(self._formatter)
         self._logger.addHandler(self._file_handler)
 
-    def debug(self, message):
-        return self._logger.debug(message)
+    def debug(self, *messages):
+        for message in messages:
+            self._logger.debug(message)
 
-    def info(self, message):
-        return self._logger.info(message)
+    def info(self, *messages):
+        for message in messages:
+            self._logger.info(message)
 
-    def warning(self, message):
-        return self._logger.warning(message)
+    def warning(self, *messages):
+        for message in messages:
+            self._logger.warning(message)
 
-    def error(self, message):
-        return self._logger.error(message)
+    def error(self, *messages):
+        for message in messages:
+            self._logger.error(message)
 
-    def critical(self, message):
-        return self._logger.critical(message)
+    def critical(self, *messages):
+        for message in messages:
+            self._logger.critical(message)
 
 logger_pydiskhealthd = RunLog("pydiskhealthd")
 syslog_pydiskhealthd = SysLog("pydiskhealthd")

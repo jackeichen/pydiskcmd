@@ -1,6 +1,6 @@
 # coding: utf-8
 
-# Copyright (C) 2021 by Eric Gao<gaozh3@lenovo.com>
+# Copyright (C) 2021 by Eric Gao<Eric-1128@outlook.com>
 # SPDX-FileCopyrightText: 2014 The python-scsi Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later

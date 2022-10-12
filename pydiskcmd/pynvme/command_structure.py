@@ -1,5 +1,8 @@
-from ctypes import *
+# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
+from ctypes import *
 
 class CmdStructure(LittleEndianStructure):
     _fields_ = [

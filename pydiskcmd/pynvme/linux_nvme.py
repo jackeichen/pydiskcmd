@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 from fcntl import ioctl
 from pydiskcmd.pynvme.command_return import CommandDecoder 
 ##

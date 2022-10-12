@@ -93,3 +93,8 @@ Advanced Usage
 ==============
 You can find some examples about how to use this tool in the dir of pydiskcmd/examples/.
 And some scsi tools in the dir of pydiskcmd/tools/, which are from python-scsi.
+
+
+Email
+=====
+If any support or ideas, contact me by email: Eric-1128@outlook.com
