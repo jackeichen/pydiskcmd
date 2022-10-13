@@ -43,7 +43,7 @@ class SmartReadData(PassThrough16):
                              0xB0,        # command
                              ck_cond=1)
         if smart_key:
-            Smart._standard_bits.update(smart_key)
+            SmartReadData._standard_bits.update(smart_key)
 
     @classmethod
     def unmarshall_datain(cls, data):

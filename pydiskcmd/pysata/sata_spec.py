@@ -6,7 +6,7 @@ from pydiskcmd.utils.converter import decode_bits,scsi_ba_to_int
 
 
 SMART_KEY = {'smartRevision': ['b', 0, 2],
-             'smartInfo': ['b', 2, 360],
+             'smartInfo': ['b', 2, 360],    # vendor_spec smart
              'offlineStatus': ['b', 362, 1],
              'selfTestStatus': ['b', 363, 1],
              'offlineDataCollectionTimeInSec': ['b', 364, 2],
@@ -106,6 +106,14 @@ Identify_Element_Type = {"FirmwareRevision": 'string',
                          "Capacity": 'int',
                          "ModelNumber": 'string'}
 
+VSSmartPerAttrBitMap = {"ID": ['b', 0, 1],
+                            "flag": ['b', 1, 2],
+                            "value": ['b', 3, 1],
+                            "worst": ['b', 4, 1],
+                            "raw_value": ['b', 5, 6],
+                            "reserved": ['b', 11, 1],
+                           }
+
 SmartFlagBitMap = {"Pre-fail": [0x01, 0],
                    "OnlineBit": [0x02, 0],
                    "PerformanceType": [0x04, 0],
@@ -134,6 +142,10 @@ class SmartAttr(object):
     @property
     def flag_int(self):
         return scsi_ba_to_int(self.flag,'little')
+
+    @property
+    def flag_decode(self):
+        return decode_smart_flag(self.flag)
 
 
 class SmartThresh(object):

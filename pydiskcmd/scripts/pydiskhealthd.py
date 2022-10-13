@@ -104,182 +104,303 @@ def pydiskhealthd():
         for dev_id,dev_context in dev_pool.items():
             if dev_context.device_type == 'nvme':
                 ### check smart Now
-                dev_context.get_smart_once()
+                smart_trace = dev_context.get_smart_once()
+                current_smart = smart_trace.current_value
+                last_smart = smart_trace.get_cache_last_value()
                 ## check critical_warning
-                if "Critical Warning" in dev_context.smart_attr:
-                    smart_attr = dev_context.smart_attr.get("Critical Warning")
-                    smart_current = smart_attr.current_value
-                    #smart_last = smart_attr.value_list[smart_attr.value_list_head-2]
-                    if smart_current:
-                        smart_t,smart_value,smart_detail = smart_current
-                        if smart_value:
-                            message = "Critical Warning detected in disk %s" % dev_context.dev_path
-                            syslog.warning(message)
+                if "Critical Warning" in current_smart.smart_info:
+                    smart_value = current_smart.smart_info["Critical Warning"]
+                    if last_smart:
+                        last_smart_value = last_smart.smart_info["Critical Warning"]
+                        if smart_value != last_smart_value:
+                            message = "Critical Warning detected in disk %s." % dev_context.dev_path
+                            syslog.info(message)
                             logger.warning(message)
                             ## base in spec v1.4
-                            if smart_value & 0x01:
+                            if smart_value & 0x01 and (not last_smart_value & 0x01):
                                 message = "Device: %s(ID: %s), the available spare capacity has fallen below the threshold!" % (dev_context.dev_path, dev_context.device_id)
                                 message += " You may need to replace this disk as soon as possible."
                                 syslog.warning(message)
-                                logger.warning(message)
-                            if smart_value & 0x02:
+                                logger.error(message)
+                            if smart_value & 0x02 and (not last_smart_value & 0x02):
                                 message = "Device: %s(ID: %s), temperature is greater than or equal to an over temperature threshold;" % (dev_context.dev_path, dev_context.device_id)
-                                message += " or less than or equal to an under temperature threshold!"
-                                syslog.warning(message)
-                                logger.warning(message)
-                            if smart_value & 0x04:
+                                message += " Or less than or equal to an under temperature threshold!"
+                                syslog.info(message)
+                                logger.error(message)
+                            if smart_value & 0x04 and (not last_smart_value & 0x04):
                                 message = "Device: %s(ID: %s), NVM subsystem reliability has been degraded due to" % (dev_context.dev_path, dev_context.device_id)
                                 message += " significant media related errors or any internal error that degrades NVM subsystem reliability."
                                 syslog.warning(message)
-                                logger.warning(message) 
-                            if smart_value & 0x08:
+                                logger.error(message) 
+                            if smart_value & 0x08 and (not last_smart_value & 0x08):
                                 message = "Device: %s(ID: %s), the media has been placed in read only mode." % (dev_context.dev_path, dev_context.device_id)
-                                syslog.error(message)
+                                syslog.warning(message)
                                 logger.error(message)
-                            if smart_value & 0x10:
+                            if smart_value & 0x10 and (not last_smart_value & 0x10):
                                 message = "Device: %s(ID: %s), the volatile memory backup device has failed." % (dev_context.dev_path, dev_context.device_id)
                                 message += "(Note: only valid if the controller has a volatile memory backup solution)"
                                 syslog.warning(message)
-                                logger.warning(message)
-                            if smart_value & 0x20:
+                                logger.error(message)
+                            if smart_value & 0x20 and (not last_smart_value & 0x20):
                                 message = "Device: %s(ID: %s), the Persistent Memory Region has become read-only or unreliable." % (dev_context.dev_path, dev_context.device_id)
-                                syslog.error(message)
+                                syslog.warning(message)
                                 logger.error(message)
                         else:
-                            message = "No Critical Warning in disk %s(ID: %s)" % (dev_context.dev_path, dev_context.device_id)
+                            message = "No New Critical Warning in disk %s(ID: %s)" % (dev_context.dev_path, dev_context.device_id)
                             logger.info(message)
-                if "Available Spare" in dev_context.smart_attr and "Available Spare Threshold" in dev_context.smart_attr:
-                    smart_as_attr = dev_context.smart_attr.get("Available Spare")
-                    smart_ast_attr = dev_context.smart_attr.get("Available Spare Threshold")
-                    smart_as_current = smart_as_attr.current_value
-                    smart_ast_current = smart_ast_attr.current_value
-                    if smart_as_current[1] > smart_ast_current[1]:
-                        message = "Check Available Spare done in disk %s(ID: %s)" % (dev_context.dev_path, dev_context.device_id)
-                        logger.info(message)
                     else:
-                        message = "Device: %s(ID: %s), the available spare capacity has fallen below the threshold!" % (dev_context.dev_path, dev_context.device_id)
-                        message += " You may need to replace this disk as soon as possible."
-                        syslog.warning(message)
-                        logger.warning(message)
-                if "Percentage Used" in dev_context.smart_attr:
-                    smart_attr = dev_context.smart_attr.get("Percentage Used")
-                    smart_current = smart_attr.current_value
-                    smart_t,smart_value,smart_detail = smart_current
-                    if smart_value < 90:
-                        message = "Check Percentage Used(used %s) done in disk %s(ID: %s)." % (smart_value, dev_context.dev_path, dev_context.device_id)
+                        ## base in spec v1.4
+                        if smart_value & 0x01:
+                            message = "Device: %s(ID: %s), the available spare capacity has fallen below the threshold!" % (dev_context.dev_path, dev_context.device_id)
+                            message += " You may need to replace this disk as soon as possible."
+                            syslog.warning(message)
+                            logger.error(message)
+                        if smart_value & 0x02:
+                            message = "Device: %s(ID: %s), temperature is greater than or equal to an over temperature threshold;" % (dev_context.dev_path, dev_context.device_id)
+                            message += " Or less than or equal to an under temperature threshold!"
+                            syslog.info(message)
+                            logger.error(message)
+                        if smart_value & 0x04:
+                            message = "Device: %s(ID: %s), NVM subsystem reliability has been degraded due to" % (dev_context.dev_path, dev_context.device_id)
+                            message += " significant media related errors or any internal error that degrades NVM subsystem reliability."
+                            syslog.warning(message)
+                            logger.error(message) 
+                        if smart_value & 0x08:
+                            message = "Device: %s(ID: %s), the media has been placed in read only mode." % (dev_context.dev_path, dev_context.device_id)
+                            syslog.warning(message)
+                            logger.error(message)
+                        if smart_value & 0x10:
+                            message = "Device: %s(ID: %s), the volatile memory backup device has failed." % (dev_context.dev_path, dev_context.device_id)
+                            message += "(Note: only valid if the controller has a volatile memory backup solution)"
+                            syslog.warning(message)
+                            logger.error(message)
+                        if smart_value & 0x20:
+                            message = "Device: %s(ID: %s), the Persistent Memory Region has become read-only or unreliable." % (dev_context.dev_path, dev_context.device_id)
+                            syslog.warning(message)
+                            logger.error(message)
+                ## check Available Spare 
+                if "Available Spare" in current_smart.smart_info:
+                    smart_value = current_smart.smart_info["Available Spare"]
+                    if smart_trace.vs_smart_calculated_value:
+                        smart_min = smart_trace.vs_smart_calculated_value["Available Spare"].value_int_min
+                        ##
+                        if (smart_value - smart_min) > 20:
+                            t = smart_trace.vs_smart_calculated_value["Available Spare"].time_t - current_smart.time_t
+                            message = "Device: %s(ID: %s), the Available Spare fall below >20 in past %s seconds." % (dev_context.dev_path, dev_context.device_id, t)
+                            syslog.info(message)
+                            logger.info(message)
+                ## check Available Spare Threshold
+                if "Available Spare Threshold" in current_smart.smart_info:
+                    if current_smart.smart_info["Available Spare"] <= current_smart.smart_info["Available Spare Threshold"]:
+                        if last_smart:
+                            if last_smart.smart_info["Available Spare"] > current_smart.smart_info["Available Spare Threshold"]:
+                                message = "Device: %s(ID: %s), the Available Spare fall below Available Spare Threshold." % (dev_context.dev_path, dev_context.device_id)
+                                syslog.warning(message)
+                                logger.warning(message)
+                            elif current_smart.smart_info["Available Spare"] < last_smart.smart_info["Available Spare"]:
+                                message = "Device: %s(ID: %s), the Available Spare has fell below Available Spare Threshold, and become worse now." % (dev_context.dev_path, dev_context.device_id)
+                                syslog.warning(message)
+                                logger.warning(message)
+                        else:
+                            message = "Device: %s(ID: %s), the Available Spare fall below Available Spare Threshold." % (dev_context.dev_path, dev_context.device_id)
+                            syslog.warning(message)
+                            logger.warning(message)
+                ## check Percentage Used
+                if "Percentage Used" in current_smart.smart_info:
+                    if current_smart.smart_info["Percentage Used"] < 90:
+                        message = "Check Percentage Used(used %s) done in disk %s(ID: %s)." % (current_smart.smart_info["Percentage Used"], dev_context.dev_path, dev_context.device_id)
                         logger.info(message)
-                    elif smart_value < 100:
-                        message = "Device: %s(ID: %s), the Percentage Used(used %s) reached >90." % (smart_value, dev_context.dev_path, dev_context.device_id)
-                        message += " You may need to replace this disk as soon as possible."
-                        syslog.warning(message)
+                    elif current_smart.smart_info["Percentage Used"] < 100:
+                        message = "Device: %s(ID: %s), the Percentage Used(used %s) reached >90." % (dev_context.dev_path, dev_context.device_id, current_smart.smart_info["Percentage Used"])
+                        message += " You may need to attention this disk."
+                        syslog.info(message)
                         logger.warning(message)
                     else:
                         message = "Device: %s(ID: %s), the Percentage Used reached 100." % (dev_context.dev_path, dev_context.device_id)
                         message += " You may need to replace this disk as soon as possible."
                         syslog.warning(message)
                         logger.warning(message)
-                if "Media and Data Integrity Errors" in dev_context.smart_attr:
-                    smart_attr = dev_context.smart_attr.get("Media and Data Integrity Errors")
-                    smart_current = smart_attr.current_value
-                    smart_last = smart_attr.value_list[smart_attr.value_list_head-2]
-                    if smart_current and smart_last:
-                        if smart_current[1] > smart_last[1]:
-                            message = "Device: %s(ID: %s), the Media and Data Integrity Errors increased(%s->%s)!" % (dev_context.dev_path, dev_context.device_id, smart_last[1], smart_current[1])
+                ## check Media and Data Integrity Errors
+                if "Media and Data Integrity Errors" in current_smart.smart_info:
+                    if smart_trace.if_cached_smart():
+                        if current_smart.smart_info["Media and Data Integrity Errors"] > last_smart.smart_info["Media and Data Integrity Errors"]:
+                            message = "Device: %s(ID: %s), the Media and Data Integrity Errors increased(%s->%s)!" % (dev_context.dev_path, dev_context.device_id, last_smart.smart_info["Media and Data Integrity Errors"], current_smart.smart_info["Media and Data Integrity Errors"])
                             message += " Attention for this Device!"
-                            syslog.warning(message)
-                            logger.warning(message)
-                    elif (not smart_last) and smart_current:
-                        if smart_current[1] > 0:
-                            message = "Device: %s(ID: %s), Init Media and Data Integrity Errors numbers: %s!" % (dev_context.dev_path, dev_context.device_id, smart_current[1])
-                            message += " Attention for this Device!"
-                            syslog.warning(message)
+                            syslog.info(message)
                             logger.warning(message)
                         else:
-                            message = "Check Media and Data Integrity Errors(total %s errors) done in disk %s(ID: %s)." % (smart_current[1], dev_context.dev_path, dev_context.device_id)
+                            message = "Device: %s(ID: %s), check the Media and Data Integrity Errors done." % (dev_context.dev_path, dev_context.device_id)
                             logger.info(message)
-                if "Number of Error Information Log Entries" in dev_context.smart_attr:
-                    smart_attr = dev_context.smart_attr.get("Number of Error Information Log Entries")
-                    smart_current = smart_attr.current_value
-                    smart_last = smart_attr.value_list[smart_attr.value_list_head-2]
-                    if smart_current and smart_last:
-                        if smart_current[1] > smart_last[1]:
-                            message = "Device: %s(ID: %s), the Number of Error Information Log Entries increased(%s->%s)!" % (dev_context.dev_path, dev_context.device_id, smart_last[1], smart_current[1])
-                            message += " Attention for this Device!"
-                            syslog.warning(message)
-                            logger.warning(message)
-                    elif (not smart_last) and smart_current:
-                        if smart_current[1] > 0:
-                            message = "Device: %s(ID: %s), Init Number of Error Information Log Entries numbers: %s!" % (dev_context.dev_path, dev_context.device_id, smart_current[1])
-                            message += " Attention for this Device!"
-                            syslog.warning(message)
+                    else:
+                        if current_smart.smart_info["Media and Data Integrity Errors"] > 0:
+                            message = "Device: %s(ID: %s), Init Media and Data Integrity Errors numbers: %s!" % (dev_context.dev_path, dev_context.device_id, current_smart.smart_info["Media and Data Integrity Errors"])
+                            syslog.info(message)
                             logger.warning(message)
                         else:
-                            message = "Check Number of Error Information Log Entries(total %s entries) done in disk %s(ID: %s)." % (smart_current[1], dev_context.dev_path, dev_context.device_id)
+                            message = "Check Media and Data Integrity Errors(total %s errors) done in disk %s(ID: %s)." % (current_smart.smart_info["Media and Data Integrity Errors"], dev_context.dev_path, dev_context.device_id)
+                            logger.info(message)
+                ## check Number of Error Information Log Entries
+                if "Number of Error Information Log Entries" in current_smart.smart_info:
+                    smart_current_value_int = current_smart.smart_info["Number of Error Information Log Entries"]
+                    if smart_trace.if_cached_smart():
+                        smart_last_value_int = last_smart.smart_info["Number of Error Information Log Entries"]
+                        if smart_current_value_int > smart_last_value_int:
+                            message = "Device: %s(ID: %s), the Number of Error Information Log Entries increased(%s->%s)!" % (dev_context.dev_path, dev_context.device_id, smart_last_value_int, smart_current_value_int)
+                            message += " Attention for that!"
+                            syslog.info(message)
+                            logger.warning(message)
+                        else:
+                            message = "Check Number of Error Information Log Entries(total %s entries) done in disk %s(ID: %s)." % (smart_current_value_int, dev_context.dev_path, dev_context.device_id)
+                            logger.info(message)
+                    else:
+                        if smart_current_value_int > 0:
+                            message = "Device: %s(ID: %s), Init Number of Error Information Log Entries numbers: %s!" % (dev_context.dev_path, dev_context.device_id, smart_current_value_int)
+                            message += " Attention for that!"
+                            syslog.info(message)
+                            logger.warning(message)
+                        else:
+                            message = "Check Number of Error Information Log Entries(total %s entries) done in disk %s(ID: %s)." % (smart_current_value_int, dev_context.dev_path, dev_context.device_id)
                             logger.info(message)
                 ### PCIe Check
-                ## check pcie link status & AER
-                if dev_context.pcie_context:
-                    ## check link status
-                    link_status = dev_context.pcie_context.express_link
+                ## check link status
+                link_status = dev_context.pcie_context.express_link
+                last_link_status  = dev_context.pcie_trace.pcie_link_status
+                if last_link_status:
+                    if last_link_status.cur_speed != link_status.cur_speed:
+                        message = "Device: %s(ID: %s), PCIe Speed change form %s to %s." % (dev_context.dev_path, dev_context.device_id, last_link_status.cur_speed, link_status.cur_speed)
+                        message += " Attention for that!"
+                        syslog.info(message)
+                        logger.warning(message)
+                    if last_link_status.cur_width != link_status.cur_width:
+                        message = "Device: %s(ID: %s), PCIe Width change form %s to %s." % (dev_context.dev_path, dev_context.device_id, last_link_status.cur_width, link_status.cur_width)
+                        message += " Attention for that!"
+                        syslog.info(message)
+                        logger.warning(message)
+                else:
                     if link_status.cur_speed != link_status.capable_speed:
-                        if dev_context.pcie_report.link_report_times['speed'] == 0:
-                            message = "Device: %s(ID: %s), PCIe Speed is %s(downgrade), device capacity is %s." % (dev_context.dev_path, dev_context.device_id, link_status.cur_speed, link_status.capable_speed)
-                            message += " Attention for that!"
-                            syslog.warning(message)
-                            logger.warning(message)
-                        dev_context.pcie_report.link_report_times['speed'] += 1
+                        message = "Device: %s(ID: %s), PCIe Speed is %s(downgrade), device capacity is %s." % (dev_context.dev_path, dev_context.device_id, link_status.cur_speed, link_status.capable_speed)
+                        message += " Attention for that!"
+                        syslog.info(message)
+                        logger.warning(message)
                     if link_status.cur_width != link_status.capable_width:
-                        if dev_context.pcie_report.link_report_times['width'] == 0:
-                            message = "Device: %s(ID: %s), PCIe Width is x%s(downgrade), device capacity is x%s." % (dev_context.dev_path, dev_context.device_id, link_status.cur_width, link_status.capable_width)
+                        message = "Device: %s(ID: %s), PCIe Speed is %s(downgrade), device capacity is %s." % (dev_context.dev_path, dev_context.device_id, link_status.cur_width, link_status.capable_width)
+                        message += " Attention for that!"
+                        syslog.info(message)
+                        logger.warning(message) 
+                ## check AER
+                link_aer = dev_context.pcie_context.express_aer
+                last_link_aer = dev_context.pcie_trace.pcie_aer_status
+                if last_link_aer:
+                    for name,status in link_aer['device']['aer_dev_correctable'].items():
+                        if status and (not last_link_aer['device']['aer_dev_correctable'][name]):
+                            message = "Device: %s(ID: %s), PCIe AER CE Error %s checked." % (dev_context.dev_path, dev_context.device_id, name)
                             message += " Attention for that!"
-                            syslog.warning(message)
-                            logger.warning(message)
-                        dev_context.pcie_report.link_report_times['width'] += 1
-                    # check with last time link status
-                    if dev_context.pcie_report.last_link_status['speed']:
-                        if link_status.cur_speed != dev_context.pcie_report.last_link_status['speed']:  # speed changed
-                            message = "Device: %s(ID: %s), PCIe Speed chaned(%s -> %s)." % (dev_context.dev_path, dev_context.device_id, dev_context.pcie_report.last_link_status['speed'], link_status.cur_speed)
                             syslog.info(message)
                             logger.warning(message)
-                            dev_context.pcie_report.last_link_status['speed'] = link_status.cur_speed
-                    if dev_context.pcie_report.last_link_status['width']:
-                        if dev_context.pcie_report.last_link_status['width'] != link_status.cur_width: # width changed
-                            message = "Device: %s(ID: %s), PCIe Width chaned(%s -> %s)." % (dev_context.dev_path, dev_context.device_id, dev_context.pcie_report.last_link_status['width'], link_status.cur_width)
+                    for name,status in link_aer['device']['aer_dev_nonfatal'].items():
+                        if status and (not last_link_aer['device']['aer_dev_nonfatal'][name]):
+                            message = "Device: %s(ID: %s), PCIe AER NonFatal Error %s checked." % (dev_context.dev_path, dev_context.device_id, name)
+                            message += " Attention for that!"
                             syslog.info(message)
                             logger.warning(message)
-                            dev_context.pcie_report.last_link_status['width'] = link_status.cur_width
-                    ## check AER
-                    pcie_aer = dev_context.pcie_context.express_aer
-                    for error_t,status in pcie_aer["device"]["aer_dev_correctable"].items():
+                    for name,status in link_aer['device']['aer_dev_fatal'].items():
+                        if status and (not last_link_aer['device']['aer_dev_fatal'][name]):
+                            message = "Device: %s(ID: %s), PCIe AER UE(Fatal) Error %s checked." % (dev_context.dev_path, dev_context.device_id, name)
+                            message += " Attention for that!"
+                            syslog.info(message)
+                            logger.warning(message)
+                else: # first time to report 
+                    for name,status in link_aer['device']['aer_dev_correctable'].items():
                         if status:
-                            if dev_context.pcie_report.aer_ce_report_times[error_t] == 0:
-                                message = "Device: %s(ID: %s), PCIe AER occur %s." % (dev_context.dev_path, dev_context.device_id, error_t)
-                                message += " Attention for that!"
-                                syslog.info(message)
-                                logger.warning(message)
-                            dev_context.pcie_report.aer_ce_report_times[error_t] += 1
-                    for error_t,status in pcie_aer["device"]["aer_dev_nonfatal"].items():
+                            message = "Device: %s(ID: %s), Init status PCIe AER CE Error %s checked." % (dev_context.dev_path, dev_context.device_id, name)
+                            message += " Attention for that!"
+                            syslog.info(message)
+                            logger.warning(message)
+                    for name,status in link_aer['device']['aer_dev_nonfatal'].items():
                         if status:
-                            if dev_context.pcie_report.aer_nonfatal_report_times[error_t] == 0:
-                                message = "Device: %s(ID: %s), PCIe AER occur %s." % (dev_context.dev_path, dev_context.device_id, error_t)
-                                message += " Attention for that!"
-                                syslog.info(message)
-                                logger.warning(message)
-                            dev_context.pcie_report.aer_nonfatal_report_times[error_t] += 1
-                    for error_t,status in pcie_aer["device"]["aer_dev_fatal"].items():
+                            message = "Device: %s(ID: %s), Init status PCIe AER NonFatal Error %s checked." % (dev_context.dev_path, dev_context.device_id, name)
+                            message += " Attention for that!"
+                            syslog.info(message)
+                            logger.warning(message)
+                    for name,status in link_aer['device']['aer_dev_fatal'].items():
                         if status:
-                            if dev_context.pcie_report.aer_fatal_report_times[error_t] == 0:
-                                message = "Device: %s(ID: %s), PCIe AER occur %s." % (dev_context.dev_path, dev_context.device_id, error_t)
-                                message += " Attention for that!"
-                                syslog.warning(message)
-                                logger.warning(message)
-                            dev_context.pcie_report.aer_fatal_report_times[error_t] += 1
+                            message = "Device: %s(ID: %s), Init status PCIe AER UE(Fatal) Error %s checked." % (dev_context.dev_path, dev_context.device_id, name)
+                            message += " Attention for that!"
+                            syslog.info(message)
+                            logger.warning(message)
+                ## update pcie trace now after check
+                dev_context.update_pcie_trace()
             ## ATA device check
             elif dev_context.device_type == 'ata':
-                dev_context.get_smart_once()
-                if 190 in dev_context.smart_attr: ## Airflow_Temperature_Cel
-                    Airflow_Temperature_Cel = dev_context.smart_attr[190].current_value[1].raw_value_int
+                ### get smart once, return smart trace
+                smart_trace = dev_context.get_smart_once()
+                ### 
+                current_smart = smart_trace.current_value  # current_smart is a SmartInfo object
+                '''
+                ### record temperature
+                if 190 in smart: ## Airflow_Temperature_Cel
+                    Airflow_Temperature_Cel = smart[190].raw_value_int
                     logger.info("dev: %s, Airflow_Temperature_Cel is %s" % (dev_context.dev_path, Airflow_Temperature_Cel))
+                '''
+                ## check start
+                for _id,smart_attr in current_smart.smart_info.items():
+                    ## check current_smart.value and current_smart.worst with smart thresh
+                    if _id in smart_trace.thresh_info and smart_trace.thresh_info[_id].thresh > 0: # valid if thresh value > 0
+                        if smart_attr.value < smart_trace.thresh_info[_id].thresh:
+                            if smart_trace.vs_smart_calculated_value and smart_trace.vs_smart_calculated_value[_id].value_int_min > smart_trace.thresh_info[_id].thresh:
+                                message1 = "Device: %s(ID: %s), smart #ID %s value fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
+                                logger.warning(message1)
+                                if smart_attr.flag_decode["Pre-fail"]:
+                                    syslog.warning(message1)
+                                else:
+                                    syslog.info(message1)
+                            elif not smart_trace.vs_smart_calculated_value: # first time to report the message
+                                message1 = "Device: %s(ID: %s), smart #ID %s check error(value < threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
+                                if smart_attr.flag_decode["Pre-fail"]:
+                                    message2 = "#ID: %s, smart name: %s, Pre-fail, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id].thresh)
+                                    logger.warning(message1, message2)
+                                    syslog.warning(message1, message2)
+                                else:
+                                    message2 = "#ID: %s, smart name: %s, Old_age, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id].thresh)
+                                    logger.warning(message1, message2)
+                                    syslog.info(message1, message2)
+                            else:    # vs_smart_calculated_value not init Or have report this error, will not duplicate report
+                                pass
+                        ## check worst value
+                        if smart_attr.worst < smart_trace.thresh_info[_id].thresh:
+                            if smart_trace.vs_smart_calculated_value and smart_trace.vs_smart_calculated_value[_id].worst_int_min > smart_trace.thresh_info[_id].thresh:
+                                message1 = "Device: %s(ID: %s), smart #ID %s worst fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
+                                logger.warning(message1)
+                                if smart_attr.flag_decode["Pre-fail"]:
+                                    syslog.warning(message1)
+                                else:
+                                    syslog.info(message1)
+                            elif not smart_trace.vs_smart_calculated_value: # first time to report the message
+                                message1 = "Device: %s(ID: %s), smart #ID %s check error(worst < threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
+                                if smart_attr.flag_decode["Pre-fail"]:
+                                    message2 = "#ID: %s, smart name: %s, Pre-fail, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id].thresh)
+                                    logger.warning(message1, message2)
+                                    syslog.warning(message1, message2)
+                                else:
+                                    message2 = "#ID: %s, smart name: %s, Old_age, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id].thresh)
+                                    logger.warning(message1, message2)
+                                    syslog.info(message1, message2)
+                            else:  # vs_smart_calculated_value not init Or have report this error
+                                pass
+                    ## check fall values
+                    #  pre-fail will report every 10 falls, Old_age report every 15 falls
+                    if smart_attr.flag_decode["Pre-fail"]:  # pre-fail
+                        if smart_trace.vs_smart_calculated_value and (smart_attr.value - smart_trace.vs_smart_calculated_value[_id].value_int_min) > 10:
+                            message1 = "Device: %s(ID: %s), smart #ID(Pre-fail) %s value reduce more than 10. " % (dev_context.dev_path, dev_context.device_id, _id)
+                            syslog.info(message1)
+                            logger.info(message1)
+                    else: # Old_age
+                        if smart_trace.vs_smart_calculated_value and (smart_attr.value - smart_trace.vs_smart_calculated_value[_id].value_int_min) > 15:
+                            message1 = "Device: %s(ID: %s), smart #ID(Old_age) %s value reduce more than 15. " % (dev_context.dev_path, dev_context.device_id, _id)
+                            syslog.info(message1)
+                            logger.info(message1)
+            else:  # SCSI(SAS) Disk
+                pass
         logger.info("Check done")
         time_left = options.check_interval - time.time() + start_t
         if time_left > 0:

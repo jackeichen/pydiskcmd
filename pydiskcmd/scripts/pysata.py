@@ -5,6 +5,7 @@ import sys,os
 import optparse
 import binascii
 from pydiskcmd.pysata.sata import SATA
+from pydiskcmd.pysata.sata_spec import decode_smart_thresh
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
 from pydiskcmd.utils.format_print import format_dump_bytes
@@ -367,13 +368,16 @@ def smart():
         with SATA(init_device(dev), 512) as d:
             print ('issuing smart command')
             print ("%s:" % d.device._file_name)
-            cmd = d.smart(SMART_KEY)
+            cmd = d.smart_read_data(SMART_KEY)
             return_descriptor = cmd.ata_status_return_descriptor
             if options.show_status:
                 _print_return_status(return_descriptor)
             data = cmd.result
             vs_smart = data.pop('smartInfo')
             general_smart = data
+            ##
+            cmd = d.smart_read_thresh()
+            smart_thread = decode_smart_thresh(cmd.datain[2:362])
         ##
         if data:
             print ('General SMART Values:')
@@ -402,7 +406,7 @@ def smart():
                        bytearray2hex_l(vs_smart, i+5, 2),       # RAW_VALUE0
                        bytearray2hex_l(vs_smart, i+7, 2),       # RAW_V_MIN
                        bytearray2hex_l(vs_smart, i+9, 2),       # RAW_V_MAX
-                       vs_smart[i+11])                          # THRESHOLD
+                       smart_thread[vs_smart[i]])               # THRESHOLD
                        )
     else:
         parser.print_help()
