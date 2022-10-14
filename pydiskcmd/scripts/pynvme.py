@@ -33,6 +33,7 @@ def print_help():
     print ("  fw-log                Retrieve FW Log, show it")
     print ("  fw-download           Download new firmware")
     print ("  fw-commit             Verify and commit firmware to a specific slot")
+    print ("  format                Format namespace with new block format")
     print ("  version               Shows the program version")
     print ("  help                  Shows the program version")
     print ("")
@@ -320,6 +321,36 @@ def fw_commit():
     else:
         parser.print_help()
 
+def nvme_format():
+    usage="usage: %prog format <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0xFFFFFFFF,
+        help="identifier of desired namespace. Default 0xFFFFFFFF")
+    parser.add_option("-l", "--lbaf", type="int", dest="lbaf", action="store", default=-1,
+        help="LBA format to apply (required)")
+    parser.add_option("-s", "--ses", type="int", dest="ses", action="store", default=0,
+        help="[0-2]: secure erase")
+    parser.add_option("-i", "--pi", type="int", dest="pi", action="store", default=0,
+        help="[0-3]: protection info off/Type, 1/Type 2/Type 3")
+    parser.add_option("-p", "--pil", type="int", dest="pil", action="store", default=1,
+        help="[0-1]: protection info location, last/first 8 bytes of metadata")
+    parser.add_option("-m", "--ms", type="int", dest="ms", action="store", default=0,
+        help="[0-1]: extended format off/on")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        if options.lbaf < 0:
+            parser.error("You need give the lbaf.")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.nvme_format(options.lbaf, nsid=options.namespace_id, mset=options.ms, pi=options.pi, pil=options.pil, ses=options.ses)
+    else:
+        parser.print_help()
+
 
 commands_dict = {"list": _list,
                  "smart-log": smart_log,
@@ -329,6 +360,7 @@ commands_dict = {"list": _list,
                  "fw-log": fw_log,
                  "fw-download": fw_download, 
                  "fw-commit": fw_commit, 
+                 "format": nvme_format,
                  "version": version,
                  "help": print_help}
 

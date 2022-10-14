@@ -13,8 +13,8 @@ class CommandDecoder(object):
         SC = (self.status & 0xFF)
         SCT = ((self.status >> 8) & 0x07)
         CRD = ((self.status >> 11) & 0x03)
-        More = (self.status >> 13)
-        DNR = (self.status >> 14)
+        More = (self.status >> 13 & 0x01)
+        DNR = (self.status >> 14 & 0x01)
         if hint:
             if SCT == 0 and SC == 0:
                 if success_hint:

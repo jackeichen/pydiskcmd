@@ -5,6 +5,7 @@
 import os
 from pydiskcmd.pynvme.command_structure import CmdStructure
 from pydiskcmd.pynvme.nvme_device import NVMeDevice
+from pydiskcmd.pynvme.nvme_command import build_command
 from pydiskcmd.pynvme.nvme_spec import nvme_id_ns_decode,nvme_id_ctrl_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int
 
@@ -311,3 +312,28 @@ class NVMe(object):
         ret = self.execute_io(cmd_struc)
         ret.check_status()
         return ret
+
+    def nvme_format(self, lbaf, mset=0, pi=0, pil=1, ses=0, nsid=0xFFFFFFFF):
+        ### Check parameters
+        if (not self.__ctrl_identify_info[524] & 0x01) and nsid == 0xFFFFFFFF:
+            print ("The controller supports format on a per namespace basis.")
+        if (not self.__ctrl_identify_info[524] & 0x02) and ses and nsid == 0xFFFFFFFF:
+            print ("Any secure erase performed as part of a format results in a secure erase of the particular namespace specified")
+        ### build command
+        cdw10 = build_command({"lbaf": (0x0F, 0, lbaf),
+                               "mset": (0x10, 0 ,mset),
+                               "pi": (0xE0, 0, pi),
+                               "pil": (0x01, 1, pil),
+                               "ses": (0x0E, 1, ses)})
+        ###
+        cmd_struc = CmdStructure(opcode=0x80,
+                                 nsid=nsid,
+                                 cdw10=cdw10,
+                                 timeout_ms=600000)
+        ###
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
+
+
