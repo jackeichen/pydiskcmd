@@ -55,7 +55,7 @@ You can avoid installing the optional dependencies by omitting the "extras":
 
     $ pip install .
 
-After your installation, you can use command to anable Linux Bash Completion:
+After your installation, you can use command to enable Linux Bash Completion:
 
     $ pydiskcmd --en_completion
 

@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+import os
+
+def check_file_exist(file):
+    return os.path.isfile(file)
+
+
+
+class NVMeAER(object):
+    '''
+    NVMe Asynchronous Event Check
+    '''
+    def __init__(self):
+        self.__aer_enable_file = "/sys/kernel/debug/tracing/events/nvme/nvme_async_event/enable"
+        self.__trace_log_file = "/sys/kernel/debug/tracing/trace"
+        self.__last_file_index = 0
+        if (not os.path.isfile(self.__aer_enable_file)) or (not os.path.isfile(self.__trace_log_file)):
+            return
+        if not self.check_aer_status():
+            self.enable_aer()
+
+    def enable_aer(self):
+        with open(self.__aer_enable_file, "w") as f:
+            f.write("1")
+
+    def disable_aer(self):
+        with open(self.__aer_enable_file, "w") as f:
+            f.write("0")
+
+    def check_aer_status(self):
+        with open(self.__aer_enable_file, "r") as f:
+            status = f.read()
+        return int(status)
+
+    def check_trace_once(self):
+        '''
+        description = {"TASK-PID": '',
+                       "CPU#": '',
+                       "setting": '',
+                       "TIMESTAMP": 0,
+                       "DEV": '',
+                       "NVME_AEN": '',
+                       "AER_TYPE": }
+        '''
+        nvme_aer = []
+        ##
+        with open(self.__trace_log_file, 'r') as f:
+            while True:
+                content = f.readline()
+                ## skip annotation
+                if not content.startswith("#"):
+                    ## check if nvme_async_event
+                    if "nvme_async_event:" in content:
+                        content = content.strip()
+                        temp_list = content.split(' ')
+                        for i in range(len(temp_list)):
+                            if temp_list[i] == '':
+                                temp_list.remove('')
+                            elif temp_list[i].endswith(":"):
+                                temp_list[i] = temp_list[i].rstrip(":")
+                        ##
+                        description["TASK-PID"] = temp_list[0]
+                        description["CPU#"] = temp_list[1]
+                        description["setting"] = temp_list[2]
+                        description["TIMESTAMP"] = float(temp_list[3])
+                        description["DEV"] = temp_list[5]
+                        description["NVME_AEN"] = temp_list[6]
+                        description["AER_TYPE"] = temp_list[7]
+                        nvme_aer.append(description)
+        return nvme_aer
