@@ -97,18 +97,15 @@ Use bellow command to get help:
 
 
 pydiskhealthd
-==============
+=============
 pydiskhealthd is a Disk Health Monitoring and Reporting tool. It check NVMe PCie Registers 
 and smart for nvme disk, smart attributes for sata disk, in a specific time interval(default 1h).
-
 Logs maybe Generated when below values changed/set/fall below threshold.
 
 For NVMe Disk:
   
   * PCIe Link Status;
-  
   * PCIe AER Registers;
-  
   * smart values;
 
 For SATA Disk:
@@ -117,7 +114,6 @@ For SATA Disk:
 
 These logs may record to either syslog or pydiskhealthd running log(in /var/log/pydiskcmd/pydiskhealthd.log), 
 or both. 
-
 The user(need root) can enable systemd service(pydiskhealthd.service), which make pydiskhealthd running as a 
 backend service and start-up service. Enable and start it by: 
 
