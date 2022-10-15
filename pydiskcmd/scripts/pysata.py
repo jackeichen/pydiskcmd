@@ -38,6 +38,7 @@ def print_help():
     print ("  write                       Send a write command to disk")
     print ("  flush                       Send a flush command to disk")
     print ("  trim                        Send a trim command to disk")
+    print ("  download_fw                 Download firmware to target disk")
     print ("  version                     Shows the program version")
     print ("  help                        Shows the program version")
     print ("")
@@ -479,6 +480,39 @@ def trim():
     else:
         parser.print_help()
 
+def download_fw():
+    usage="usage: %prog standby <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-f", "--file", dest="fw_file", action="store", default='',
+        help="The firmware file path.")
+    parser.add_option("-c", "--code", type="choice", dest="code", action="store", choices=[0x03, 0x07, 0x0E, 0x0F], default=3,
+        help="The subcommand code to use, default 3")
+    parser.add_option("-x", "--xfer", type=int, dest="xfer", action="store", default=0x200,
+        help="Transfer chunksize.")
+
+    print ("Function Not Ready Now.")
+    return
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        if not os.path.isfile(options.fw_file):
+            parser.error("Firmware file Not Exist.")
+        ##
+        with SATA(init_device(dev), 512) as d:
+            print ('issuing download microcode command')
+            print ("%s:" % d.device._file_name)
+            rc = d.download_fw(options.fw_file, transfer_size=options.xfer, feature=options.code)
+            if rc == 0:
+                print ("Success to download firmware.")
+            else:
+                print ("Failed to download firmware.")
+    else:
+        parser.print_help()
+
+
 commands_dict = {"check-PowerMode": check_power_mode,
                  "accessible-MaxAddress": accessible_max_address,
                  "identify": identify, 
@@ -489,6 +523,7 @@ commands_dict = {"check-PowerMode": check_power_mode,
                  "write": write_dma_ext,
                  "flush": flush,
                  "trim": trim,
+                 "download_fw": download_fw,
                  "version": version,
                  "help": print_help}
 

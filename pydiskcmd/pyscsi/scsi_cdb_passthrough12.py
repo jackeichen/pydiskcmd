@@ -152,14 +152,12 @@ class PassThrough12(SCSICommand):
                        control=control,
                        )
         ###
+        self.ata_sense_data_condition = None
         self.ata_sense_data = {}
-
-    def _get_ata_sense_data(self, sense):
-        ata_sense_data_condition = ATACheckReturnDescriptorCondition(sense)
-        return ata_sense_data_condition.data
 
     @property
     def ata_status_return_descriptor(self):
         if not self.ata_sense_data:
-            self.ata_sense_data = self._get_ata_sense_data(self.sense)
+            self.ata_sense_data_condition = ATACheckReturnDescriptorCondition(self.sense)
+            self.ata_sense_data = self.ata_sense_data_condition.data
         return self.ata_sense_data.get("ata_pass_thr_return_descriptor")

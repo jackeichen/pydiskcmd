@@ -21,6 +21,8 @@ from pydiskcmd.pysata.ata_cdb_hardreset import Hardreset
 from pydiskcmd.pysata.ata_cdb_softreset import SoftReset
 from pydiskcmd.pysata.ata_cdb_DeviceReset import DeviceReset
 from pydiskcmd.pysata.ata_cdb_executeDeviceDiagnostic import ExecuteDeviceDiagnostic
+from pydiskcmd.pysata.ata_cdb_downloadmicrocode import DownloadMicrocode
+
 
 code_version = "0.1.0"
 
@@ -156,8 +158,8 @@ class SATA(object):
         return cmd
 
     def read_DMAEXT16(self, 
-                   lba,
-                   tl,):
+                      lba,
+                      tl,):
         """
         Returns a Read16 Instance
 
@@ -172,9 +174,9 @@ class SATA(object):
         return cmd
     
     def write_DMAEXT16(self,
-                    lba,
-                    tl,
-                    data):
+                       lba,
+                       tl,
+                       data):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = WriteDMAEXT16(opcode, self.blocksize, lba, tl, data)
         self.execute(cmd)
@@ -316,3 +318,75 @@ class SATA(object):
         cmd = ExecuteDeviceDiagnostic(opcode, self.blocksize)
         self.execute(cmd)
         return cmd
+
+    def download_microcode(self,
+                           feature,
+                           lba,
+                           tl,
+                           data):
+        opcode = self.device.opcodes.PASS_THROUGH_16
+        cmd = DownloadMicrocode(opcode, self.blocksize, lba, tl, data, feature=feature)
+        self.execute(cmd)
+        return cmd
+
+    def download_fw(self, fw_path, transfer_size=0x200, feature=0x03):
+        '''
+        transfer_data_size = (transfer_size * 512), in every transfer, <transfer_data_size> blocks to transfer.
+        '''
+        ## read fw data
+        with open(fw_path, 'rb') as fp:
+            data = fp.read()
+        ## check fw if multiple of 512
+        res = len(data) % 512
+        if res != 0:
+            data += (b'\x00'*(512-re)) # need to be multiple of 512 Bytes, otherwise refill it.
+        #dataview = memoryview(data)
+        lba = 0
+        length = len(data) / 512  # length=how many sectors(512 Bytes) of data
+        ##
+        if feature == 0x03 or feature == 0x0E:
+            quotients = int(length / transfer_size) # 
+            remainders = int(length % transfer_size)
+            ##
+            data_size = 512*transfer_size
+            ##
+            for i in range(0, quotients):
+                cmd = self.download_microcode(feature, lba, transfer_size, data[i*data_size:(i+1)*data_size])
+                ## first check sense data
+                return_descriptor = cmd.ata_status_return_descriptor
+                if return_descriptor:
+                    if return_descriptor.get("error") != 0:
+                        print ("Cycle: %s,Error: %s, status: %s" % (i, return_descriptor.get("error"), return_descriptor.get("status")))
+                        return 1
+                elif cmd.ata_sense_data_condition:  # something may be wrong here, check!
+                    print ("Cycle: %s, Descrption: %s" % (i, cmd.ata_sense_data_condition._describe_ascq()))
+                    print ('')
+                    print (cmd.ata_sense_data_condition.data)
+                    return 2
+                lba += transfer_size
+            if remainders != 0:
+                cmd = self.download_microcode(feature, lba, remainders, data[quotients*data_size:])
+                ##
+                ## first check sense data
+                return_descriptor = cmd.ata_status_return_descriptor
+                if return_descriptor:
+                    if return_descriptor.get("error") != 0:
+                        print ("Cycle: %s, Error: %s, status: %s" % (i+1, return_descriptor.get("error"), return_descriptor.get("status")))
+                elif cmd.ata_sense_data_condition:  # something may be wrong here, check!
+                    print ("Cycle: %s, Descrption: %s" % (i+1, cmd.ata_sense_data_condition._describe_ascq()))
+                    print ('')
+                    print (cmd.ata_sense_data_condition.data)
+        else:
+            cmd = self.download_microcode(feature, lba, length, data)
+            ## first check sense data
+            return_descriptor = cmd.ata_status_return_descriptor
+            if return_descriptor:
+                if return_descriptor.get("error") != 0:
+                    print ("Error: %s, status: %s" % (return_descriptor.get("error"), return_descriptor.get("status")))
+                    return 1
+            elif cmd.ata_sense_data_condition:  # something may be wrong here, check!
+                print (cmd.ata_sense_data_condition._describe_ascq())
+                print ('')
+                print (cmd.ata_sense_data_condition.data)
+                return 2
+        return 0

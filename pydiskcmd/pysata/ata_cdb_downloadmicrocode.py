@@ -17,7 +17,7 @@
 from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
 
 
-class DownloadMicrocodeDMA(PassThrough16):
+class DownloadMicrocode(PassThrough16):
     """
     A class to send download microcode command to a ATA device
     """
@@ -26,20 +26,21 @@ class DownloadMicrocodeDMA(PassThrough16):
                  blocksize,
                  lba,
                  tl,
-                 data):
+                 data,
+                 feature=0x03):
+        count_l = (tl & 0xff)
         count_h = (tl >> 8)
         lba_pass = (lba << 8) + count_h
-        count_l = (tl & 0xff)
         PassThrough16.__init__(self,
                              opcode,
                              blocksize,
                              lba_pass, # lba
-                             0x6,      # protocal
+                             0x5,      # protocal, 0x5: PIO Data-Out
                              2,        # t_length 
                              0,        # t_dir
-                             3,        # feature
+                             feature,  # feature
                              count_l,  # sector_count
-                             0x93,     # command
+                             0x92,     # command
                              dataout=data,
                              ck_cond=1)
         
