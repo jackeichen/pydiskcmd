@@ -43,4 +43,25 @@ class DownloadMicrocode(PassThrough16):
                              0x92,     # command
                              dataout=data,
                              ck_cond=1)
+
+
+class ActivateMicrocode(PassThrough16):
+    """
+    A class to send activate download microcode command to a ATA device
+    """
+    def __init__(self,
+                 opcode,
+                 blocksize):
+        PassThrough16.__init__(self,
+                             opcode,
+                             blocksize,
+                             0,        # lba
+                             0x3,      # protocal, 0x3: Non-data
+                             0,        # t_length, 00h: No data is transferred
+                             0,        # t_dir, this field shall be ignored when T_Length=0
+                             0x0F,     # feature
+                             0,        # sector_count
+                             0x92,     # command
+                             ck_cond=1)
+
         

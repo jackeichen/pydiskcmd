@@ -55,7 +55,8 @@ You can avoid installing the optional dependencies by omitting the "extras":
 
     $ pip install .
 
-After your installation, you can use command to enable Linux Bash Completion:
+After your installation, you can use command to enable Linux Bash Completion for 
+command pynvme&pysata:
 
     $ pydiskcmd --en_completion
 
@@ -99,8 +100,11 @@ Use bellow command to get help:
 pydiskhealthd
 =============
 pydiskhealthd is a Disk Health Monitoring and Reporting tool. It check NVMe PCie Registers 
-and smart for nvme disk, smart attributes for sata disk, in a specific time interval(default 1h).
-Logs maybe Generated when below values changed/set/fall below threshold.
+and smart for nvme disk, smart attributes for sata disk, in a specific time interval(default 1h). 
+The pydiskhealthd usually runs in only-one-per-environment mode(default mode). 
+
+Logs maybe Generated when below values changed/set/fall below threshold. These logs may record to 
+either syslog or pydiskhealthd running log(in /var/log/pydiskcmd/pydiskhealthd.log), or both of them.
 
 For NVMe Disk:
   
@@ -110,10 +114,8 @@ For NVMe Disk:
 
 For SATA Disk:
 
-  * Smart Pre-fail/Old_age attributes;
+  * Smart Pre-fail/Old_age attributes; 
 
-These logs may record to either syslog or pydiskhealthd running log(in /var/log/pydiskcmd/pydiskhealthd.log), 
-or both. 
 The user(need root) can enable systemd service(pydiskhealthd.service), which make pydiskhealthd running as a 
 backend service and start-up service. Enable and start it by: 
 
@@ -121,7 +123,7 @@ backend service and start-up service. Enable and start it by:
 
 After that, the user can manage the pydiskhealthd with command "systemctl". Auto start service is recommended:
 
-    $ systemctl enable pydiskhealthd
+    $ systemctl enable pydiskhealthd.service
 
 
 Advanced Usage

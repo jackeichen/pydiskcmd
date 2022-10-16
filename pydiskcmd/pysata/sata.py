@@ -21,7 +21,7 @@ from pydiskcmd.pysata.ata_cdb_hardreset import Hardreset
 from pydiskcmd.pysata.ata_cdb_softreset import SoftReset
 from pydiskcmd.pysata.ata_cdb_DeviceReset import DeviceReset
 from pydiskcmd.pysata.ata_cdb_executeDeviceDiagnostic import ExecuteDeviceDiagnostic
-from pydiskcmd.pysata.ata_cdb_downloadmicrocode import DownloadMicrocode
+from pydiskcmd.pysata.ata_cdb_downloadmicrocode import DownloadMicrocode,ActivateMicrocode
 
 
 code_version = "0.1.0"
@@ -329,6 +329,12 @@ class SATA(object):
         self.execute(cmd)
         return cmd
 
+    def active_delayed_microcode(self):
+        opcode = self.device.opcodes.PASS_THROUGH_16
+        cmd = ActivateMicrocode(opcode, self.blocksize)
+        self.execute(cmd)
+        return cmd
+
     def download_fw(self, fw_path, transfer_size=0x200, feature=0x03):
         '''
         transfer_data_size = (transfer_size * 512), in every transfer, <transfer_data_size> blocks to transfer.
@@ -376,7 +382,8 @@ class SATA(object):
                     print ("Cycle: %s, Descrption: %s" % (i+1, cmd.ata_sense_data_condition._describe_ascq()))
                     print ('')
                     print (cmd.ata_sense_data_condition.data)
-        else:
+        elif feature == 0x07:
+            length = 0
             cmd = self.download_microcode(feature, lba, length, data)
             ## first check sense data
             return_descriptor = cmd.ata_status_return_descriptor
@@ -389,4 +396,6 @@ class SATA(object):
                 print ('')
                 print (cmd.ata_sense_data_condition.data)
                 return 2
+        else:
+            return 3
         return 0
