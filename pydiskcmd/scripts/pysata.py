@@ -490,8 +490,6 @@ def download_fw():
     parser.add_option("-x", "--xfer", type=int, dest="xfer", action="store", default=0x200,
         help="Transfer chunksize.")
 
-    print ("Function Not Ready Now.")
-    return
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
@@ -508,7 +506,7 @@ def download_fw():
             if rc == 0:
                 print ("Success to download firmware.")
             else:
-                print ("Failed to download firmware.")
+                print ("Failed to download firmware. Return Code: %s" % rc)
     else:
         parser.print_help()
 

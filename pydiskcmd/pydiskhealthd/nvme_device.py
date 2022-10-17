@@ -14,81 +14,6 @@ PCIeMappingPath = "/sys/class/nvme/%s/address"
 SMARTTracePath = "/var/log/pydiskcmd/smart_trace/"
 ###
 
-class PCIeReport(object): 
-    """
-    'RxErr', 'BadTLP', 'BadDLLP', 'Rollover', 'Timeout', 'NonFatalErr', 'CorrIntErr', 'HeaderOF', 'TOTAL_ERR_COR'
-    
-    'Undefined', 'DLP', 'SDES', 'TLP', 'FCP', 'CmpltTO', 'CmpltAbrt', 'UnxCmplt', 'RxOF', 'MalfTLP', 'ECRC', 'UnsupReq', 
-    'ACSViol', 'UncorrIntErr', 'BlockedTLP', 'AtomicOpBlocked', 'TLPBlockedErr', 'PoisonTLPBlocked', 'TOTAL_ERR_FATAL'
-    """
-    def __init__(self):
-        ## link status
-        self.link_report_times = {"speed": 0,
-                                  "width": 0}
-        self.last_link_status = {"speed": '',
-                                 "width": 0}
-        ## AER
-        self.aer_ce_report_times = {'RxErr': 0, 
-                                    'BadTLP': 0, 
-                                    'BadDLLP': 0, 
-                                    'Rollover': 0, 
-                                    'Timeout': 0, 
-                                    'NonFatalErr': 0, 
-                                    'CorrIntErr': 0, 
-                                    'HeaderOF': 0, 
-                                    'TOTAL_ERR_COR': 0}
-        self.aer_fatal_report_times = {'Undefined': 0, 
-                                       'DLP': 0, 
-                                       'SDES': 0, 
-                                       'TLP': 0, 
-                                       'FCP': 0, 
-                                       'CmpltTO': 0, 
-                                       'CmpltAbrt': 0, 
-                                       'UnxCmplt': 0, 
-                                       'RxOF': 0, 
-                                       'MalfTLP': 0, 
-                                       'ECRC': 0, 
-                                       'UnsupReq': 0, 
-                                       'ACSViol': 0, 
-                                       'UncorrIntErr': 0, 
-                                       'BlockedTLP': 0, 
-                                       'AtomicOpBlocked': 0, 
-                                       'TLPBlockedErr': 0, 
-                                       'PoisonTLPBlocked': 0, 
-                                       'TOTAL_ERR_FATAL': 0}
-        self.aer_nonfatal_report_times = {'Undefined': 0, 
-                                          'DLP': 0, 
-                                          'SDES': 0, 
-                                          'TLP': 0, 
-                                          'FCP': 0, 
-                                          'CmpltTO': 0, 
-                                          'CmpltAbrt': 0, 
-                                          'UnxCmplt': 0, 
-                                          'RxOF': 0, 
-                                          'MalfTLP': 0, 
-                                          'ECRC': 0, 
-                                          'UnsupReq': 0, 
-                                          'ACSViol': 0, 
-                                          'UncorrIntErr': 0, 
-                                          'BlockedTLP': 0, 
-                                          'AtomicOpBlocked': 0, 
-                                          'TLPBlockedErr': 0, 
-                                          'PoisonTLPBlocked': 0, 
-                                          'TOTAL_ERR_NONFATAL': 0}
-
-    def set_aer_report_time(self, aer_type, error):
-        if aer_type == "aer_dev_correctable" and error in self.aer_ce_report_times:
-            self.aer_ce_report_times[error] += 1
-        elif aer_type == "aer_dev_fatal" and error in self.aer_fatal_report_times:
-            self.aer_fatal_report_times[error] += 1
-        elif aer_type == "aer_dev_nonfatal" and error in self.aer_nonfatal_report_times:
-            self.aer_nonfatal_report_times[error] += 1
-        else:
-            pass
-
-
-###############################################################################
-###############################################################################
 
 class SmartInfo(object):
     def __init__(self, raw_value, time_t):
@@ -208,20 +133,8 @@ class NVMeDevice(object):
         bus_address = self._get_bus_addr_by_controller(dev_path)
         self.pcie_context = map_pci_device(bus_address)
         self.__pcie_trace = PCIeTrace()
-        self.pcie_report = PCIeReport()  ## class used by pydiskhealthd
         # init smart attr
         self.__smart_trace = SmartTrace()
-        '''
-        self.__smart_attr = {"Critical Warning": SmartKeyAttr("Critical Warning"),
-                             "Available Spare": SmartKeyAttr("Available Spare"),
-                             "Available Spare Threshold": SmartKeyAttr("Available Spare Threshold"),
-                             "Percentage Used": SmartKeyAttr("Percentage Used"),
-                             "Media and Data Integrity Errors": SmartKeyAttr("Media and Data Integrity Errors"),
-                             "Number of Error Information Log Entries": SmartKeyAttr("Number of Error Information Log Entries"),
-                             "Warning Composite Temperature Time": SmartKeyAttr("Warning Composite Temperature Time"),
-                             "Critical Composite Temperature Time": SmartKeyAttr("Critical Composite Temperature Time "),
-                            }
-        '''
         ## get device ID
         self.__device_id = None
         with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
@@ -267,17 +180,6 @@ class NVMeDevice(object):
         with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
             cmd = d.smart_log()
         self.__smart_trace.set_smart(cmd.data, int(time.time()))
-        '''
-        smart = nvme_smart_decode(cmd.data)
-        self.__smart_attr["Critical Warning"].set_value(scsi_ba_to_int(smart.get("Critical Warning"), 'little'))
-        self.__smart_attr["Available Spare"].set_value(scsi_ba_to_int(smart.get("Available Spare"), 'little'))
-        self.__smart_attr["Available Spare Threshold"].set_value(scsi_ba_to_int(smart.get("Available Spare Threshold"), 'little'))
-        self.__smart_attr["Percentage Used"].set_value(scsi_ba_to_int(smart.get("Percentage Used"), 'little'))
-        self.__smart_attr["Media and Data Integrity Errors"].set_value(scsi_ba_to_int(smart.get("Media and Data Integrity Errors"), 'little'))
-        self.__smart_attr["Number of Error Information Log Entries"].set_value(scsi_ba_to_int(smart.get("Number of Error Information Log Entries"), 'little'))
-        self.__smart_attr["Warning Composite Temperature Time"].set_value(scsi_ba_to_int(smart.get("Warning Composite Temperature Time"), 'little'))
-        self.__smart_attr["Critical Composite Temperature Time"].set_value(scsi_ba_to_int(smart.get("Critical Composite Temperature Time"), 'little'))
-        '''
         return self.__smart_trace
 
     def update_pcie_trace(self):
