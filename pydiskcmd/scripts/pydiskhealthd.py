@@ -261,6 +261,11 @@ def pydiskhealthd():
                         else:
                             message = "Check Number of Error Information Log Entries(total %s entries) done in disk %s(ID: %s)." % (smart_current_value_int, dev_context.dev_path, dev_context.device_id)
                             logger.info(message)
+                ## Record Current Tempeture
+                if "Composite Temperature" in current_smart.smart_info:
+                    temperature = current_smart.smart_info["Composite Temperature"] - 273.15
+                    message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
+                    logger.info(message)
                 ### PCIe Check
                 ## check link status
                 link_status = dev_context.pcie_context.express_link
@@ -336,18 +341,12 @@ def pydiskhealthd():
                 smart_trace = dev_context.get_smart_once()
                 ### 
                 current_smart = smart_trace.current_value  # current_smart is a SmartInfo object
-                '''
-                ### record temperature
-                if 190 in smart: ## Airflow_Temperature_Cel
-                    Airflow_Temperature_Cel = smart[190].raw_value_int
-                    logger.info("dev: %s, Airflow_Temperature_Cel is %s" % (dev_context.dev_path, Airflow_Temperature_Cel))
-                '''
                 ## check start
                 for _id,smart_attr in current_smart.smart_info.items():
                     ## check current_smart.value and current_smart.worst with smart thresh
-                    if _id in smart_trace.thresh_info and smart_trace.thresh_info[_id].thresh > 0: # valid if thresh value > 0
-                        if smart_attr.value < smart_trace.thresh_info[_id].thresh:
-                            if smart_trace.vs_smart_calculated_value and smart_trace.vs_smart_calculated_value[_id].value_int_min > smart_trace.thresh_info[_id].thresh:
+                    if _id in smart_trace.thresh_info and smart_trace.thresh_info[_id] > 0: # valid if thresh value > 0
+                        if smart_attr.value < smart_trace.thresh_info[_id]:
+                            if smart_trace.vs_smart_calculated_value and smart_trace.vs_smart_calculated_value[_id].value_int_min > smart_trace.thresh_info[_id]:
                                 message1 = "Device: %s(ID: %s), smart #ID %s value fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
                                 logger.warning(message1)
                                 if smart_attr.flag_decode["Pre-fail"]:
@@ -357,18 +356,18 @@ def pydiskhealthd():
                             elif not smart_trace.vs_smart_calculated_value: # first time to report the message
                                 message1 = "Device: %s(ID: %s), smart #ID %s check error(value < threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
                                 if smart_attr.flag_decode["Pre-fail"]:
-                                    message2 = "#ID: %s, smart name: %s, Pre-fail, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id].thresh)
+                                    message2 = "#ID: %s, smart name: %s, Pre-fail, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id])
                                     logger.warning(message1, message2)
                                     syslog.warning(message1, message2)
                                 else:
-                                    message2 = "#ID: %s, smart name: %s, Old_age, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id].thresh)
+                                    message2 = "#ID: %s, smart name: %s, Old_age, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id])
                                     logger.warning(message1, message2)
                                     syslog.info(message1, message2)
                             else:    # vs_smart_calculated_value not init Or have report this error, will not duplicate report
                                 pass
                         ## check worst value
-                        if smart_attr.worst < smart_trace.thresh_info[_id].thresh:
-                            if smart_trace.vs_smart_calculated_value and smart_trace.vs_smart_calculated_value[_id].worst_int_min > smart_trace.thresh_info[_id].thresh:
+                        if smart_attr.worst < smart_trace.thresh_info[_id]:
+                            if smart_trace.vs_smart_calculated_value and smart_trace.vs_smart_calculated_value[_id].worst_int_min > smart_trace.thresh_info[_id]:
                                 message1 = "Device: %s(ID: %s), smart #ID %s worst fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
                                 logger.warning(message1)
                                 if smart_attr.flag_decode["Pre-fail"]:
@@ -378,11 +377,11 @@ def pydiskhealthd():
                             elif not smart_trace.vs_smart_calculated_value: # first time to report the message
                                 message1 = "Device: %s(ID: %s), smart #ID %s check error(worst < threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
                                 if smart_attr.flag_decode["Pre-fail"]:
-                                    message2 = "#ID: %s, smart name: %s, Pre-fail, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id].thresh)
+                                    message2 = "#ID: %s, smart name: %s, Pre-fail, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id])
                                     logger.warning(message1, message2)
                                     syslog.warning(message1, message2)
                                 else:
-                                    message2 = "#ID: %s, smart name: %s, Old_age, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id].thresh)
+                                    message2 = "#ID: %s, smart name: %s, Old_age, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id])
                                     logger.warning(message1, message2)
                                     syslog.info(message1, message2)
                             else:  # vs_smart_calculated_value not init Or have report this error
@@ -399,6 +398,11 @@ def pydiskhealthd():
                             message1 = "Device: %s(ID: %s), smart #ID(Old_age) %s value reduce more than 15. " % (dev_context.dev_path, dev_context.device_id, _id)
                             syslog.info(message1)
                             logger.info(message1)
+                ## Record Current Tempeture
+                if 194 in current_smart.smart_info:
+                    temperature = (current_smart.smart_info[194].raw_value_int & 0xFFFF)
+                    message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
+                    logger.info(message)
             else:  # SCSI(SAS) Disk
                 pass
         logger.info("Check done")

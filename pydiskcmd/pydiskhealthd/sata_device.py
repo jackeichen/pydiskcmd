@@ -168,9 +168,8 @@ class ATADevice(object):
         return self.__smart_trace
 
     def get_smart_once(self):
-        with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:  
-            general_smart = d.smart_read_data().result
-            vs_smart = general_smart.pop('smartInfo')
+        with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:
+            raw_data = d.smart_read_data().datain
         #
-        self.__smart_trace.set_smart(vs_smart, int(time.time()))
+        self.__smart_trace.set_smart(raw_data, int(time.time()))
         return self.__smart_trace

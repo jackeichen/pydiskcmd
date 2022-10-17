@@ -59,6 +59,9 @@ pysata_list_opts () {
         "trim")
 		opts+=" -r --block_range= --show_status -h --help"
 		;;
+        "download_fw")
+		opts+=" -f --file= -c --code= -x --xfer= -h --help"
+		;;
         "version")
 		opts+=""
 			;;
