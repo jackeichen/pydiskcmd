@@ -351,6 +351,69 @@ def nvme_format():
     else:
         parser.print_help()
 
+def persistent_event_log():
+    usage="usage: %prog fw-commit <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-a", "--action", type="int", dest="action", action="store", default=3,
+        help="action of get persistent event log, 0: open, 1: read, 2: close, 3: check status")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev)) as d:
+            ret = d.get_persistent_event_log(options.action)
+            if options.action == 3:
+                if ret == 0:
+                    print ("Context Not Established!")
+                elif ret == 1:
+                    print ("Context Established!")
+                else:
+                    print ("Command failed.")
+            elif isinstance(ret, int):
+                if ret == 0:
+                    print ("Command success.")
+                else:
+                    print ("Command failed.")
+            elif options.action == 1:
+                event_log_header = persistent_event_log_header_decode(ret[0:512])
+                event_log_events = persistent_event_log_events_decode(ret[512:], scsi_ba_to_int(event_log_header.get("TNEV"), 'little'))
+                ## format print
+                print ("Persistent Event Log Header: ")
+                for k,v in event_log_header.items():
+                    if k in ("LogID", "VID", "SSVID"):
+                        print ("%-10s: %#x" % (k,scsi_ba_to_int(v, 'little')))
+                    elif k in ("SN", "MN", "SUBNQN"):
+                        print ("%-10s: %s" % (k,ba_to_ascii_string(v, "")))
+                    elif k == "SEB":
+                        print ("Supported Events Bitmap: ")
+                        for m,n in v.items():
+                            print ("     %-20s:%s" % (m,n))
+                    else:
+                        print ("%-10s: %s" % (k,scsi_ba_to_int(v, 'little')))
+                ##
+                print ("="*60)
+                if event_log_events:
+                    print ("Persistent Event Log Events: ")
+                    print ('......................')
+                for k,v in event_log_events.items():
+                    print ('Entry[%s]' % k)
+                    print ('......................')
+                    for m,n in v.items():
+                        if m == 'event_log_event_header' and n:
+                            for p,q in n.items():
+                                print ('%-20s : %s' % (p,scsi_ba_to_int(q, 'little')))
+                        elif m in ("vendor_spec_info", "event_log_event_data"):
+                            print ('%-20s : %s' % (m,n))
+                        else:
+                            print ('%-20s : %s' % (m,scsi_ba_to_int(n, 'little')))
+                    print ('......................')
+    else:
+        parser.print_help()
+    
 
 commands_dict = {"list": _list,
                  "smart-log": smart_log,
@@ -361,6 +424,7 @@ commands_dict = {"list": _list,
                  "fw-download": fw_download, 
                  "fw-commit": fw_commit, 
                  "format": nvme_format,
+                 "persistent_event_log": persistent_event_log,
                  "version": version,
                  "help": print_help}
 

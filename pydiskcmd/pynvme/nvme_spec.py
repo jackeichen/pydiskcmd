@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-from pydiskcmd.utils.converter import decode_bits
+from pydiskcmd.utils.converter import decode_bits,scsi_ba_to_int
 
 nvme_smart_bit_mask = {"Critical Warning": ('b', 0, 1),
                        "Composite Temperature": ('b', 1, 2),
@@ -173,6 +173,47 @@ nvme_power_management_cq_bit_mask = {"PS": [0x1F, 0],   ## Power State
 
 nvme_error_log_entry_bit_mask = {}
 
+PersistentEventLogHeader_bit_mask = {"LogID": ('b', 0, 1),      ## Log Identifier: This field shall be set to 0Dh.
+                                     "TNEV": ('b', 4, 4),       ## Total Number of Events (TNEV): Contains the number of event entries in the log.
+                                     "TLL": ('b', 8, 8),        ## Total Log Length (TLL): Contains the total number of bytes of persistent event log page data available, including the header.
+                                     "LogRev": ('b', 16, 1),    ## Log Revision:
+                                     "LogHL": ('b', 18, 2),     ## Log Header Length: 
+                                     "Timestamp": ('b', 20, 8), ## Timestamp
+                                     "POH": ('b', 28, 16),      ## Power on Hours (POH)
+                                     "PCC": ('b', 44, 8),       ## Power Cycle Count
+                                     "VID": ('b', 52, 2),       ## PCI Vendor ID (VID)
+                                     "SSVID": ('b', 54, 2),     ## PCI Subsystem Vendor ID (SSVID)
+                                     "SN": ('b', 56, 20),       ## Serial Number (SN):
+                                     "MN": ('b', 76, 40),       ## Model Number (MN)
+                                     "SUBNQN": ('b', 116, 256), ## NVM Subsystem NVMe Qualified Name (SUBNQN): 
+                                     "SEB": ('b', 480, 32),     ## Supported Events Bitmap: 
+                                    }
+
+SupportedEventsBitmap = {"smart_snapshot": [0x02, 0],           ## SMART / Health Log Snapshot Event Supported
+                         "fw_commit": [0x04, 0],                ## Firmware Commit Event Supported
+                         "timestamp_change": [0x08, 0],         ## Timestamp Change Event Supported
+                         "poweron_reset": [0x10, 0],            ## Power-on or Reset Event Supported
+                         "nvmsub_hardware_err": [0x20, 0],      ## Power-on or Reset Event Supported
+                         "change_ns": [0x40, 0],                ## Change Namespace Event Support
+                         "format_start": [0x80, 0],             ## Format NVM Start Event Support
+                         "format_end": [0x01, 1],               ## Format NVM Completion Even Support
+                         "sanitize_start": [0x02, 1],           ## Sanitize Start Event Support
+                         "sanitize_end": [0x04, 1],             ## Sanitize Completion Event Support
+                         "set_feature": [0x08, 1],              ## Set Feature Event Support
+                         "telemetry_log_create": [0x10, 1],     ## Telemetry Log Create Event Support
+                         "thermal_excursion": [0x20, 1],        ## Telemetry Log Create Event Support
+                         "vendor_spec": [0x40, 27],             ## Telemetry Log Create Event Support
+                        }
+
+Persistent_Event_Log_Event_Header_bit_mask = {"event_type": ('b', 0, 1),                ## Event Type
+                                              "event_type_revision": ('b', 1, 1),       ## Event Type Revision
+                                              "EHL": ('b', 2, 1),                       ## Event Type Revision
+                                              "ctrl_id": ('b', 4, 2),                   ## Controller Identifier
+                                              "event_timestamp": ('b', 6, 8),           ## Event Timestamp
+                                              "VSIL": ('b', 20, 2),                     ## Vendor Specific Information Length (VSIL)
+                                              "EL": ('b', 22, 2),                       ## Event Length (EL)
+                                             }
+
 
 class ErrorInfomationLogEntryUnit(object):
     def __init__(self, data):
@@ -188,6 +229,7 @@ class ErrorInfomationLogEntryUnit(object):
         self.transport_type = data[29]
         self.command_spec_info = data[32:40]
         self.transport_type_spec_info = data[40:42]
+
 
 
 def nvme_smart_decode(data):
@@ -250,3 +292,33 @@ def nvme_error_log_decode(data):
         error_log_entry_list.append(ErrorInfomationLogEntryUnit(data[offset:(offset+64)]))
         offset += 64
     return error_log_entry_list
+
+def persistent_event_log_header_decode(data):
+    result = {}
+    decode_bits(data, PersistentEventLogHeader_bit_mask, result)
+    if "SEB" in result:
+        result_temp = {}
+        decode_bits(result["SEB"], SupportedEventsBitmap, result_temp)
+        result["SEB"] = result_temp
+    return result
+
+def persistent_event_log_events_decode(raw_data, total_event_number):
+    offset = 0
+    event_log_events = {}
+    for i in range(total_event_number):
+        event_log_event_format = {}
+        event_log_event_header = {}
+        decode_bits(raw_data[offset:offset+24], Persistent_Event_Log_Event_Header_bit_mask, event_log_event_header)
+        event_log_event_format["event_log_event_header"] = event_log_event_header
+        ##
+        ehl_int = scsi_ba_to_int(event_log_event_header.get("EHL"), 'little')
+        vsil_int = scsi_ba_to_int(event_log_event_header.get("VSIL"), 'little')
+        el_int = scsi_ba_to_int(event_log_event_header.get("EL"), 'little')
+        #
+        vendor_spec_info = raw_data[ehl_int+3:ehl_int+2+vsil_int+1]
+        event_log_event_data = raw_data[ehl_int+3+vsil_int:ehl_int+el_int+2+1]
+        event_log_event_format["vendor_spec_info"] = vendor_spec_info
+        event_log_event_format["event_log_event_data"] = event_log_event_data
+        event_log_events[i] = event_log_event_format
+        offset += (ehl_int+el_int+2+1)
+    return event_log_events

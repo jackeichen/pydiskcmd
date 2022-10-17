@@ -6,7 +6,7 @@ import os
 from pydiskcmd.pynvme.command_structure import CmdStructure
 from pydiskcmd.pynvme.nvme_device import NVMeDevice
 from pydiskcmd.pynvme.nvme_command import build_command
-from pydiskcmd.pynvme.nvme_spec import nvme_id_ns_decode,nvme_id_ctrl_decode
+from pydiskcmd.pynvme.nvme_spec import nvme_id_ns_decode,nvme_id_ctrl_decode,persistent_event_log_header_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int
 
 code_version = "0.1.0"
@@ -335,5 +335,120 @@ class NVMe(object):
         ret = self.execute(cmd_struc)
         ret.check_status()
         return ret
+
+    def get_persistent_event_log(self, action):
+        '''
+        action: 0-> Establish Context, 1 -> Read Log Data, 2 -> Release Context.
+        '''
+        if not (self.__ctrl_identify_info[261] & 0x10):
+            print ("Device Not support Persistent Event log.")
+            return 1
+        event_log_size_max = scsi_ba_to_int(self.__ctrl_identify_info[352:356], 'little')  # 64Kib unit
+        if action == 0:
+            ## step 1. first to Establish Context and Read Log Data, first 512 Bytes(Persistent Event Log Header) to be read here, 
+            ##  to determine the "Total Log Length"(TLL)
+            # try to Establish Context and Read Log Data
+            # build command
+            cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
+                                   "lsp": (0x0F, 1, 1),   # Establish Context and Read Log Data:
+                                   "rae": (0x80, 1, 0),
+                                   "numdl": (0xFFFF, 2, 511),})
+
+            cmd_struc = CmdStructure(opcode=0x02,
+                                     data_len=4096,
+                                     cdw10=cdw10,)
+            # execute command
+            ret = self.execute(cmd_struc)
+            # if command abort, then Context is already established
+            SC,SCT = ret.check_status()
+            if SCT == 0 and SC == 0:
+                print ("Context is established.")
+                return 0
+            elif SCT == 0 and SC == 0x0C:
+                print ("Context is already established by others.")
+                return 0
+            else:
+                return 2
+        elif action == 1:
+            ## step 1. first to Establish Context and Read Log Data, first 512 Bytes(Persistent Event Log Header) to be read here, 
+            ##  to determine the "Total Log Length"(TLL)
+            # build command
+            cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
+                                   "lsp": (0x0F, 1, 0),   # Read Log Data
+                                   "rae": (0x80, 1, 0),
+                                   "numdl": (0xFFFF, 2, 511),})
+
+            cmd_struc = CmdStructure(opcode=0x02,
+                                     data_len=4096,
+                                     cdw10=cdw10,)
+            # execute command
+            ret = self.execute(cmd_struc)
+            # if command abort, then Context is already established
+            SC,SCT = ret.check_status()
+            if SCT == 0 and SC == 0:
+                persistent_event_log_header = persistent_event_log_header_decode(ret.data)
+                total_number_of_events = scsi_ba_to_int(persistent_event_log_header.get("TNEV"), 'little')
+                total_log_length = scsi_ba_to_int(persistent_event_log_header.get("TLL"), 'little')
+                ## to 4k aligned
+                total_log_length = total_log_length + 4096 - (total_log_length % 4096) - 1
+                ## now we need re-read the log now
+                cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
+                                       "lsp": (0x0F, 1, 0),   # Read Log Data
+                                       "rae": (0x80, 1, 0),
+                                       "numdl": (0xFFFF, 2, total_log_length & 0xFFFF),})
+                cdw11 = build_command({"numdu": (0xFFFF, 0, (total_log_length >> 16) & 0xFFFF),
+                                       "lsi": (0x0F, 1, 0),})  
+                cmd_struc = CmdStructure(opcode=0x02,
+                                         data_len=total_log_length+1,
+                                         cdw10=cdw10,
+                                         cdw11=cdw11,)
+                # execute command
+                ret = self.execute(cmd_struc)
+                SC,SCT = ret.check_status()
+                if SCT == 0 and SC == 0:
+                    return ret.data
+                else:
+                    return 3
+            elif SCT == 0 and SC == 0x0C:
+                print ("Need Establish Context first.")
+                return 4
+            else:
+                print ("Other errors.")
+                return 5
+        elif action == 2:  ## Release Context
+            # build command
+            cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
+                                   "lsp": (0x0F, 1, 2),   # Release Context:
+                                   "rae": (0x80, 1, 0),
+                                   "numdl": (0xFFFF, 2, 0),})
+            cmd_struc = CmdStructure(opcode=0x02,
+                                     cdw10=cdw10,)
+            ret = self.execute(cmd_struc)
+            ret.check_status()
+            return 0
+        elif action == 3:  ## Check if Context exist
+            # build command
+            cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
+                                   "lsp": (0x0F, 1, 0),   # Read Log Data
+                                   "rae": (0x80, 1, 0),
+                                   "numdl": (0xFFFF, 2, 511),})
+
+            cmd_struc = CmdStructure(opcode=0x02,
+                                     data_len=4096,
+                                     cdw10=cdw10,)
+            # execute command
+            ret = self.execute(cmd_struc)
+            # if command abort, then Context is already established
+            SC,SCT = ret.check_status()
+            if SCT == 0 and SC == 0:  # can read, Context established
+                return 1
+            elif SCT == 0 and SC == 0x0C: # abort, Context Not established
+                return 0
+            else:
+                return 5
+        else:
+            print ("Action should be 0|1|2|3.")
+            return 6
+
 
 
