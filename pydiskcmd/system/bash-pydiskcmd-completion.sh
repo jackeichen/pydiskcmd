@@ -4,7 +4,7 @@
 # bash tab completion for the nvme command line utility
 
 _pysata_cmds="check-PowerMode accessible-MaxAddress identify self-test \
-          smart standby read write flush trim version help"
+          smart standby read write flush trim download_fw version help"
 
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
           format version help"
