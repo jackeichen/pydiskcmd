@@ -73,7 +73,7 @@ pydiskcmd
 ---------
 It is a program that show and manage pydiskcmd tool. Use bellow command to get help:
 
-    $ pydiskcmd help
+    $ pydiskcmd --help
 
 pynvme
 ------

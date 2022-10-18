@@ -315,8 +315,8 @@ def persistent_event_log_events_decode(raw_data, total_event_number):
         vsil_int = scsi_ba_to_int(event_log_event_header.get("VSIL"), 'little')
         el_int = scsi_ba_to_int(event_log_event_header.get("EL"), 'little')
         #
-        vendor_spec_info = raw_data[ehl_int+3:ehl_int+2+vsil_int+1]
-        event_log_event_data = raw_data[ehl_int+3+vsil_int:ehl_int+el_int+2+1]
+        vendor_spec_info = raw_data[offset+ehl_int+3:offset+ehl_int+2+vsil_int+1]
+        event_log_event_data = raw_data[offset+ehl_int+3+vsil_int:offset+ehl_int+el_int+2+1]
         event_log_event_format["vendor_spec_info"] = vendor_spec_info
         event_log_event_format["event_log_event_data"] = event_log_event_data
         event_log_events[i] = event_log_event_format

@@ -34,6 +34,7 @@ def print_help():
     print ("  fw-download           Download new firmware")
     print ("  fw-commit             Verify and commit firmware to a specific slot")
     print ("  format                Format namespace with new block format")
+    print ("  persistent_event_log  Get persistent event log from device.")
     print ("  version               Shows the program version")
     print ("  help                  Shows the program version")
     print ("")
@@ -356,6 +357,8 @@ def persistent_event_log():
     parser = optparse.OptionParser(usage)
     parser.add_option("-a", "--action", type="int", dest="action", action="store", default=3,
         help="action of get persistent event log, 0: open, 1: read, 2: close, 3: check status")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -381,36 +384,41 @@ def persistent_event_log():
             elif options.action == 1:
                 event_log_header = persistent_event_log_header_decode(ret[0:512])
                 event_log_events = persistent_event_log_events_decode(ret[512:], scsi_ba_to_int(event_log_header.get("TNEV"), 'little'))
-                ## format print
-                print ("Persistent Event Log Header: ")
-                for k,v in event_log_header.items():
-                    if k in ("LogID", "VID", "SSVID"):
-                        print ("%-10s: %#x" % (k,scsi_ba_to_int(v, 'little')))
-                    elif k in ("SN", "MN", "SUBNQN"):
-                        print ("%-10s: %s" % (k,ba_to_ascii_string(v, "")))
-                    elif k == "SEB":
-                        print ("Supported Events Bitmap: ")
-                        for m,n in v.items():
-                            print ("     %-20s:%s" % (m,n))
-                    else:
-                        print ("%-10s: %s" % (k,scsi_ba_to_int(v, 'little')))
-                ##
-                print ("="*60)
-                if event_log_events:
-                    print ("Persistent Event Log Events: ")
-                    print ('......................')
-                for k,v in event_log_events.items():
-                    print ('Entry[%s]' % k)
-                    print ('......................')
-                    for m,n in v.items():
-                        if m == 'event_log_event_header' and n:
-                            for p,q in n.items():
-                                print ('%-20s : %s' % (p,scsi_ba_to_int(q, 'little')))
-                        elif m in ("vendor_spec_info", "event_log_event_data"):
-                            print ('%-20s : %s' % (m,n))
+                if options.output_format == "binary":
+                    format_dump_bytes(ret)
+                elif options.output_format == "normal":
+                    ## format print
+                    print ("Persistent Event Log Header: ")
+                    for k,v in event_log_header.items():
+                        if k in ("LogID", "VID", "SSVID"):
+                            print ("%-10s: %#x" % (k,scsi_ba_to_int(v, 'little')))
+                        elif k in ("SN", "MN", "SUBNQN"):
+                            print ("%-10s: %s" % (k,ba_to_ascii_string(v, "")))
+                        elif k == "SEB":
+                            print ("Supported Events Bitmap: ")
+                            for m,n in v.items():
+                                print ("     %-20s:%s" % (m,n))
                         else:
-                            print ('%-20s : %s' % (m,scsi_ba_to_int(n, 'little')))
-                    print ('......................')
+                            print ("%-10s: %s" % (k,scsi_ba_to_int(v, 'little')))
+                    ##
+                    print ("="*60)
+                    if event_log_events:
+                        print ("Persistent Event Log Events: ")
+                        print ('......................')
+                    for k,v in event_log_events.items():
+                        print ('Entry[%s]' % k)
+                        print ('......................')
+                        for m,n in v.items():
+                            if m == 'event_log_event_header' and n:
+                                for p,q in n.items():
+                                    print ('%-20s : %s' % (p,scsi_ba_to_int(q, 'little')))
+                            elif m in ("vendor_spec_info", "event_log_event_data"):
+                                print ('%-20s : %s' % (m,n))
+                            else:
+                                print ('%-20s : %s' % (m,scsi_ba_to_int(n, 'little')))
+                        print ('......................')
+                else:
+                    print (ret)
     else:
         parser.print_help()
     

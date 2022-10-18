@@ -7,7 +7,7 @@ _pysata_cmds="check-PowerMode accessible-MaxAddress identify self-test \
           smart standby read write flush trim download_fw version help"
 
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
-          format version help"
+          format persistent_event_log version help"
 
 pysata_list_opts () {
     local opts=""
@@ -123,6 +123,9 @@ pynvme_list_opts () {
         "format")
 		opts+=" -n --namespace-id= -l --lbaf= -s --ses= -i --pi= \
             -p --pil= -h --help"
+		;;
+        "persistent_event_log")
+		opts+=" -a --action= -o --output-format= -h --help"
 		;;
         "version")
 		opts+=""
