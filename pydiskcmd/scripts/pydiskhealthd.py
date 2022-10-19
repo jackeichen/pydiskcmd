@@ -43,10 +43,10 @@ def get_disk_context(devices):
             dev_path = "/dev/%s" % dev
             try:  # try SATA command, ATADevice will send identify command to device
                 dev_context = ATADevice(dev_path)
-            except: # May be SAS Device, Not support now
-                logger.info("Skip device %s, it is not a nvme or SATA Device" % dev_path)
             except FileNotFoundError:
                 logger.warning("Skip device %s, device is removed." % dev_path)
+            except: # May be SAS Device, Not support now
+                logger.info("Skip device %s, it is not a nvme or SATA Device" % dev_path)
             else:  # send success, it's a SATA Device
                 if dev_context.device_id not in devices:
                     devices[dev_context.device_id] = dev_context
