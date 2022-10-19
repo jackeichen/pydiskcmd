@@ -29,10 +29,14 @@ def get_disk_context(devices):
                 ns_id = g[2]
                 ## add to dict
                 dev_path = "/dev/nvme%s" % ctrl_id
-                dev_context = NVMeDevice(dev_path)
-                if dev_context.device_id not in devices:
-                    devices[dev_context.device_id] = dev_context
-                    logger.info("Find new nvme device %s, ID: %s" % (dev_path, dev_context.device_id))
+                try:
+                    dev_context = NVMeDevice(dev_path)
+                except FileNotFoundError:
+                    logger.warning("Skip device %s, device is removed." % dev_path)
+                else:
+                    if dev_context.device_id not in devices:
+                        devices[dev_context.device_id] = dev_context
+                        logger.info("Find new nvme device %s, ID: %s" % (dev_path, dev_context.device_id))
         ## SATA Or SAS Disk here
         else:
             ## judge the disk is SATA Or SAS, by send ATA_identify command
@@ -41,6 +45,8 @@ def get_disk_context(devices):
                 dev_context = ATADevice(dev_path)
             except: # May be SAS Device, Not support now
                 logger.info("Skip device %s, it is not a nvme or SATA Device" % dev_path)
+            except FileNotFoundError:
+                logger.warning("Skip device %s, device is removed." % dev_path)
             else:  # send success, it's a SATA Device
                 if dev_context.device_id not in devices:
                     devices[dev_context.device_id] = dev_context
