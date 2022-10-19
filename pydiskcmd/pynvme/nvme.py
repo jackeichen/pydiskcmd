@@ -120,20 +120,13 @@ class NVMe(object):
 
     def fw_slot_info(self):
         ### build command
-        cdw10 = 0
-        cdw11 = 0
-        cdw12 = 0
-        cdw13 = 0
-        #
-        cdw10 += 3  # Log ID
-        cdw10 += (127 << 16)
+        numdl = int(512 / 4) - 1
+        cdw10 = build_command({"lid": (0xFF, 0, 0x03),
+                               "numdl": (0x0FFF, 2, numdl),})
         ##
         cmd_struc = CmdStructure(opcode=0x02,
                                  data_len=512,
-                                 cdw10=cdw10,
-                                 cdw11=cdw11,
-                                 cdw12=cdw12,
-                                 cdw13=cdw13,)
+                                 cdw10=cdw10,)
         ###
         ret = self.execute(cmd_struc)
         ret.check_status()
@@ -142,52 +135,47 @@ class NVMe(object):
     def error_log_entry(self):
         ## get the max number log entries
         max_number = self.__ctrl_identify_info[262] + 1
-        number_bytes = max_number * 64
-        NUMDL = number_bytes & 0xFFFF
-        NUMDU = (number_bytes >> 16) & 0xFFFF
+        numbet_dw = max_number * 16 ## 16 = 64 / 4
+        numd = numbet_dw - 1
+        ## the numbet_dw <= 256*16= 4096,
+        #  so 0x0FFF is enough for numd
+        numdl = numd & 0x0FFF
         ### build command
-        cdw10 = 0
-        cdw11 = 0
-        cdw12 = 0
-        cdw13 = 0
-        #
-        cdw10 += 1  # Log ID
-        NUMDL = number_bytes & 0xFFFF
-        cdw10 += (NUMDL << 16)
-        #
-        cdw11 += NUMDU
+        cdw10 = build_command({"lid": (0xFF, 0, 0x01),      # log id
+                               "numdl": (0x0FFF, 2, numdl),})
         ##
         cmd_struc = CmdStructure(opcode=0x02,
-                                 data_len=number_bytes,
-                                 cdw10=cdw10,
-                                 cdw11=cdw11,
-                                 cdw12=cdw12,
-                                 cdw13=cdw13,)
+                                 data_len=numbet_dw*4,
+                                 cdw10=cdw10,)
         ###
         ret = self.execute(cmd_struc)
         ret.check_status()
         return ret
 
-    def smart_log(self):
+    def smart_log(self, data_buffer=None):
+        ###
+        data_addr = None
+        if data_buffer:
+            data_addr = data_buffer.addr
+            ## need check data_buffer is multiple of 4 kib
+            if data_buffer.data_length < 512:
+                print ("data buffer for persistent_event_log need >= 512 bytes")
+                return 7
         ### build command
-        cdw10 = 0
-        cdw11 = 0
-        cdw12 = 0
-        cdw13 = 0
-        #
-        cdw10 += 2  # Log ID
-        cdw10 += (512 << 16)
+        numdl = int(512 / 4) - 1
+        cdw10 = build_command({"lid": (0xFF, 0, 0x02),      # log id
+                               "numdl": (0x0FFF, 2, numdl),})
         ##
         cmd_struc = CmdStructure(opcode=0x02,
                                  nsid=0xFFFFFFFF,
-                                 data_len=4096,
-                                 cdw10=cdw10,
-                                 cdw11=cdw11,
-                                 cdw12=cdw12,
-                                 cdw13=cdw13,)
+                                 addr=data_addr,
+                                 data_len=512,
+                                 cdw10=cdw10,)
         ###
         ret = self.execute(cmd_struc)
         ret.check_status()
+        if data_buffer:
+            ret.data = bytes(data_buffer._data_buf)[0:512]
         return ret
 
     def nvme_fw_download(self, fw_path, xfer=0, offset=0):
@@ -292,26 +280,6 @@ class NVMe(object):
         lba_size = pow(2, lbads)
         print (metadata_size, lba_size)
         return
-        ### build command
-        cdw10 = 0
-        cdw11 = 0
-        cdw12 = 0
-        cdw13 = 0
-        #
-        cdw10 += 2  # Log ID
-        cdw10 += (512 << 16)
-        ##
-        cmd_struc = CmdStructure(opcode=0x02,
-                                 nsid=nsid,
-                                 data_len=4096,
-                                 cdw10=cdw10,
-                                 cdw11=cdw11,
-                                 cdw12=cdw12,
-                                 cdw13=cdw13,)
-        ###
-        ret = self.execute_io(cmd_struc)
-        ret.check_status()
-        return ret
 
     def nvme_format(self, lbaf, mset=0, pi=0, pil=1, ses=0, nsid=0xFFFFFFFF):
         ### Check parameters
@@ -336,26 +304,41 @@ class NVMe(object):
         ret.check_status()
         return ret
 
-    def get_persistent_event_log(self, action):
+    def get_persistent_event_log(self, action, data_buffer=None):
         '''
         action: 0-> Establish Context, 1 -> Read Log Data, 2 -> Release Context.
+        data_buffer: a data buffer object from pydiskcmd.pynvme.command_structure.DataBuffer
         '''
+        ## by nvme spec 1.4a
         if not (self.__ctrl_identify_info[261] & 0x10):
             print ("Device Not support Persistent Event log.")
-            return 1
+            return 6
+        extend_cap = (self.__ctrl_identify_info[261] & 0x04)
+        ##
+        data_addr = None
+        if data_buffer:
+            data_addr = data_buffer.addr
+            ## need check data_buffer is multiple of 4 kib
+            if data_buffer.data_length < 16384:
+                print ("data buffer for persistent_event_log need >= 16KiB")
+                return 7
         event_log_size_max = scsi_ba_to_int(self.__ctrl_identify_info[352:356], 'little')  # 64Kib unit
         if action == 0:
-            ## step 1. first to Establish Context and Read Log Data, first 512 Bytes(Persistent Event Log Header) to be read here, 
+            ## Establish Context and Read Log Data, first 512 Bytes(Persistent Event Log Header) to be read here, 
             ##  to determine the "Total Log Length"(TLL)
             # try to Establish Context and Read Log Data
             # build command
+            # If extended data is not supported, then bits 27:16 of the Number of Dwords Lower field 
+            # specify the Number of Dwords to transfer.
+            # 0x0FFF is enough for 512 Bytes. we Do Not Need check the Log Page Attributes field
             cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
                                    "lsp": (0x0F, 1, 1),   # Establish Context and Read Log Data:
                                    "rae": (0x80, 1, 0),
-                                   "numdl": (0xFFFF, 2, 511),})
+                                   "numdl": (0x0FFF, 2, 127),})
 
             cmd_struc = CmdStructure(opcode=0x02,
-                                     data_len=4096,
+                                     addr=data_addr,
+                                     data_len=512,
                                      cdw10=cdw10,)
             # execute command
             ret = self.execute(cmd_struc)
@@ -370,57 +353,138 @@ class NVMe(object):
             else:
                 return 2
         elif action == 1:
-            ## step 1. first to Establish Context and Read Log Data, first 512 Bytes(Persistent Event Log Header) to be read here, 
+            ## step 1. Read Log Data, first 512 Bytes(Persistent Event Log Header) to be read here, 
             ##  to determine the "Total Log Length"(TLL)
             # build command
+            # If extended data is not supported, then bits 27:16 of the Number of Dwords Lower field 
+            # specify the Number of Dwords to transfer.
+            # 0x0FFF is enough for 512 Bytes. We Do Not Need check the Log Page Attributes field
             cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
                                    "lsp": (0x0F, 1, 0),   # Read Log Data
                                    "rae": (0x80, 1, 0),
-                                   "numdl": (0xFFFF, 2, 511),})
+                                   "numdl": (0x0FFF, 2, 127),})
 
             cmd_struc = CmdStructure(opcode=0x02,
-                                     data_len=4096,
+                                     addr=data_addr,
+                                     data_len=512,
                                      cdw10=cdw10,)
             # execute command
             ret = self.execute(cmd_struc)
             # if command abort, then Context is already established
-            SC,SCT = ret.check_status()
+            SC,SCT = ret.check_status(fail_hint=False)
             if SCT == 0 and SC == 0:
-                persistent_event_log_header = persistent_event_log_header_decode(ret.data)
+                if data_buffer:
+                    ret_data = bytes(data_buffer._data_buf)
+                else:
+                    ret_data = ret.data
+                persistent_event_log_header = persistent_event_log_header_decode(ret_data)
                 total_number_of_events = scsi_ba_to_int(persistent_event_log_header.get("TNEV"), 'little')
                 total_log_length = scsi_ba_to_int(persistent_event_log_header.get("TLL"), 'little')
-                ## to 4k aligned
-                total_log_length = total_log_length + 4096 - (total_log_length % 4096) - 1
-                ## now we need re-read the log now
-                cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
-                                       "lsp": (0x0F, 1, 0),   # Read Log Data
-                                       "rae": (0x80, 1, 0),
-                                       "numdl": (0xFFFF, 2, total_log_length & 0xFFFF),})
-                cdw11 = build_command({"numdu": (0xFFFF, 0, (total_log_length >> 16) & 0xFFFF),
-                                       "lsi": (0x0F, 1, 0),})  
-                cmd_struc = CmdStructure(opcode=0x02,
-                                         data_len=total_log_length+1,
-                                         cdw10=cdw10,
-                                         cdw11=cdw11,)
-                # execute command
-                ret = self.execute(cmd_struc)
-                SC,SCT = ret.check_status()
-                if SCT == 0 and SC == 0:
-                    return ret.data
+                ## here to 512B aligned
+                if total_log_length % 512:
+                    total_log_length = total_log_length + 512 - (total_log_length % 512)
+                ## Read the log page, default 16kiB data to be read every time
+                # check Log Page Attributes field page of extend capacity
+                numd = int(total_log_length / 4)
+                if extend_cap:
+                    ret_data = b''
+                    numd_mod = numd % 4096
+                    numd_cycles = int((numd-numd_mod)/4096)
+                    offset_by_byte = 0
+                    for i in range(numd_cycles):
+                        cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
+                                               "lsp": (0x0F, 1, 0),   # Read Log Data
+                                               "rae": (0x80, 1, 0),
+                                               "numdl": (0x0FFF, 2, 4095),})
+                        # cdw 12 Log Page Offset Lower (LPOL), cdw13 Log Page Offset Upper (LPOU)
+                        lpol = offset_by_byte & 0xFFFF
+                        lpou = (offset_by_byte >> 32) & 0xFFFF
+                        cdw12 = build_command({"lpol": (0xFFFF, 0, lpol)})
+                        cdw13 = build_command({"lpou": (0xFFFF, 0, lpou)})
+                        #
+                        cmd_struc = CmdStructure(opcode=0x02,
+                                                 addr=data_addr,
+                                                 data_len=16384,
+                                                 cdw10=cdw10,
+                                                 cdw12=cdw12,
+                                                 cdw13=cdw13,)
+                        # execute command
+                        ret = self.execute(cmd_struc)
+                        SC,SCT = ret.check_status()
+                        if SCT == 0 and SC == 0:
+                            if data_buffer:
+                                ret_data += bytes(data_buffer._data_buf)[0:16384]
+                            else:
+                                ret_data += ret.data
+                            offset_by_byte += 16384
+                        else:
+                            print ("Failed in cycle %s" % i)
+                            return 3
+                    if numd_mod:
+                        ## build command
+                        cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
+                                               "lsp": (0x0F, 1, 0),   # Read Log Data
+                                               "rae": (0x80, 1, 0),
+                                               "numdl": (0x0FFF, 2, numd_mod-1),})
+                        # cdw 12 Log Page Offset Lower (LPOL), cdw13 Log Page Offset Upper (LPOU)
+                        lpol = offset_by_byte & 0xFFFF
+                        lpou = (offset_by_byte >> 32) & 0xFFFF
+                        cdw12 = build_command({"lpol": (0xFFFF, 0, lpol)})
+                        cdw13 = build_command({"lpou": (0xFFFF, 0, lpou)})
+                        #
+                        cmd_struc = CmdStructure(opcode=0x02,
+                                                 addr=data_addr,
+                                                 data_len=numd_mod*4,
+                                                 cdw10=cdw10,
+                                                 cdw12=cdw12,
+                                                 cdw13=cdw13,)
+                                    # execute command
+                        ret = self.execute(cmd_struc)
+                        SC,SCT = ret.check_status()
+                        if SCT == 0 and SC == 0:
+                            if data_buffer:
+                                ret_data += bytes(data_buffer._data_buf)[0:numd_mod*4]
+                            else:
+                                ret_data += ret.data
+                        else:
+                            print ("Failed in cycle %s" % i)
+                            return 3
+                    return ret_data
                 else:
-                    return 3
+                    numdl = min(numd-1, 0x0FFF)
+                    # we only can read 16 KiB of data now, included persistent_event_log_header
+                    cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
+                                           "lsp": (0x0F, 1, 0),   # Read Log Data
+                                           "rae": (0x80, 1, 0),
+                                           "numdl": (0x0FFF, 2, numdl),}) 
+                    cmd_struc = CmdStructure(opcode=0x02,
+                                             addr=data_addr,
+                                             data_len=(numdl+1)*4,
+                                             cdw10=cdw10,)
+
+                    # execute command
+                    ret = self.execute(cmd_struc)
+                    SC,SCT = ret.check_status()
+                    if SCT == 0 and SC == 0:
+                        if data_buffer:
+                            return bytes(data_buffer._data_buf)
+                        else:
+                            return ret.data
+                    else:
+                        return 3
             elif SCT == 0 and SC == 0x0C:
                 print ("Need Establish Context first.")
                 return 4
             else:
                 print ("Other errors.")
+                ret.check_status()
                 return 5
         elif action == 2:  ## Release Context
             # build command
             cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
                                    "lsp": (0x0F, 1, 2),   # Release Context:
                                    "rae": (0x80, 1, 0),
-                                   "numdl": (0xFFFF, 2, 0),})
+                                   "numdl": (0x0FFF, 2, 0),})
             cmd_struc = CmdStructure(opcode=0x02,
                                      cdw10=cdw10,)
             ret = self.execute(cmd_struc)
@@ -428,18 +492,22 @@ class NVMe(object):
             return 0
         elif action == 3:  ## Check if Context exist
             # build command
+            # If extended data is not supported, then bits 27:16 of the Number of Dwords Lower field 
+            # specify the Number of Dwords to transfer.
+            # 0x0FFF is enough for 512 Bytes. we Do Not Need check the Log Page Attributes field
             cdw10 = build_command({"lid": (0xFF, 0, 0x0D),
                                    "lsp": (0x0F, 1, 0),   # Read Log Data
                                    "rae": (0x80, 1, 0),
-                                   "numdl": (0xFFFF, 2, 511),})
+                                   "numdl": (0x0FFF, 2, 127),})
 
             cmd_struc = CmdStructure(opcode=0x02,
-                                     data_len=4096,
+                                     addr=data_addr,
+                                     data_len=512,
                                      cdw10=cdw10,)
             # execute command
             ret = self.execute(cmd_struc)
             # if command abort, then Context is already established
-            SC,SCT = ret.check_status()
+            SC,SCT = ret.check_status(fail_hint=False)
             if SCT == 0 and SC == 0:  # can read, Context established
                 return 1
             elif SCT == 0 and SC == 0x0C: # abort, Context Not established

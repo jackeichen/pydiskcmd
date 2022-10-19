@@ -92,3 +92,15 @@ class CmdStructure(LittleEndianStructure):
             self._metadata_buf = None
             self.metadata = metadata
         self.metadata_len = metadata_len
+
+
+class DataBuffer(LittleEndianStructure):
+    def __init__(self, length):
+        self.__len = length
+        ## init
+        self._data_buf = create_string_buffer(length)
+        self.addr = c_uint64(addressof(self._data_buf))
+
+    @property
+    def data_length(self):
+        return self.__len

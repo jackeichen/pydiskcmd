@@ -9,7 +9,7 @@ class CommandDecoder(object):
         self.data = b''      ## Data
         self.meta_data = b'' ## meta data
 
-    def check_status(self, hint=True, success_hint=False):
+    def check_status(self, hint=True, success_hint=False, fail_hint=True):
         SC = (self.status & 0xFF)
         SCT = ((self.status >> 8) & 0x07)
         CRD = ((self.status >> 11) & 0x03)
@@ -21,9 +21,10 @@ class CommandDecoder(object):
                     print ("Command Success")
                     print ('')
             else:
-                print ("Command failed, and details bellow.")
-                format_string = "%-15s%-20s%-8s%s"
-                print (format_string % ("Status Code", "Status Code Type", "More", "Do Not Retry"))
-                print (format_string % (SC, SCT, More, DNR))
-                print ('')
+                if fail_hint:
+                    print ("Command failed, and details bellow.")
+                    format_string = "%-15s%-20s%-8s%s"
+                    print (format_string % ("Status Code", "Status Code Type", "More", "Do Not Retry"))
+                    print (format_string % (SC, SCT, More, DNR))
+                    print ('')
         return SC,SCT

@@ -125,7 +125,8 @@ pynvme_list_opts () {
             -p --pil= -h --help"
 		;;
         "persistent_event_log")
-		opts+=" -a --action= -o --output-format= -h --help"
+		opts+=" -a --action= -o --output-format= -f --filter= \
+            -h --help"
 		;;
         "version")
 		opts+=""

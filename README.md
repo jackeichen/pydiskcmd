@@ -13,7 +13,7 @@ the command set specs(sata,nvme).
 The project is under development now. 
 
 
-Many thanks from
+Acknowledgements
 ================
 Really appreciate the project python-scsi in github.
 

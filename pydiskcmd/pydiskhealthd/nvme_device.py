@@ -7,7 +7,9 @@ from pydiskcmd.pynvme.nvme import NVMe
 from pydiskcmd.pypci.pci_lib import map_pci_device
 from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme_spec import nvme_smart_decode,nvme_id_ctrl_decode
+from pydiskcmd.pynvme.nvme_spec import persistent_event_log_header_decode,persistent_event_log_events_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
+from pydiskcmd.pynvme.command_structure import DataBuffer
 
 ###
 PCIeMappingPath = "/sys/class/nvme/%s/address"
@@ -121,6 +123,39 @@ class PCIeTrace(object):
         self.pcie_aer_status = {}
 
 
+class PersistentEventTrace(object):
+    def __init__(self):
+        self.last_trace = []
+        self.current_trace = []
+        ##
+        self.__data_buffer = DataBuffer(16384)
+
+    def set_log(self, event_log_header, event_log_events):
+        if self.current_trace:
+            self.last_trace = self.current_trace
+            self.current_trace = [event_log_header, event_log_events]
+        else:
+            self.current_trace = [event_log_header, event_log_events]
+
+    @property
+    def current_trace_timestamp(self):
+        if self.current_trace:
+            return scsi_ba_to_int(self.current_trace[0].get("Timestamp"), 'little')
+
+    @property
+    def data_buffer(self):
+        return self.__data_buffer
+
+    def diff_trace(self):
+        if self.last_trace and self.current_trace:
+            result = []
+            for k,v in self.current_trace[1].items():
+                if v in self.last_trace[1].values():
+                    break
+                result.append(v)
+            return result
+
+
 class NVMeDevice(object):
     """
     dev_path: the nvme controller device path(ex. /dev/nvme0)
@@ -135,6 +170,8 @@ class NVMeDevice(object):
         self.__pcie_trace = PCIeTrace()
         # init smart attr
         self.__smart_trace = SmartTrace()
+        # init 
+        self.__persistent_event_log = PersistentEventTrace()
         ## get device ID
         self.__device_id = None
         with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
@@ -167,6 +204,10 @@ class NVMeDevice(object):
     def pcie_trace(self):
         return self.__pcie_trace
 
+    @property
+    def persistent_event_log(self):
+        return self.__persistent_event_log
+
     def _get_bus_addr_by_controller(self, ctrl):
         path = PCIeMappingPath % ctrl.replace("/dev/", "")
         addr = None
@@ -176,11 +217,37 @@ class NVMeDevice(object):
             addr = addr.strip()
         return addr
 
-    def get_smart_once(self):
+    def get_log_once(self):
+        smart_data = None
+        persistent_event_log_data = None
+        ##
         with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
             cmd = d.smart_log()
-        self.__smart_trace.set_smart(cmd.data, int(time.time()))
-        return self.__smart_trace
+            smart_data = cmd.data
+            ##
+            persistent_event_log_status = 0  # the state of persistent_event_log_status
+            persistent_event_log_ret = d.get_persistent_event_log(3, data_buffer=self.__persistent_event_log.data_buffer)
+            if persistent_event_log_ret == 6:
+                ## not support persistent_event_log
+                pass
+            else:
+                if persistent_event_log_ret == 1:
+                    ## the persistent_event_log is opened 
+                    persistent_event_log_status = 1
+                    ## need close it to refresh the log
+                    d.get_persistent_event_log(2, data_buffer=self.__persistent_event_log.data_buffer)
+                d.get_persistent_event_log(0, data_buffer=self.__persistent_event_log.data_buffer)
+                persistent_event_log_data = d.get_persistent_event_log(1, data_buffer=self.__persistent_event_log.data_buffer)
+                if persistent_event_log_status == 0: # if not open, then close it.
+                    d.get_persistent_event_log(2, data_buffer=self.__persistent_event_log.data_buffer)
+        if smart_data:
+            self.__smart_trace.set_smart(cmd.data, int(time.time()))
+        ##
+        if persistent_event_log_data:
+            event_log_header = persistent_event_log_header_decode(persistent_event_log_data[0:512])
+            event_log_events = persistent_event_log_events_decode(persistent_event_log_data[512:], scsi_ba_to_int(event_log_header.get("TNEV"), 'little'))
+            self.__persistent_event_log.set_log(event_log_header, event_log_events)
+        return self.__smart_trace,self.__persistent_event_log
 
     def update_pcie_trace(self):
         self.__pcie_trace.pcie_link_status = self.pcie_context.express_link

@@ -11,13 +11,14 @@ from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
 ##
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice
 from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice
+from pydiskcmd.utils.converter import scsi_ba_to_int
 
 tool_version = '0.1.0'
 
 
 def get_disk_context(devices):
     '''
-    devices: a dict
+    devices: a dict that contain device object.
     '''
     for dev in get_block_devs():
         ## init nvme device
@@ -103,8 +104,9 @@ def pydiskhealthd():
         logger.info("Check Device ...")
         for dev_id,dev_context in dev_pool.items():
             if dev_context.device_type == 'nvme':
+                ### update log
+                smart_trace,persistent_event_log = dev_context.get_log_once()
                 ### check smart Now
-                smart_trace = dev_context.get_smart_once()
                 current_smart = smart_trace.current_value
                 last_smart = smart_trace.get_cache_last_value()
                 ## check critical_warning
@@ -146,7 +148,7 @@ def pydiskhealthd():
                                 syslog.warning(message)
                                 logger.error(message)
                         else:
-                            message = "No New Critical Warning in disk %s(ID: %s)" % (dev_context.dev_path, dev_context.device_id)
+                            message = "Device: %s(ID: %s), No New Critical Warning." % (dev_context.dev_path, dev_context.device_id)
                             logger.info(message)
                     else:
                         ## base in spec v1.4
@@ -208,7 +210,7 @@ def pydiskhealthd():
                 ## check Percentage Used
                 if "Percentage Used" in current_smart.smart_info:
                     if current_smart.smart_info["Percentage Used"] < 90:
-                        message = "Check Percentage Used(used %s) done in disk %s(ID: %s)." % (current_smart.smart_info["Percentage Used"], dev_context.dev_path, dev_context.device_id)
+                        message = "Device: %s(ID: %s), Check Percentage Used(used %s) done." % (dev_context.dev_path, dev_context.device_id, current_smart.smart_info["Percentage Used"])
                         logger.info(message)
                     elif current_smart.smart_info["Percentage Used"] < 100:
                         message = "Device: %s(ID: %s), the Percentage Used(used %s) reached >90." % (dev_context.dev_path, dev_context.device_id, current_smart.smart_info["Percentage Used"])
@@ -237,7 +239,7 @@ def pydiskhealthd():
                             syslog.info(message)
                             logger.warning(message)
                         else:
-                            message = "Check Media and Data Integrity Errors(total %s errors) done in disk %s(ID: %s)." % (current_smart.smart_info["Media and Data Integrity Errors"], dev_context.dev_path, dev_context.device_id)
+                            message = "Device: %s(ID: %s), Check Media and Data Integrity Errors(total %s errors) done." % (dev_context.dev_path, dev_context.device_id, current_smart.smart_info["Media and Data Integrity Errors"])
                             logger.info(message)
                 ## check Number of Error Information Log Entries
                 if "Number of Error Information Log Entries" in current_smart.smart_info:
@@ -259,11 +261,68 @@ def pydiskhealthd():
                             syslog.info(message)
                             logger.warning(message)
                         else:
-                            message = "Check Number of Error Information Log Entries(total %s entries) done in disk %s(ID: %s)." % (smart_current_value_int, dev_context.dev_path, dev_context.device_id)
+                            message = "Device: %s(ID: %s), Check Number of Error Information Log Entries(total %s entries) done." % (dev_context.dev_path, dev_context.device_id, smart_current_value_int)
                             logger.info(message)
+                ### check persistent_event_log
+                values = persistent_event_log.diff_trace()
+                if values:
+                    for event in values:
+                        event_type = scsi_ba_to_int(event["event_log_event_header"]["event_type"], 'little')
+                        event_timestamp = scsi_ba_to_int(event["event_log_event_header"]["event_timestamp"], 'little')
+                        past_t = (persistent_event_log.current_trace_timestamp - event_timestamp) / 1000 ## seconds
+                        if event_type == 2:       ## 
+                            message = "Device: %s(ID: %s), firmware commit detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 3:     ## 
+                            message = "Device: %s(ID: %s), timestamp change detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 4:     ## 
+                            message = "Device: %s(ID: %s), power-on or reset detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 5:     ## 
+                            message = "Device: %s(ID: %s), NVM subsystem Hardware Error detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                            syslog.info(message, message1)
+                        elif event_type == 6:     ## 
+                            message = "Device: %s(ID: %s), change namespace detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 7:     ## 
+                            message = "Device: %s(ID: %s), format NVM Start detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 8:     ## 
+                            message = "Device: %s(ID: %s), format NVM completion detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 9:     ## 
+                            message = "Device: %s(ID: %s), sanitize start detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 10:    ## 
+                            message = "Device: %s(ID: %s), sanitize completion detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 11:    ## 
+                            message = "Device: %s(ID: %s), set feature detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 12:    ## 
+                            message = "Device: %s(ID: %s), telemetry log created detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                        elif event_type == 13:    ## 
+                            message = "Device: %s(ID: %s), thermal excursion detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
+                            message1 = "The event log event data is %s" % event["event_log_event_data"]
+                            logger.info(message, message1)
+                            syslog.info(message, message1)
                 ## Record Current Tempeture
                 if "Composite Temperature" in current_smart.smart_info:
-                    temperature = current_smart.smart_info["Composite Temperature"] - 273.15
+                    temperature = round(current_smart.smart_info["Composite Temperature"] - 273.15)
                     message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
                     logger.info(message)
                 ### PCIe Check

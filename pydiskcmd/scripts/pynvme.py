@@ -359,6 +359,8 @@ def persistent_event_log():
         help="action of get persistent event log, 0: open, 1: read, 2: close, 3: check status")
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
         help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-f", "--filter", type="str", dest="filter", action="store", default='',
+        help="Show the event of the specified event type when --action=normal, split with comma(ex. 2,3)")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -366,9 +368,17 @@ def persistent_event_log():
         dev = sys.argv[2]
         if not os.path.exists(dev):
             raise RuntimeError("Device not support!")
+        # check options.filter
+        _filter = []
+        if options.filter:
+            try:
+                _filter = [int(i) for i in options.filter.split(',')]
+            except ValueError:
+                parser.error("int type is need with -f/--filter")
         ##
         with NVMe(init_device(dev)) as d:
             ret = d.get_persistent_event_log(options.action)
+        if True:
             if options.action == 3:
                 if ret == 0:
                     print ("Context Not Established!")
@@ -406,6 +416,8 @@ def persistent_event_log():
                         print ("Persistent Event Log Events: ")
                         print ('......................')
                     for k,v in event_log_events.items():
+                        if _filter and (scsi_ba_to_int(v['event_log_event_header']['event_type'], 'little') not in _filter):
+                            continue
                         print ('Entry[%s]' % k)
                         print ('......................')
                         for m,n in v.items():
@@ -421,7 +433,7 @@ def persistent_event_log():
                     print (ret)
     else:
         parser.print_help()
-    
+
 
 commands_dict = {"list": _list,
                  "smart-log": smart_log,
