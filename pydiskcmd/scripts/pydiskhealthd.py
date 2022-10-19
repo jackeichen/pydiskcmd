@@ -104,8 +104,14 @@ def pydiskhealthd():
         logger.info("Check Device ...")
         for dev_id,dev_context in dev_pool.items():
             if dev_context.device_type == 'nvme':
+                try:
                 ### update log
-                smart_trace,persistent_event_log = dev_context.get_log_once()
+                    smart_trace,persistent_event_log = dev_context.get_log_once()
+                except FileNotFoundError:
+                    message = "Device: %s(ID: %s), we lost this device now!" % (dev_context.dev_path, dev_context.device_id)
+                    logger.error(message)
+                    syslog.info(message)
+                    continue  # skip this device 
                 ### check smart Now
                 current_smart = smart_trace.current_value
                 last_smart = smart_trace.get_cache_last_value()
@@ -396,8 +402,14 @@ def pydiskhealthd():
                 dev_context.update_pcie_trace()
             ## ATA device check
             elif dev_context.device_type == 'ata':
-                ### get smart once, return smart trace
-                smart_trace = dev_context.get_smart_once()
+                try:
+                    ### get smart once, return smart trace
+                    smart_trace = dev_context.get_smart_once()
+                except FileNotFoundError:
+                    message = "Device: %s(ID: %s), we lost this device now!" % (dev_context.dev_path, dev_context.device_id)
+                    logger.error(message)
+                    syslog.info(message)
+                    continue  # skip this device 
                 ### 
                 current_smart = smart_trace.current_value  # current_smart is a SmartInfo object
                 ## check start
