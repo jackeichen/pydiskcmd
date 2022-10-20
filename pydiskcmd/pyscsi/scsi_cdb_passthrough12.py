@@ -17,6 +17,8 @@
 from pydiskcmd.pyscsi.scsi_command import SCSICommand
 from pydiskcmd.utils.byte_converter import byteconvert2
 from pydiskcmd.pyscsi.scsi_sense import SCSICheckCondition,decode_bits
+from pydiskcmd.exceptions import DeviceTypeError
+
 #
 # SCSI pass-through command and definitions
 #
@@ -45,6 +47,8 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
         ##
         if self.asc == 0 and self.ascq == 29: ## ATA PASS THROUGH INFORMATION AVAILABLE
             self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:22])
+        else:
+            raise DeviceTypeError("May Not a valid ATA Device.")
 
     @property
     def ata_pass_thr_return_descriptor(self):
@@ -57,7 +61,6 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
                     ATACheckReturnDescriptorCondition._extend_ata_status_return_descriptor,
                     result)
         return result
-
 
 
 class PassThrough12(SCSICommand):
@@ -155,9 +158,12 @@ class PassThrough12(SCSICommand):
         self.ata_sense_data_condition = None
         self.ata_sense_data = {}
 
+    def decode_sense(self):
+        self.ata_sense_data_condition = ATACheckReturnDescriptorCondition(self.sense)
+        self.ata_sense_data = self.ata_sense_data_condition.data
+
     @property
     def ata_status_return_descriptor(self):
-        if not self.ata_sense_data:
-            self.ata_sense_data_condition = ATACheckReturnDescriptorCondition(self.sense)
-            self.ata_sense_data = self.ata_sense_data_condition.data
+        if not self.ata_sense_data_condition:
+            self.decode_sense()
         return self.ata_sense_data.get("ata_pass_thr_return_descriptor")

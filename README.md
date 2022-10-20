@@ -47,6 +47,13 @@ It is also available as a downloadable zip archive from:
 Building and installing
 =======================
 
+Requirements:
+    * python3-devel
+    * setuptools_scm
+    * Cython
+    * libiscsi-dev(need by iscsi): 1.13 or later
+
+A fresh installation usually need sgio(or iscsi if desired). 
 To build and install from the repository:
 
     $ pip install .[iscsi,sgio]

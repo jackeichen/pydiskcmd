@@ -5,12 +5,16 @@ import re
 import time
 import optparse
 import subprocess
+import traceback
 from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs
 from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
+from pydiskcmd.exceptions import DeviceTypeError
+from pydiskcmd.pyscsi import scsi_enum_inquiry as INQUIRY
 ##
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice
 from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice
+from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
 
 tool_version = '0.1.0'
@@ -33,21 +37,30 @@ def get_disk_context(devices):
                     dev_context = NVMeDevice(dev_path)
                 except FileNotFoundError:
                     logger.warning("Skip device %s, device is removed." % dev_path)
+                except:
+                    logger.error(traceback.format_exc())
                 else:
                     if dev_context.device_id not in devices:
                         devices[dev_context.device_id] = dev_context
                         logger.info("Find new nvme device %s, ID: %s" % (dev_path, dev_context.device_id))
         ## SATA Or SAS Disk here
         else:
-            ## judge the disk is SATA Or SAS, by send ATA_identify command
             dev_path = "/dev/%s" % dev
-            try:  # try SATA command, ATADevice will send identify command to device
-                dev_context = ATADevice(dev_path)
+            ### first act as a scsi device
+            try:
+                dev_context = SCSIDevice(dev_path)
+                ## judge the disk if is SATA device, by send an inquiry page=0x89(ATA Infomation)
+                i = dev_context.inquiry(INQUIRY.VPD.ATA_INFORMATION)
+            ##
             except FileNotFoundError:
                 logger.warning("Skip device %s, device is removed." % dev_path)
-            except: # May be SAS Device, Not support now
-                logger.info("Skip device %s, it is not a nvme or SATA Device" % dev_path)
-            else:  # send success, it's a SATA Device
+            except:
+                logger.error(traceback.format_exc())
+            else:
+                if ("identify" in i) and ("general_config" in i['identify']) and ("ata_device" in i['identify']['general_config']) and (i['identify']['general_config']['ata_device'] == 0):
+                    ## change device to SATA Device interface
+                    dev_context = ATADevice(dev_path)
+                    logger.info("Device %s, change from scsi to sata" % dev_path)
                 if dev_context.device_id not in devices:
                     devices[dev_context.device_id] = dev_context
                     logger.info("Find new ATA device %s, ID: %s" % (dev_path, dev_context.device_id))

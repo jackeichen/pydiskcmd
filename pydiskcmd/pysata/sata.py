@@ -81,6 +81,14 @@ class SATA(object):
             elif self.device.devicetype in (0x05,):  # mmc
                 self.device.opcodes = mmc
 
+    def _execute(self, cmd):
+        """
+        wrapper method to call the SCSIDevice._execute method
+
+        :param cmd: a SCSICommand object
+        """
+        self.device.execute(cmd)
+
     def execute(self, cmd):
         """
         wrapper method to call the SCSIDevice.execute method
@@ -88,7 +96,8 @@ class SATA(object):
         :param cmd: a SCSICommand object
         """
         try:
-            self.device.execute(cmd)
+            self._execute(cmd)
+            cmd.decode_sense()
         except Exception as e:
             raise e
 
@@ -110,7 +119,7 @@ class SATA(object):
         :param: blocksize in bytes
         """
         self._blocksize = value
-    
+
     def inquiry(self,
                 evpd=0,
                 page_code=0,
@@ -128,16 +137,19 @@ class SATA(object):
                       evpd=evpd,
                       page_code=page_code,
                       alloclen=alloclen)
-        self.execute(cmd)
+        try:
+            self._execute(cmd)
+        except Exception as e:
+            raise e
         cmd.unmarshall(evpd=evpd)
         return cmd
-    
+
     def getAccessibleMaxAddress(self):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = AccessibleMaxAddressCfg(opcode, self.blocksize, 0)
         self.execute(cmd)   # information need be reported in sense data
         return cmd
-    
+
     def smart_read_data(self, smart_key=None):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = SmartReadData(opcode, self.blocksize, smart_key)
@@ -172,7 +184,7 @@ class SATA(object):
         cmd = ReadDMAEXT16(opcode, self.blocksize, lba, tl)
         self.execute(cmd)
         return cmd
-    
+
     def write_DMAEXT16(self,
                        lba,
                        tl,
@@ -181,7 +193,7 @@ class SATA(object):
         cmd = WriteDMAEXT16(opcode, self.blocksize, lba, tl, data)
         self.execute(cmd)
         return cmd
-    
+
     def dsm(self,
             lba_description,
             fetures=1):
@@ -221,7 +233,7 @@ class SATA(object):
         cmd = DSM(opcode, self.blocksize, fetures, data)
         self.execute(cmd)
         return cmd
-    
+
     def trim(self, *args, **kwargs):
         return self.dsm(*args, **kwargs)
 
@@ -269,14 +281,14 @@ class SATA(object):
             cmd = DSM(opcode, self.blocksize, fetures, data)
             self.execute(cmd)
         return cmd
-    
+
     def identify(self):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = Identify(opcode, self.blocksize)
         self.execute(cmd)
         cmd.unmarshall()
         return cmd
-    
+
     def flush(self):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = Flush(opcode, self.blocksize)
@@ -288,31 +300,31 @@ class SATA(object):
         cmd = CheckPowerMode(opcode, self.blocksize)
         self.execute(cmd)
         return cmd
-    
+
     def standby_imm(self):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = StandbyImm(opcode, self.blocksize)
         self.execute(cmd)
         return cmd
-    
+
     def hard_reset(self):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = Hardreset(opcode, self.blocksize)
         self.execute(cmd)
         return cmd
-    
+
     def soft_reset(self):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = SoftReset(opcode, self.blocksize)
         self.execute(cmd)
         return cmd
-    
+
     def device_reset(self):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = DeviceReset(opcode, self.blocksize)
         self.execute(cmd)
         return cmd
-    
+
     def execute_device_diagnostic(self):
         opcode = self.device.opcodes.PASS_THROUGH_16
         cmd = ExecuteDeviceDiagnostic(opcode, self.blocksize)
