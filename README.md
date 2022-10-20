@@ -48,6 +48,7 @@ Building and installing
 =======================
 
 Requirements:
+
     * python3-devel
     * setuptools_scm
     * Cython
