@@ -297,54 +297,66 @@ def pydiskhealthd():
                         past_t = (persistent_event_log.current_trace_timestamp - event_timestamp) / 1000 ## seconds
                         if event_type == 2:       ## 
                             message = "Device: %s(ID: %s), firmware commit detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 3:     ## 
                             message = "Device: %s(ID: %s), timestamp change detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 4:     ## 
                             message = "Device: %s(ID: %s), power-on or reset detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 5:     ## 
                             message = "Device: %s(ID: %s), NVM subsystem Hardware Error detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
-                            syslog.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
+                            syslog.info(message, message1, message2)
                         elif event_type == 6:     ## 
                             message = "Device: %s(ID: %s), change namespace detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 7:     ## 
                             message = "Device: %s(ID: %s), format NVM Start detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 8:     ## 
                             message = "Device: %s(ID: %s), format NVM completion detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 9:     ## 
                             message = "Device: %s(ID: %s), sanitize start detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 10:    ## 
                             message = "Device: %s(ID: %s), sanitize completion detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 11:    ## 
                             message = "Device: %s(ID: %s), set feature detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 12:    ## 
                             message = "Device: %s(ID: %s), telemetry log created detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
                         elif event_type == 13:    ## 
                             message = "Device: %s(ID: %s), thermal excursion detected in past %.3f seconds." % (dev_context.dev_path, dev_context.device_id, past_t)
-                            message1 = "The event log event data is %s" % event["event_log_event_data"]
-                            logger.info(message, message1)
-                            syslog.info(message, message1)
+                            message1 = "The event log event vendor spec info is %s" % event["vendor_spec_info"]
+                            message2 = "The event log event data is %s" % event["event_log_event_data"] #
+                            logger.info(message, message1, message2)
+                            syslog.info(message, message1, message2)
                 ## Record Current Tempeture
                 if "Composite Temperature" in current_smart.smart_info:
                     temperature = round(current_smart.smart_info["Composite Temperature"] - 273.15)

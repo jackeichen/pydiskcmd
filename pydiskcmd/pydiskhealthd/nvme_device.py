@@ -10,10 +10,9 @@ from pydiskcmd.pynvme.nvme_spec import nvme_smart_decode,nvme_id_ctrl_decode
 from pydiskcmd.pynvme.nvme_spec import persistent_event_log_header_decode,persistent_event_log_events_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmd.pynvme.command_structure import DataBuffer
-
+from pydiskcmd.pydiskhealthd.DB import my_tinydb,encode_byte,decode_str
 ###
 PCIeMappingPath = "/sys/class/nvme/%s/address"
-SMARTTracePath = "/var/log/pydiskcmd/smart_trace/"
 ###
 
 
@@ -53,6 +52,7 @@ class SmartTrace(object):
         # value: SmartCalculatedValue object
         # the current value DO Not included in this calculated_value
         self.__vs_smart_calculated_value = {}
+        ##
 
     @property
     def current_value(self):
@@ -87,7 +87,6 @@ class SmartTrace(object):
             return self.__smart_cache_index
 
     def set_smart(self, raw_data, time_t):
-        ## TODO: store the raw value to file 
         ## decode the smart info
         smart = SmartInfo(raw_data, time_t)
         ## current value handle
@@ -177,6 +176,10 @@ class NVMeDevice(object):
         with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
             result = nvme_id_ctrl_decode(d.ctrl_identify_info)
         self.__device_id = ba_to_ascii_string(result.get("SN"), "")
+        ##
+        self.__device_info_db = None
+        if my_tinydb:
+            self.__device_info_db = my_tinydb.get_table_by_id(self.device_id)
 
     def __del__(self):
         ## close device when exit
@@ -240,8 +243,12 @@ class NVMeDevice(object):
                 persistent_event_log_data = d.get_persistent_event_log(1, data_buffer=self.__persistent_event_log.data_buffer)
                 if persistent_event_log_status == 0: # if not open, then close it.
                     d.get_persistent_event_log(2, data_buffer=self.__persistent_event_log.data_buffer)
+        current_t = int(time.time())
         if smart_data:
-            self.__smart_trace.set_smart(cmd.data, int(time.time()))
+            self.__smart_trace.set_smart(smart_data, current_t)
+            ## store it to db, if tinydb installed.
+            if self.__device_info_db:
+                self.__device_info_db.insert({"time": current_t, "smart": encode_byte(smart_data)})
         ##
         if persistent_event_log_data:
             event_log_header = persistent_event_log_header_decode(persistent_event_log_data[0:512])

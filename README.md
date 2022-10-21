@@ -52,7 +52,9 @@ Requirements:
     * python3-devel
     * setuptools_scm
     * Cython
-    * libiscsi-dev(need by iscsi): 1.13 or later
+    * libiscsi-dev(optional, need by iscsi): 1.13 or later
+    * TinyDB(optional)
+    * typing_extensions(optional, need by TinyDB): >= 3.10, < 5.0.
 
 A fresh installation usually need sgio(or iscsi if desired). 
 To build and install from the repository:
@@ -75,7 +77,7 @@ You can uninstall it by run:
 
 Usage
 =====
-There executable programs should be added to environment variables after installation.
+Four executable programs should be added to environment variables after installation.
 
 pydiskcmd
 ---------
@@ -119,6 +121,7 @@ For NVMe Disk:
   * PCIe Link Status;
   * PCIe AER Registers;
   * smart values;
+  * Persistent Event Logs；
 
 For SATA Disk:
 

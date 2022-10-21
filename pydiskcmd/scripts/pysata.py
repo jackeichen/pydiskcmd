@@ -7,7 +7,7 @@ import binascii
 from pydiskcmd.pysata.sata import SATA
 from pydiskcmd.pysata.sata_spec import decode_smart_thresh
 from pydiskcmd.utils import init_device
-from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
+from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scsi_ba_to_int
 from pydiskcmd.utils.format_print import format_dump_bytes
 
 Version = '0.1.0'
@@ -354,6 +354,8 @@ def self_test():
 def smart():
     usage="usage: %prog smart <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
 
@@ -381,34 +383,38 @@ def smart():
             smart_thread = decode_smart_thresh(cmd.datain[2:362])
         ##
         if data:
-            print ('General SMART Values:')
-            print ('=' * 100)
-            for name,value in general_smart.items():
-                dt = value[::-1]
-                r = binascii.hexlify(dt)
-                print ('%34s: %-10d [0x%s]' % (name,int(r,16),r.decode()))
-            print ('')
-            print ('Vendor Specific SMART Attributes with Thresholds:')
-            print ('=' * 100)
-            print_fomrat = '%3s %-25s %-6s %-6s %-6s %-10s %-10s %-10s %-10s'
-            print (print_fomrat %
-                  ('ID#','ATTRIBUTE_NAME','FLAG','VALUE','WORST','RAW_VALUE0','RAW_V_MIN','RAW_V_MAX','THRESHOLD'))
-            print ('-'*100)
-            for i in range(0, 359, 12):
-                ID = str(vs_smart[i])
-                if ID not in SMART_ATTR:
-                    continue
+            if options.output_format == "normal":
+                print ('General SMART Values:')
+                print ('=' * 100)
+                for name,value in general_smart.items():
+                    dt = value[::-1]
+                    r = binascii.hexlify(dt)
+                    print ('%34s: %-10d [0x%s]' % (name,int(r,16),r.decode()))
+                print ('')
+                print ('Vendor Specific SMART Attributes with Thresholds:')
+                print ('=' * 100)
+                print_fomrat = '%3s %-25s %-6s %-6s %-6s %-10s %s'
                 print (print_fomrat %
-                      (ID,                                      # ID
-                       SMART_ATTR[ID],                          # ATTRIBUTE_NAME
-                       vs_smart[i+1],                           # FLAG
-                       vs_smart[i+3],                           # VALUE
-                       vs_smart[i+4],                           # WORST
-                       bytearray2hex_l(vs_smart, i+5, 2),       # RAW_VALUE0
-                       bytearray2hex_l(vs_smart, i+7, 2),       # RAW_V_MIN
-                       bytearray2hex_l(vs_smart, i+9, 2),       # RAW_V_MAX
-                       smart_thread[vs_smart[i]])               # THRESHOLD
-                       )
+                      ('ID#','ATTRIBUTE_NAME','FLAG','VALUE','WORST','THRESHOLD','RAW_VALUE'))
+                print ('-'*100)
+                print_fomrat = '%3s %-25s %#-6x %-6s %-6s %-10s %s'
+                for i in range(0, 359, 12):
+                    ID = str(vs_smart[i])
+                    if ID not in SMART_ATTR:
+                        continue
+                    print (print_fomrat %
+                          (ID,                                          # ID
+                           SMART_ATTR[ID],                              # ATTRIBUTE_NAME
+                           scsi_ba_to_int(vs_smart[i+1:i+3], 'little'), # FLAG
+                           vs_smart[i+3],                               # VALUE
+                           vs_smart[i+4],                               # WORST
+                           smart_thread[vs_smart[i]],                   # THRESHOLD
+                           bytearray2hex_l(vs_smart, i+5, 6))           # RAW_VALUE0
+                           )
+            elif options.output_format == "raw":
+                print (cmd.datain)
+            else:
+                format_dump_bytes(cmd.datain) 
     else:
         parser.print_help()
 

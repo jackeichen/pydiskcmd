@@ -12,7 +12,6 @@ class SCSIDevice(object):
     """
     dev_path: the nvme controller device path(ex. /dev/nvme0)
     
-    
     """
     def __init__(self, dev_path):
         self.__device_type = 'scsi'

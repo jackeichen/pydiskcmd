@@ -6,6 +6,7 @@ from pydiskcmd.pysata.sata import SATA
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
 from pydiskcmd.pysata.sata_spec import decode_bits,SMART_KEY,decode_smart_info,decode_smart_thresh,decode_smart_flag
+from pydiskcmd.pydiskhealthd.DB import my_tinydb,encode_byte,decode_str
 
 
 class SmartInfo(object):
@@ -84,7 +85,6 @@ class SmartTrace(object):
             return self.__smart_cache_index
 
     def set_smart(self, raw_data, time_t):
-        ## TODO: store the raw value to file 
         ## decode the smart info
         smart_all = {}
         decode_bits(raw_data, SMART_KEY, smart_all)
@@ -147,6 +147,10 @@ class ATADevice(object):
             cmd = d.identify()
             result = cmd.result
         self.__device_id = bytearray2string(translocate_bytearray(result.get("SerialNumber")))
+        ##
+        self.__device_info_db = None
+        if my_tinydb:
+            self.__device_info_db = my_tinydb.get_table_by_id(self.device_id)
 
     def __del__(self):
         ## close device when exit
@@ -168,8 +172,12 @@ class ATADevice(object):
         return self.__smart_trace
 
     def get_smart_once(self):
+        current_t = int(time.time())
         with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:
             raw_data = d.smart_read_data().datain
         #
-        self.__smart_trace.set_smart(raw_data, int(time.time()))
+        self.__smart_trace.set_smart(raw_data, current_t)
+        ## store to db, if installed
+        if self.__device_info_db:
+            self.__device_info_db.insert({"time": current_t, "smart": encode_byte(raw_data)})
         return self.__smart_trace
