@@ -127,13 +127,23 @@ class SmartTrace(object):
         self.__current_value = smart
 
 
+def get_dev_id(dev_path):
+    ## get device ID
+    device_id = None
+    with SATA(init_device(dev_path, open_t="ata"), blocksize=512) as d:
+        cmd = d.identify()
+        result = cmd.result
+    device_id = bytearray2string(translocate_bytearray(result.get("SerialNumber")))
+    return device_id.strip()
+
+
 class ATADevice(object):
     """
     dev_path: the nvme controller device path(ex. /dev/nvme0)
     
     
     """
-    def __init__(self, dev_path):
+    def __init__(self, dev_path, init_db=False):
         self.__device_type = 'ata'
         self.dev_path = dev_path
         # init smart trace
@@ -142,15 +152,11 @@ class ATADevice(object):
             raw_data_thresh = cmd_thresh.datain
         self.__smart_trace = SmartTrace(raw_data_thresh)
         ## init device
-        self.__device_id = None
-        with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:
-            cmd = d.identify()
-            result = cmd.result
-        self.__device_id = bytearray2string(translocate_bytearray(result.get("SerialNumber")))
+        self.__device_id = get_dev_id(self.dev_path)
         ##
         self.__device_info_db = None
-        if my_tinydb:
-            self.__device_info_db = my_tinydb.get_table_by_id(self.device_id)
+        if init_db:
+            self.init_db()
 
     def __del__(self):
         ## close device when exit
@@ -158,6 +164,17 @@ class ATADevice(object):
 
     def _close(self):
         pass
+
+    def init_db(self):
+        if my_tinydb:
+            self.__device_info_db = my_tinydb.get_table_by_id(self.device_id)
+            ## try to initial smart info, stored in last time.
+            last_doc_id = self.__device_info_db.get_last_doc_id()
+            if last_doc_id > 1:
+                e = self.__device_info_db.get_doc_by_doc_id(last_doc_id)
+                self.__smart_trace.set_smart(decode_str(e["smart"]), e["time"])
+                print ("Init sata smart: ")
+                print (e)
 
     @property
     def device_type(self):

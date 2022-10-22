@@ -155,13 +155,22 @@ class PersistentEventTrace(object):
             return result
 
 
+def get_dev_id(dev_path):
+    ## get device ID
+    device_id = None
+    with NVMe(init_device(dev_path, open_t="nvme")) as d:
+        result = nvme_id_ctrl_decode(d.ctrl_identify_info)
+    device_id = ba_to_ascii_string(result.get("SN"), "")
+    return device_id.strip()
+
+
 class NVMeDevice(object):
     """
     dev_path: the nvme controller device path(ex. /dev/nvme0)
     
     
     """
-    def __init__(self, dev_path):
+    def __init__(self, dev_path, init_db=False):
         self.__device_type = 'nvme'
         self.dev_path = dev_path
         bus_address = self._get_bus_addr_by_controller(dev_path)
@@ -172,14 +181,11 @@ class NVMeDevice(object):
         # init 
         self.__persistent_event_log = PersistentEventTrace()
         ## get device ID
-        self.__device_id = None
-        with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
-            result = nvme_id_ctrl_decode(d.ctrl_identify_info)
-        self.__device_id = ba_to_ascii_string(result.get("SN"), "")
+        self.__device_id = get_dev_id(self.dev_path)
         ##
         self.__device_info_db = None
-        if my_tinydb:
-            self.__device_info_db = my_tinydb.get_table_by_id(self.device_id)
+        if init_db:
+            self.init_db()
 
     def __del__(self):
         ## close device when exit
@@ -190,6 +196,17 @@ class NVMeDevice(object):
         May save the smart to a file, used in next power on
         '''
         pass
+
+    def init_db(self):
+        if my_tinydb:
+            self.__device_info_db = my_tinydb.get_table_by_id(self.device_id)
+            ## try to initial smart info, stored in last time.
+            last_doc_id = self.__device_info_db.get_last_doc_id()
+            if last_doc_id > 1:
+                e = self.__device_info_db.get_doc_by_doc_id(last_doc_id)
+                self.__smart_trace.set_smart(decode_str(e["smart"]), e["time"])
+                print ("Init nvme  smart: ")
+                print (e)
 
     @property
     def device_type(self):

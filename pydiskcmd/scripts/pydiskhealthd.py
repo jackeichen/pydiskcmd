@@ -11,7 +11,7 @@ from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
 from pydiskcmd.exceptions import DeviceTypeError
 from pydiskcmd.pyscsi import scsi_enum_inquiry as INQUIRY
-##
+## 
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice
 from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
@@ -41,6 +41,7 @@ def get_disk_context(devices):
                     logger.error(traceback.format_exc())
                 else:
                     if dev_context.device_id not in devices:
+                        dev_context.init_db()
                         devices[dev_context.device_id] = dev_context
                         logger.info("Find new nvme device %s, ID: %s" % (dev_path, dev_context.device_id))
         ## SATA Or SAS Disk here
@@ -62,14 +63,10 @@ def get_disk_context(devices):
                     dev_context = ATADevice(dev_path)
                     logger.info("Device %s, change from scsi to sata" % dev_path)
                 if dev_context.device_id not in devices:
+                    dev_context.init_db()
                     devices[dev_context.device_id] = dev_context
                     logger.info("Find new ATA device %s, ID: %s" % (dev_path, dev_context.device_id))
     return devices
-
-def difference_set_methmod(a, b):
-    diff_a_b = set(b).difference(set(a))  ## in b but not in a
-    diff_b_a = set(a).difference(set(b))  ## in a but not in b
-    return list(diff_a_b),list(diff_b_a)
 
 def pydiskhealthd():
     usage="usage: %prog [OPTION] [args...]"
@@ -443,20 +440,21 @@ def pydiskhealthd():
                     continue  # skip this device 
                 ### 
                 current_smart = smart_trace.current_value  # current_smart is a SmartInfo object
+                last_smart = smart_trace.get_cache_last_value()
                 ## check start
                 for _id,smart_attr in current_smart.smart_info.items():
                     ## check current_smart.value and current_smart.worst with smart thresh
                     if _id in smart_trace.thresh_info and smart_trace.thresh_info[_id] > 0: # valid if thresh value > 0
-                        if smart_attr.value < smart_trace.thresh_info[_id]:
-                            if smart_trace.vs_smart_calculated_value and smart_trace.vs_smart_calculated_value[_id].value_int_min > smart_trace.thresh_info[_id]:
+                        if smart_attr.value <= smart_trace.thresh_info[_id]:
+                            if last_smart and last_smart.smart_info[_id].value > smart_trace.thresh_info[_id]:
                                 message1 = "Device: %s(ID: %s), smart #ID %s value fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
                                 logger.warning(message1)
                                 if smart_attr.flag_decode["Pre-fail"]:
                                     syslog.warning(message1)
                                 else:
                                     syslog.info(message1)
-                            elif not smart_trace.vs_smart_calculated_value: # first time to report the message
-                                message1 = "Device: %s(ID: %s), smart #ID %s check error(value < threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
+                            elif not last_smart: # first time to report the message
+                                message1 = "Device: %s(ID: %s), smart #ID %s check error(value <= threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
                                 if smart_attr.flag_decode["Pre-fail"]:
                                     message2 = "#ID: %s, smart name: %s, Pre-fail, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id])
                                     logger.warning(message1, message2)
@@ -468,16 +466,16 @@ def pydiskhealthd():
                             else:    # vs_smart_calculated_value not init Or have report this error, will not duplicate report
                                 pass
                         ## check worst value
-                        if smart_attr.worst < smart_trace.thresh_info[_id]:
-                            if smart_trace.vs_smart_calculated_value and smart_trace.vs_smart_calculated_value[_id].worst_int_min > smart_trace.thresh_info[_id]:
+                        if smart_attr.worst <= smart_trace.thresh_info[_id]:
+                            if last_smart and last_smart.smart_info[_id].worst > smart_trace.thresh_info[_id]:
                                 message1 = "Device: %s(ID: %s), smart #ID %s worst fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
                                 logger.warning(message1)
                                 if smart_attr.flag_decode["Pre-fail"]:
                                     syslog.warning(message1)
                                 else:
                                     syslog.info(message1)
-                            elif not smart_trace.vs_smart_calculated_value: # first time to report the message
-                                message1 = "Device: %s(ID: %s), smart #ID %s check error(worst < threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
+                            elif not last_smart: # first time to report the message
+                                message1 = "Device: %s(ID: %s), smart #ID %s check error(worst <= threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
                                 if smart_attr.flag_decode["Pre-fail"]:
                                     message2 = "#ID: %s, smart name: %s, Pre-fail, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id])
                                     logger.warning(message1, message2)

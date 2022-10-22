@@ -43,14 +43,28 @@ class MyTinyTable(object):
     def table(self):
         return self.__table
 
+    def get_last_doc_id(self):
+        return self.__metadata["doc_id"]
+
     def get_next_doc_id(self, doc_id):
         temp = doc_id + 1
         if temp >= self.__max_entry:
             temp = 2
         return temp
 
+    def get_doc_by_doc_id(self, doc_id):
+        return self.__table.get(doc_id=doc_id)
+
     def _locate_accurate_meta(self):
         doc_id = self.__metadata["doc_id"]
+        ## current doc_id
+        ## if doc_id == 0, then check if doc_id=2 exist,
+        #  if exist, then set it to 2.
+        if doc_id < 2:
+            next_doc_id = self.get_next_doc_id(doc_id)
+            doc = self.__table.get(doc_id=next_doc_id)
+            if doc and ("time" in doc):
+                doc_id = 2
         if doc_id > 1:
             last_doc = self.__table.get(doc_id=doc_id)
             if last_doc and last_doc.get("time"):
