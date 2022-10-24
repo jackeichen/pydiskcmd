@@ -9,7 +9,7 @@ from pydiskcmd.pyscsi.scsi import code_version as scsi_version
 from pydiskcmd.system.bash_completion import update_pydiskcmd_completion
 from pydiskcmd.system.pydiskhealth_daemon import enable_systemd_pydiskhealthd
 
-ToolVersion = "0.1.0"
+ToolVersion = "0.2.1"
 
 def pydiskcmd():
     usage="usage: %prog [OPTION] [args...]"
@@ -18,6 +18,8 @@ def pydiskcmd():
         help="Enable pynvme/pysata bash completion")
     parser.add_option("", "--en_diskhealth_daemon", dest="en_diskhealth_daemon", action="store_true", default=False,
         help="Enable pysmartd systemctl diskhealth daemon")
+    parser.add_option("", "--show_temperature", dest="show_temperature", action="store_true", default=False,
+        help="Show the history of disk temperature")
     parser.add_option("", "--code_version", dest="code_version", action="store",default="pydiskcmd",
         help="Check code version: pydiskcmd|nvme|ata|scsi, default pydiskcmd")
 
@@ -27,6 +29,8 @@ def pydiskcmd():
         update_pydiskcmd_completion()
     elif options.en_diskhealth_daemon:
         enable_systemd_pydiskhealthd()
+    elif options.show_temperature:
+        from pydiskcmd.pydiskhealthd.DB import my_tinydb
     elif options.code_version:
         if options.code_version == "pydiskcmd":
             print ('')

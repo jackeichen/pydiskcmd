@@ -13,11 +13,11 @@ from pydiskcmd.exceptions import DeviceTypeError
 from pydiskcmd.pyscsi import scsi_enum_inquiry as INQUIRY
 ## 
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice
-from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice
+from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,AERTrace
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
 
-tool_version = '0.1.0'
+tool_version = '0.1.1'
 
 
 def get_disk_context(devices):
@@ -111,6 +111,8 @@ def pydiskhealthd():
         syslog.warning(str(e))
     ## check device here
     dev_pool = {}
+    # init aer
+    aer_trace = AERTrace()
     ## check start
     while True:
         start_t = time.time()
@@ -118,6 +120,16 @@ def pydiskhealthd():
         get_disk_context(dev_pool)
         ### check process Now
         logger.info("Check Device ...")
+        ## check nvme aer now
+        aer_trace.get_log_once()
+        diff = aer_trace.diff_trace()
+        if diff:
+            for i in diff:
+                logger.info("AER triggered, below is the details: ")
+                for k,v in i.items():
+                    logger.info("%-10s : %s" % (k, str(v)))
+                logger.info("-")
+        ##
         for dev_id,dev_context in dev_pool.items():
             if dev_context.device_type == 'nvme':
                 try:

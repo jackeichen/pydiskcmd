@@ -49,16 +49,22 @@ class NVMeAER(object):
         with open(self.__trace_log_file, 'r') as f:
             while True:
                 content = f.readline()
+                if not content:
+                    break
                 ## skip annotation
                 if not content.startswith("#"):
                     ## check if nvme_async_event
                     if "nvme_async_event:" in content:
+                        description = {}
+                        ##
                         content = content.strip()
                         temp_list = content.split(' ')
+                        ## remove "''"
+                        while '' in temp_list:
+                            temp_list.remove('')
+                        ## strip ":"
                         for i in range(len(temp_list)):
-                            if temp_list[i] == '':
-                                temp_list.remove('')
-                            elif temp_list[i].endswith(":"):
+                            if temp_list[i].endswith(":"):
                                 temp_list[i] = temp_list[i].rstrip(":")
                         ##
                         description["TASK-PID"] = temp_list[0]
@@ -66,7 +72,7 @@ class NVMeAER(object):
                         description["setting"] = temp_list[2]
                         description["TIMESTAMP"] = float(temp_list[3])
                         description["DEV"] = temp_list[5]
-                        description["NVME_AEN"] = temp_list[6]
+                        description["NVME_AEN"] = int(temp_list[6].strip("NVME_AEN="), base=16)
                         description["AER_TYPE"] = temp_list[7]
                         nvme_aer.append(description)
         return nvme_aer

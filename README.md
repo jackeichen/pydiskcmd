@@ -121,7 +121,8 @@ For NVMe Disk:
   * PCIe Link Status;
   * PCIe AER Registers;
   * smart values;
-  * Persistent Event Logs；
+  * Persistent Event Logs;
+  * AER Event Check;
 
 For SATA Disk:
 

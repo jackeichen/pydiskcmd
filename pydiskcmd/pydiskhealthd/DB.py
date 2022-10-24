@@ -101,7 +101,12 @@ class MyTinyTable(object):
 
 
 class MyTinyDB(object):
-    def __init__(self, db_file=_db_file, max_entry_per_disk=10000):
+    '''
+    For SATA Or NVMe Disk, usually about 800 Bytes per entry per disk，
+    example, if 2 sata disk and 1 nvme disk in system, and 30 entries per disk,
+    the TinyDB need max size = 3 * 30 * 800 = 72K.
+    '''
+    def __init__(self, db_file=_db_file, max_entry_per_disk=2000):
         self.__db_file = db_file
         self.__max_entry_per_disk = max_entry_per_disk
         ##
