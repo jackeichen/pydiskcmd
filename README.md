@@ -49,14 +49,17 @@ Building and installing
 
 Requirements:
 
+    * python3
     * python3-devel
     * setuptools_scm
     * Cython
-    * libiscsi-dev(optional, need by iscsi): 1.13 or later
+    * cython-sgio
+    * libiscsi-dev(optional, need by cython-iscsi): 1.13 or later
+    * cython-iscsi(optional)
     * TinyDB(optional)
     * typing_extensions(optional, need by TinyDB): >= 3.10, < 5.0.
 
-A fresh installation usually need sgio(or iscsi if desired). 
+A fresh installation usually need cython-sgio(or cython-iscsi if desired). 
 To build and install from the repository:
 
     $ pip install .[iscsi,sgio]

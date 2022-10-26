@@ -9,6 +9,9 @@ _pysata_cmds="check-PowerMode accessible-MaxAddress identify self-test \
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
           format persistent_event_log version help"
 
+_pyscsi_cmds="inq version help"
+
+
 pysata_list_opts () {
     local opts=""
 	local compargs=""
@@ -62,6 +65,43 @@ pysata_list_opts () {
         "download_fw")
 		opts+=" -f --file= -c --code= -x --xfer= -h --help"
 		;;
+        "version")
+		opts+=""
+			;;
+		"help")
+		opts+=""
+			;;
+    esac
+
+        opts+=" -h --help"
+
+	COMPREPLY+=( $( compgen $compargs -W "$opts" -- $cur ) )
+
+	return 0
+}
+
+
+pyscsi_list_opts () {
+    local opts=""
+	local compargs=""
+
+	local nonopt_args=0
+	for (( i=0; i < ${#words[@]}-1; i++ )); do
+		if [[ ${words[i]} != -* ]]; then
+			let nonopt_args+=1
+		fi
+	done
+
+	if [ $nonopt_args -eq 2 ]; then
+		opts="/dev/sd* "
+	fi
+
+	opts+=" "
+
+    case "$1" in
+        "inq")
+		opts+=" -p --page= -o --output-format=  -h --help"
+			;;
         "version")
 		opts+=""
 			;;
@@ -157,6 +197,19 @@ _pysata_subcmds () {
 	return 0
 }
 
+_pyscsi_subcmds () {
+        local cur prev words cword
+	_init_completion || return
+
+	if [[ ${#words[*]} -lt 3 ]]; then
+		COMPREPLY+=( $(compgen -W "$_pyscsi_cmds" -- $cur ) )
+	else
+		pyscsi_list_opts ${words[1]} $prev
+	fi
+
+	return 0
+}
+
 _pynvme_subcmds () {
         local cur prev words cword
 	_init_completion || return
@@ -173,3 +226,5 @@ _pynvme_subcmds () {
 complete -o default -F _pysata_subcmds pysata
 
 complete -o default -F _pynvme_subcmds pynvme
+
+complete -o default -F _pyscsi_subcmds pyscsi

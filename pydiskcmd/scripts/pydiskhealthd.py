@@ -1,11 +1,13 @@
 # SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+import os
 import re
 import time
 import optparse
 import subprocess
 import traceback
+import json
 from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs
 from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
@@ -16,13 +18,18 @@ from pydiskcmd.pydiskhealthd.sata_device import ATADevice
 from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,AERTrace
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
+from pydiskcmd.pydiskhealthd.some_path import SMARTTracePath
 
+####
+## the disk info store path
+DisksInfoPath = os.path.join(SMARTTracePath, "AllDisksInfo.json")
+##
 tool_version = '0.1.1'
-
+####
 
 def get_disk_context(devices):
     '''
-    devices: a dict that contain device object.
+    devices: a dict , that will contain device object.
     '''
     for dev in get_block_devs():
         ## init nvme device
@@ -68,6 +75,26 @@ def get_disk_context(devices):
                     logger.info("Find new ATA device %s, ID: %s" % (dev_path, dev_context.device_id))
     return devices
 
+def store_all_disks_id(devices):
+    '''
+    devices: a dict that contain device object.
+    '''
+    target = [] 
+    target = list(devices.keys())
+    with open(DisksInfoPath, 'w') as f:
+        f.write(json.dumps(target))
+
+def get_all_disks_id():
+    '''
+    return all disks id
+    '''
+    if os.path.exists(DisksInfoPath):
+        with open(DisksInfoPath, 'r') as f:
+            content = f.read()
+        if content:
+            return json.loads(content)
+    return []
+
 def pydiskhealthd():
     usage="usage: %prog [OPTION] [args...]"
     parser = optparse.OptionParser(usage,version="pydiskhealthd " + tool_version)
@@ -111,6 +138,22 @@ def pydiskhealthd():
         syslog.warning(str(e))
     ## check device here
     dev_pool = {}
+    get_disk_context(dev_pool)
+    # check if lost disks
+    dev_id_list = get_all_disks_id()
+    if dev_id_list:
+        for k,v in dev_pool.items():
+            if k in dev_id_list:
+                dev_id_list.remove(k)
+            else:
+                message = "Found new Disk ID: %s, compared to the last time to run" % k
+                syslog.info(message)
+                logger.info(message)
+        if dev_id_list:
+            for i in dev_id_list:
+                message = "Lost the Disk ID: %s, compared to the last time to run" % i
+                syslog.info(message)
+                logger.warning(message)
     # init aer
     aer_trace = AERTrace()
     ## check start
@@ -118,6 +161,8 @@ def pydiskhealthd():
         start_t = time.time()
         ### check device, add or lost
         get_disk_context(dev_pool)
+        ## store all the disk info
+        store_all_disks_id(dev_pool)
         ### check process Now
         logger.info("Check Device ...")
         ## check nvme aer now
@@ -286,7 +331,7 @@ def pydiskhealthd():
                             syslog.info(message)
                             logger.warning(message)
                         else:
-                            message = "Check Number of Error Information Log Entries(total %s entries) done in disk %s(ID: %s)." % (smart_current_value_int, dev_context.dev_path, dev_context.device_id)
+                            message = "Device: %s(ID: %s), check Number of Error Information Log Entries(total %s entries) done." % (dev_context.dev_path, dev_context.device_id, smart_current_value_int)
                             logger.info(message)
                     else:
                         if smart_current_value_int > 0:
