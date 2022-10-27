@@ -215,6 +215,23 @@ Persistent_Event_Log_Event_Header_bit_mask = {"event_type": ('b', 0, 1),        
                                              }
 
 
+self_test_log_bit_mask = {"operation_status": [0x0F, 0],                  ## Current Device Self-Test Operation
+                          "test_process": [0x7F, 1],                      ## Current Device Self-Test Completion
+                          }
+
+self_test_return_data_struc_bit_mask = {"test_result": [0x0F, 0],          ##  the result of the device self-test operation that this Self-test Result Data Structure describes
+                                        "operation_type": [0xF0, 0],       ##  the Self-test Code value that was specified in the Device Self-test command
+                                        "Segment_num": ('b', 1, 1),        ##  Segment Number
+                                        "valid_diag_info": ('b', 2, 1),    ##  Valid Diagnostic Information
+                                        "POH": ('b', 4, 8),                ##  Power On Hours (POH)
+                                        "NSID": ('b', 12, 4),              ##  Namespace Identifier (NSID)
+                                        "failing_lba": ('b', 16, 8),       ##  Failing LBA
+                                        "status_code_type": ('b', 24, 1),  ##  Status Code Type
+                                        "status_code": ('b', 25, 1),       ##  Status Code
+                                        }
+
+
+
 class ErrorInfomationLogEntryUnit(object):
     def __init__(self, data):
         self.error_count = int.from_bytes(data[0:8], byteorder='little', signed=False)
@@ -322,3 +339,15 @@ def persistent_event_log_events_decode(raw_data, total_event_number):
         event_log_events[i] = event_log_event_format
         offset += (ehl_int+el_int+2+1)
     return event_log_events
+
+def self_test_log_decode(raw_data):
+    result = {}
+    decode_bits(raw_data, self_test_log_bit_mask, result)
+    ## by nvme spec 1.4a
+    for i in range(20):
+        temp = {}
+        decode_bits(raw_data[4+i*28:32+i*28], self_test_return_data_struc_bit_mask, temp)
+        if temp["test_result"] != 0x0F:
+            result["LogEntry%s" % i] = temp
+    return result
+        

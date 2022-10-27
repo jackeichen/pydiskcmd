@@ -34,7 +34,9 @@ def print_help():
     print ("  fw-download           Download new firmware")
     print ("  fw-commit             Verify and commit firmware to a specific slot")
     print ("  format                Format namespace with new block format")
-    print ("  persistent_event_log  Get persistent event log from device.")
+    print ("  persistent_event_log  Get persistent event log from device")
+    print ("  device-self-test      Perform the necessary tests to observe the performance")
+    print ("  self-test-log         Retrieve the SELF-TEST Log, show it")
     print ("  version               Shows the program version")
     print ("  help                  Shows the program version")
     print ("")
@@ -434,6 +436,72 @@ def persistent_event_log():
     else:
         parser.print_help()
 
+def device_self_test():
+    usage="usage: %prog self-test-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0xFFFFFFFF,
+        help="Indicate the namespace in which the device self-test has to be carried out")
+    parser.add_option("-s", "--self-test-code", type="int", dest="test_code", action="store", default=0x01,
+        help="This field specifies the action taken by the device \
+self-test command:                                     \
+0x1 Start a short device self-test operation           \
+0x2 Start a extended device self-test operation        \
+0xe Start a vendor specific device self-test operation \
+0xf abort the device self-test")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        # 
+        if options.test_code not in (1, 2, 0xe, 0xf):
+            parser.error("-s/--self-test-code not match")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.self_test(options.test_code, ns_id=options.namespace_id)
+        cmd.check_status(success_hint=True)
+
+
+def self_test_log():
+    usage="usage: %prog self-test-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.self_test_log()
+        ##
+        if options.output_format == "binary":
+            format_dump_bytes(cmd.data)
+        elif options.output_format == "normal":
+            result = self_test_log_decode(cmd.data)
+            print ("Current Device Self-Test Operation Status :  %s" % result["operation_status"])
+            print ("Current Device Self-Test Process          :  %s" % result["test_process"])
+            print ('')
+            print_format = "  %-40s: %s"
+            for i in range(20):
+                k = "LogEntry%s" % i
+                if k in result:
+                    print (k)
+                    for _k,v in result[k].items():
+                        if isinstance(v, bytes):
+                            v = scsi_ba_to_int(v, 'little')
+                        print (print_format % (_k, v))
+                    print ('-'*45)
+        else:
+            print (cmd.data)
+    else:
+        parser.print_help()
+
 
 commands_dict = {"list": _list,
                  "smart-log": smart_log,
@@ -445,6 +513,8 @@ commands_dict = {"list": _list,
                  "fw-commit": fw_commit, 
                  "format": nvme_format,
                  "persistent_event_log": persistent_event_log,
+                 "device-self-test": device_self_test,
+                 "self-test-log": self_test_log,
                  "version": version,
                  "help": print_help}
 

@@ -518,5 +518,30 @@ class NVMe(object):
             print ("Action should be 0|1|2|3.")
             return 6
 
+    def self_test(self, stc, ns_id=0xFFFFFFFF,):
+        ### build command
+        cdw10 = build_command({"stc": (0x0F, 0, stc),})
+        ###
+        cmd_struc = CmdStructure(opcode=0x14,
+                                 nsid=ns_id,
+                                 cdw10=cdw10,
+                                 timeout_ms=60000)
+        ###
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
 
-
+    def self_test_log(self):
+        ### build command
+        numdl = int(564 / 4) - 1
+        cdw10 = build_command({"lid": (0xFF, 0, 0x06),      # log id
+                               "numdl": (0x0FFF, 2, numdl),})
+        ##
+        cmd_struc = CmdStructure(opcode=0x02,
+                                 data_len=564,
+                                 cdw10=cdw10,)
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret

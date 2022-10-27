@@ -52,7 +52,6 @@ Requirements:
     * python3
     * python3-devel
     * setuptools_scm
-    * Cython
     * cython-sgio
     * libiscsi-dev(optional, need by cython-iscsi): 1.13 or later
     * cython-iscsi(optional)
