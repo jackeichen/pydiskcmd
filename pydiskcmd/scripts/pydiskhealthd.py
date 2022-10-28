@@ -2,13 +2,12 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
-import re
 import time
 import optparse
 import subprocess
 import traceback
 import json
-from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs
+from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs,get_nvme_dev_info
 from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
 from pydiskcmd.exceptions import DeviceTypeError
@@ -31,28 +30,9 @@ def get_disk_context(devices):
     '''
     devices: a dict , that will contain device object.
     '''
-    for dev in get_block_devs():
-        ## init nvme device
-        if "nvme" in dev:
-            g = re.match(r"nvme([0-9]+)n([0-9]+)", dev)
-            if g:
-                ctrl_id = g[1]
-                ns_id = g[2]
-                ## add to dict
-                dev_path = "/dev/nvme%s" % ctrl_id
-                try:
-                    dev_context = NVMeDevice(dev_path)
-                except FileNotFoundError:
-                    logger.warning("Skip device %s, device is removed." % dev_path)
-                except:
-                    logger.error(traceback.format_exc())
-                else:
-                    if dev_context.device_id not in devices:
-                        dev_context.init_db()
-                        devices[dev_context.device_id] = dev_context
-                        logger.info("Find new nvme device %s, ID: %s" % (dev_path, dev_context.device_id))
-        ## SATA Or SAS Disk here
-        else:
+    for dev in get_block_devs(print_detail=False):
+        ## Skip nvme device, and scan SATA Or SAS Disk here
+        if "nvme" not in dev:
             dev_path = "/dev/%s" % dev
             ### first act as a scsi device
             try:
@@ -73,6 +53,20 @@ def get_disk_context(devices):
                     dev_context.init_db()
                     devices[dev_context.device_id] = dev_context
                     logger.info("Find new ATA device %s, ID: %s" % (dev_path, dev_context.device_id))
+    ## scan nvme device
+    for ctrl_id in get_nvme_dev_info():
+        dev_path = "/dev/%s" % ctrl_id
+        try:
+            dev_context = NVMeDevice(dev_path)
+        except FileNotFoundError:
+            logger.warning("Skip device %s, device is removed." % dev_path)
+        except:
+            logger.error(traceback.format_exc())
+        else:
+            if dev_context.device_id not in devices:
+                dev_context.init_db()
+                devices[dev_context.device_id] = dev_context
+                logger.info("Find new nvme device %s, ID: %s" % (dev_path, dev_context.device_id))
     return devices
 
 def store_all_disks_id(devices):

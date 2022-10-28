@@ -25,7 +25,20 @@ def get_block_devs(print_detail=True) -> List[str]:
             if not dev.startswith(excluded_block_devices)]
     if print_detail:
         print (f'{len(devs)} devices detected')
-    return devs
+    return devs 
+
+def get_nvme_dev_info():
+    """
+    Return: a list that contain ctrl_id, like ["nvme0", "nvme1"]
+    """
+    return [dev for dev in os.listdir('/sys/class/nvme') if dev.startswith("nvme")]
+
+def get_nvme_block_dev_by_ctrl_id(ctrl_id):
+    """
+    Return: a list that contain ns_id under ctrl_id, like ["nvme0n1", "nvme0n2"]
+    """
+    path = os.path.join('/sys/class/nvme', ctrl_id)
+    return [dev for dev in os.listdir(path) if dev.startswith("nvme")]
 
 
 class SystemdNotify(object):
