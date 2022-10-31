@@ -5,7 +5,7 @@
 class CommandDecoder(object):
     def __init__(self):
         self.status = 0      ## Completion Queue Entry: Status Field
-        self.cmd_spec = 0     ## Completion Queue Entry: Command Specific
+        self.cmd_spec = 0    ## Completion Queue Entry: Command Specific
         self.data = b''      ## Data
         self.meta_data = b'' ## meta data
 

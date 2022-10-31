@@ -7,7 +7,8 @@ _pysata_cmds="check-PowerMode accessible-MaxAddress identify self-test \
           smart standby read write flush trim download_fw version help"
 
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
-          format persistent_event_log device-self-test self-test-log version help"
+          format persistent_event_log device-self-test self-test-log get-feature \
+          set-feature version help"
 
 _pyscsi_cmds="inq version help"
 
@@ -100,7 +101,7 @@ pyscsi_list_opts () {
 
     case "$1" in
         "inq")
-		opts+=" -p --page= -o --output-format=  -h --help"
+		opts+=" -p --page= -o --output-format= -h --help"
 			;;
         "version")
 		opts+=""
@@ -173,6 +174,14 @@ pynvme_list_opts () {
 		;;
         "self-test-log")
 		opts+=" -o --output-format= -h --help"
+		;;
+        "get-feature")
+		opts+=" -n --namespace-id= -f --feature-id= -s --sel= -l --data-len \
+            -c --cdw11= -o --output-format= -h --help"
+		;;
+        "set-feature")
+		opts+=" -n --namespace-id= -f --feature-id= -v --value= -d --data= \
+            -c --cdw12= -s --save -h --help"
 		;;
         "version")
 		opts+=""

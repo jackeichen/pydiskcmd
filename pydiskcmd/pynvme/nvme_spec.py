@@ -350,4 +350,13 @@ def self_test_log_decode(raw_data):
         if temp["test_result"] != 0x0F:
             result["LogEntry%s" % i] = temp
     return result
-        
+
+def decode_ns_list_format(raw_data):
+    target = []
+    max_cycle = int(len(raw_data) / 4)
+    for i in range(max_cycle):
+        v = scsi_ba_to_int(raw_data[i*4:i*4+4], 'little')
+        if v == 0:
+            break
+        target.append(v)
+    return target

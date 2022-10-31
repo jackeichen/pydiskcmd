@@ -39,7 +39,7 @@ class CmdStructure(LittleEndianStructure):
         addr=None,      ## Data Pointer
         metadata_len=0, ##
         data_len=0,     ## used to create data buffer
-        data_in=None,    ## used to init data_buf
+        data_in=None,   ## used to init data_buf
         cdw10=0,   ## cdw10
         cdw11=0,   ## cdw11
         cdw12=0,   ## cdw12
@@ -102,5 +102,70 @@ class DataBuffer(LittleEndianStructure):
         self.addr = c_uint64(addressof(self._data_buf))
 
     @property
+    def data_buffer(self):
+        return self._data_buf
+
+    @property
     def data_length(self):
         return self.__len
+
+def scsi_int_to_ba(to_convert=0,
+                   array_size=4):
+    """
+    This function converts a  integer of (8 *array_size)-bit to a bytearray(array_size) in
+    BigEndian byte order. Here we use the 32-bit as default.
+
+    example:
+
+        >>scsi_to_ba(34,4)
+        bytearray(b'\x00\x00\x00"')
+
+        so we take a 32-bit integer and get a byte array(4)
+
+    :param to_convert: a integer
+    :param array_size: a integer defining the size of the byte array
+    :return: a byte array
+    """
+    return bytearray((to_convert >> i * 8) & 0xff for i in range(array_size))
+
+def encode_data_buffer(data_dict,
+                       check_dict,
+                       result):
+    """
+    helper method to perform some simple bit operations
+
+    the list in the value of each key:value pair contains 2 values
+    - the bit mask
+    - the offset byte in the datain byte array
+
+    for now we assume he have to right shift only
+
+    :param data_dict:  a dict mapping field-names to notation tuples.
+    :param check_dict: a dict mapping field-names to notation tuples.
+    :param result: a buffer containing the bits encoded
+    """
+    for key in data_dict.keys():
+        if key not in check_dict:
+            continue
+        value = data_dict[key]
+
+        val = check_dict[key]
+        if len(val) == 2:
+            bitmask, bytepos = val
+
+            _num = 1
+            _bm = bitmask
+            while _bm > 0xff:
+                _bm >>= 8
+                _num += 1
+
+            _bm = bitmask
+            while not _bm & 0x01:
+                _bm >>= 1
+                value <<= 1
+
+            v = scsi_int_to_ba(value, _num)
+            for i in range(len(v)):
+                result[bytepos + i] = (ord(result[bytepos + i]) + v[i])
+        else:
+            pass

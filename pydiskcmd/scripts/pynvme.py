@@ -26,13 +26,20 @@ def print_help():
     print ("")
     print ("The following are all implemented sub-commands:")
     print ("  list                  List all NVMe devices and namespaces on machine")
+    print ("  list-ns               Send NVMe Identify List, display structure")
     print ("  smart-log             Retrieve SMART Log, show it")
     print ("  id-ctrl               Send NVMe Identify Controller")
     print ("  id-ns                 Send NVMe Identify Namespace, display structure")
+    print ("  nvme-create-ns        Creates a namespace with the provided parameters")
+    print ("  nvme-delete-ns        Deletes a namespace from the controller")
+    print ("  nvme-attach-ns        Attaches a namespace to requested controller(s)")
+    print ("  nvme-detach-ns        Detaches a namespace from requested controller(s)")
     print ("  error-log             Retrieve Error Log, show it")
     print ("  fw-log                Retrieve FW Log, show it")
     print ("  fw-download           Download new firmware")
     print ("  fw-commit             Verify and commit firmware to a specific slot")
+    print ("  get-feature           Get feature and show the resulting value")
+    print ("  set-feature           Set a feature and show the resulting value")
     print ("  format                Format namespace with new block format")
     print ("  persistent_event_log  Get persistent event log from device")
     print ("  device-self-test      Perform the necessary tests to observe the performance")
@@ -502,15 +509,312 @@ def self_test_log():
     else:
         parser.print_help()
 
+def _get_feature_power_management(device_context, options):
+    cmd = device_context.get_feature(2, sel=options.sel)
+    return cmd
 
+def _get_feature_lba_range_type(device_context, options):
+    options.data_len = 64
+    cmd = device_context.get_feature(3, sel=options.sel, data_len=options.data_len)
+    return cmd
+
+def get_feature():
+    usage="usage: %prog get-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="identifier of desired namespace")
+    parser.add_option("-f", "--feature-id", type="int", dest="feature_id", action="store", default=0,
+        help="feature identifier")
+    parser.add_option("-s", "--sel", type="int", dest="sel", action="store", default=0,
+        help="[0-3]: current/default/saved/supported")
+    parser.add_option("-l", "--data-len", type="int", dest="data_len", action="store", default=0,
+        help="buffer len if data is returned through host memory buffer")
+    parser.add_option("-c", "--cdw11", type="int", dest="cdw11", action="store", default=0,
+        help="dword 11 for interrupt vector config")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        #
+        if options.feature_id < 1:
+            parser.error("You should give a valid feature id")
+        ##
+        result = {}
+        with NVMe(init_device(dev)) as d:
+            if options.feature_id == 2:
+                cmd = _get_feature_power_management(d, options)
+                result = nvme_power_management_cq_decode(cmd.cmd_spec)
+            elif options.feature_id == 3:
+                cmd = _get_feature_lba_range_type(d, options)
+            else:
+                cmd = d.get_feature(options.feature_id,
+                                    ns_id=options.namespace_id,
+                                    sel=options.sel,
+                                    cdw11=options.cdw11,
+                                    data_len=options.data_len)
+        ##
+        if options.output_format == "binary":
+            print ("cmd spec data: %#x" % cmd.cmd_spec)
+            print ('')
+            if options.data_len > 0:
+                print ('')
+                print ("cmd data:")
+                format_dump_bytes(cmd.data)
+        elif options.output_format == "normal":
+            if result:
+                for k,v in result.items():
+                    print ("%-5s: %s" % (k,v))
+            else:
+                print ("cmd spec data: %#x" % cmd.cmd_spec)
+                print ('')
+                if options.data_len > 0:
+                    print ('')
+                    print ("cmd data:")
+                    format_dump_bytes(cmd.data)
+        else:
+            print ("cmd spec data: %#x" % cmd.cmd_spec)
+            print ('')
+            if options.data_len > 0:
+                print ('')
+                print ("cmd data:")
+                print (cmd.data)
+    else:
+        parser.print_help()
+
+def set_feature():
+    usage="usage: %prog get-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="identifier of desired namespace")
+    parser.add_option("-f", "--feature-id", type="int", dest="feature_id", action="store", default=0,
+        help="feature identifier (required)")
+    parser.add_option("-v", "--value", type="int", dest="value", action="store", default=-1,
+        help="new value of feature (required)")
+    parser.add_option("-d", "--data", type="string", dest="file", action="store", default='',
+        help="optional feature data file path")
+    parser.add_option("-c", "--cdw12", type="int", dest="cdw12", action="store", default=0,
+        help="feature cdw12, if used")
+    parser.add_option("-s", "--save", dest="save", action="store_false", default=False,
+        help="specifies that the controller shall save the attribute")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        #
+        if options.feature_id < 1:
+            parser.error("You should give a valid feature id")
+        if options.value < 0:
+            parser.error("You should give a valid value")
+        if options.save:
+            options.save = 1
+        else:
+            options.save = 0
+        raw_data = None
+        if options.file:
+            if os.path.isfile(options.file):
+                with open(options.file, 'rb') as f:
+                    raw_data = f.read()
+            else:
+                parser.error("Data file not exists")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.set_feature(options.feature_id,
+                                ns_id=options.namespace_id,
+                                sv=options.save,
+                                cdw11=options.value,
+                                cdw12=options.cdw12,
+                                data_in=raw_data)
+        cmd.check_status(success_hint=True, fail_hint=False)
+    else:
+        parser.print_help()
+
+def nvme_create_ns():
+    usage="usage: %prog get-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-s", "--nsze", type="int", dest="nsze", action="store", default=0,
+        help="The namespace size.")
+    parser.add_option("-c", "--ncap", type="int", dest="ncap", action="store", default=0,
+        help="The namespace capacity.")
+    parser.add_option("-f", "--flbas", type="int", dest="flbas", action="store", default=0,
+        help="The namespace formatted logical block size setting.")
+    parser.add_option("-d", "--dps", type="int", dest="dps", action="store", default=0,
+        help="The data protection settings.")
+    parser.add_option("-m", "--nmic", type="int", dest="nmic", action="store", default=0,
+        help="Namespace multipath and sharing capabilities.")
+    parser.add_option("-a", "--anagrp-id", type="int", dest="anagrpid", action="store", default=0,
+        help="ANA Gorup Identifier. If this value is 0h specifies that the controller determines the value to use")
+    parser.add_option("-i", "--nvmset-id", type="int", dest="nvmsetid", action="store", default=0,
+        help="This field specifies the identifier of the NVM Set.")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        #
+        if options.nsze < 1:
+            parser.error("namespace size should > 0")
+        if options.ncap < 1:
+            parser.error("namespace capacity should > 0")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.ns_create(options.nsze,
+                              options.ncap,
+                              options.flbas,
+                              options.dps,
+                              options.nmic,
+                              options.anagrpid,
+                              options.nvmsetid,
+                              )
+        sc,sct = cmd.check_status(success_hint=True, fail_hint=False)
+        if sc == 0 and sct == 0:
+            print ("Namespace Identifier is: %s" % cmd.cmd_spec)
+        ##
+    else:
+        parser.print_help()
+
+def nvme_delete_ns():
+    usage="usage: %prog get-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="The namespace identifier to delete.")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        #
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.ns_delete(options.namespace_id)
+        ##
+        cmd.check_status(success_hint=True, fail_hint=False)
+    else:
+        parser.print_help()
+
+def nvme_attach_ns():
+    usage="usage: %prog get-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="The namespace identifier to attach.")
+    parser.add_option("-c", "--controllers", dest="ctrl_list", action="store", default='',
+        help="The comma separated list of controller identifiers to attach the namesapce too.")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        #
+        ctrl_list = []
+        if options.ctrl_list:
+            ctrl_list = options.ctrl_list.split(',')
+            ctrl_list = [int(i.strip()) for i in ctrl_list]
+        else:
+            parser.error("give a ctrl_list")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.ns_attachment(options.namespace_id, 0, ctrl_list)
+        ##
+        cmd.check_status(success_hint=True, fail_hint=False)
+    else:
+        parser.print_help()
+
+def nvme_detach_ns():
+    usage="usage: %prog get-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="The namespace identifier to detach.")
+    parser.add_option("-c", "--controllers", dest="ctrl_list", action="store", default='',
+        help="The comma separated list of controller identifiers to detach the namesapce from.")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        #
+        ctrl_list = []
+        if options.ctrl_list:
+            ctrl_list = options.ctrl_list.split(',')
+            ctrl_list = [int(i.strip()) for i in ctrl_list]
+        else:
+            parser.error("give a ctrl_list")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.ns_attachment(options.namespace_id, 1, ctrl_list)
+        ##
+        cmd.check_status(success_hint=True, fail_hint=False)
+    else:
+        parser.print_help()
+
+def list_ns():
+    usage="usage: %prog get-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="first nsid returned list should start from")
+    parser.add_option("-a", "--all", dest="all", action="store_true", default=False,
+        help="show all namespaces in the subsystem, whether attached or inactive")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        #
+        if options.all:
+            print ("Function not support")
+            return 1
+        ##
+        else:
+            with NVMe(init_device(dev)) as d:
+                cmd = d.active_ns_ids(options.namespace_id)
+        ##
+        if options.output_format == "binary":
+            format_dump_bytes(cmd.data)
+        elif options.output_format == "normal":
+            result = decode_ns_list_format(cmd.data)
+            for k,v in enumerate(result):
+                print ("[%4d]:%d" % (k,v))
+        else:
+            print (cmd.data)
+        ##
+    else:
+        parser.print_help()
+
+###########################
+###########################
 commands_dict = {"list": _list,
                  "smart-log": smart_log,
                  "id-ctrl": id_ctrl,
                  "id-ns": id_ns,
+                 "list-ns": list_ns,
                  "error-log": error_log,
                  "fw-log": fw_log,
                  "fw-download": fw_download, 
                  "fw-commit": fw_commit, 
+                 "nvme-create-ns": nvme_create_ns,
+                 "nvme-delete-ns": nvme_delete_ns,
+                 "nvme-attach-ns": nvme_attach_ns,
+                 "nvme-detach-ns": nvme_detach_ns,
+                 "get-feature": get_feature,
+                 "set-feature": set_feature,
                  "format": nvme_format,
                  "persistent_event_log": persistent_event_log,
                  "device-self-test": device_self_test,
