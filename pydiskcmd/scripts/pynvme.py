@@ -27,6 +27,7 @@ def print_help():
     print ("The following are all implemented sub-commands:")
     print ("  list                  List all NVMe devices and namespaces on machine")
     print ("  list-ns               Send NVMe Identify List, display structure")
+    print ("  list-ctrl             Send NVMe Identify Controller List, display structure")
     print ("  smart-log             Retrieve SMART Log, show it")
     print ("  id-ctrl               Send NVMe Identify Controller")
     print ("  id-ns                 Send NVMe Identify Namespace, display structure")
@@ -362,7 +363,7 @@ def nvme_format():
         parser.print_help()
 
 def persistent_event_log():
-    usage="usage: %prog fw-commit <device> [OPTIONS]"
+    usage="usage: %prog persistent_event_log <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-a", "--action", type="int", dest="action", action="store", default=3,
         help="action of get persistent event log, 0: open, 1: read, 2: close, 3: check status")
@@ -444,7 +445,7 @@ def persistent_event_log():
         parser.print_help()
 
 def device_self_test():
-    usage="usage: %prog self-test-log <device> [OPTIONS]"
+    usage="usage: %prog device-self-test <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0xFFFFFFFF,
         help="Indicate the namespace in which the device self-test has to be carried out")
@@ -587,7 +588,7 @@ def get_feature():
         parser.print_help()
 
 def set_feature():
-    usage="usage: %prog get-feature <device> [OPTIONS]"
+    usage="usage: %prog set-feature <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
         help="identifier of desired namespace")
@@ -637,7 +638,7 @@ def set_feature():
         parser.print_help()
 
 def nvme_create_ns():
-    usage="usage: %prog get-feature <device> [OPTIONS]"
+    usage="usage: %prog nvme-create-ns <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-s", "--nsze", type="int", dest="nsze", action="store", default=0,
         help="The namespace size.")
@@ -683,7 +684,7 @@ def nvme_create_ns():
         parser.print_help()
 
 def nvme_delete_ns():
-    usage="usage: %prog get-feature <device> [OPTIONS]"
+    usage="usage: %prog nvme-delete-ns <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
         help="The namespace identifier to delete.")
@@ -704,7 +705,7 @@ def nvme_delete_ns():
         parser.print_help()
 
 def nvme_attach_ns():
-    usage="usage: %prog get-feature <device> [OPTIONS]"
+    usage="usage: %prog nvme-attach-ns <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
         help="The namespace identifier to attach.")
@@ -733,7 +734,7 @@ def nvme_attach_ns():
         parser.print_help()
 
 def nvme_detach_ns():
-    usage="usage: %prog get-feature <device> [OPTIONS]"
+    usage="usage: %prog nvme-detach-ns <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
         help="The namespace identifier to detach.")
@@ -762,10 +763,10 @@ def nvme_detach_ns():
         parser.print_help()
 
 def list_ns():
-    usage="usage: %prog get-feature <device> [OPTIONS]"
+    usage="usage: %prog list-ns <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
-        help="first nsid returned list should start from")
+        help="first nsid returned list should start from(0 based value)")
     parser.add_option("-a", "--all", dest="all", action="store_true", default=False,
         help="show all namespaces in the subsystem, whether attached or inactive")
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
@@ -779,8 +780,8 @@ def list_ns():
             raise RuntimeError("Device not support!")
         #
         if options.all:
-            print ("Function not support")
-            return 1
+            with NVMe(init_device(dev)) as d:
+                cmd = d.allocated_ns_ids(options.namespace_id)
         ##
         else:
             with NVMe(init_device(dev)) as d:
@@ -798,13 +799,54 @@ def list_ns():
     else:
         parser.print_help()
 
+def list_ctrl():
+    usage="usage: %prog list-ctrl <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-c", "--cntid", type="int", dest="cntid", action="store", default=0,
+        help="controller to display(0 means all)")
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=None,
+        help="optional namespace attached to controller")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        #
+        if (options.namespace_id is not None) and (options.namespace_id < 1):
+            parser.error("namespace-id should > 0")
+        ##
+        if options.namespace_id is None:
+            with NVMe(init_device(dev)) as d:
+                cmd = d.cnt_ids(options.cntid)
+        ##
+        else:
+            with NVMe(init_device(dev)) as d:
+                cmd = d.ns_attached_cnt_ids(options.namespace_id, options.cntid)
+        ##
+        if options.output_format == "binary":
+            format_dump_bytes(cmd.data)
+        elif options.output_format == "normal":
+            result = decode_ctrl_list_format(cmd.data)
+            for k,v in enumerate(result):
+                print ("[%4d]:%d" % (k,v))
+        else:
+            print (cmd.data)
+        ##
+    else:
+        parser.print_help()
+
 ###########################
 ###########################
 commands_dict = {"list": _list,
+                 "list-ctrl": list_ctrl,
+                 "list-ns": list_ns,
                  "smart-log": smart_log,
                  "id-ctrl": id_ctrl,
                  "id-ns": id_ns,
-                 "list-ns": list_ns,
                  "error-log": error_log,
                  "fw-log": fw_log,
                  "fw-download": fw_download, 

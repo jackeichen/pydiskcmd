@@ -11,7 +11,7 @@ from pydiskcmd.pynvme.nvme_spec import persistent_event_log_header_decode,persis
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmd.pynvme.command_structure import DataBuffer
 from pydiskcmd.pydiskhealthd.DB import my_tinydb,encode_byte,decode_str
-from pydiskcmd.pynvme.linux_nvme_aer import NVMeAER
+from pydiskcmd.pynvme.linux_nvme_aer import AERTrace
 from pydiskcmd.pydiskhealthd.some_path import SMARTTracePath
 ###
 PCIeMappingPath = "/sys/class/nvme/%s/address"
@@ -174,37 +174,6 @@ class PersistentEventTrace(object):
                 if v in self.last_trace[1].values():
                     break
                 result.append(v)
-            return result
-
-
-class AERTrace(object):
-    '''
-    We do not need store the aer trace, it usually be cleared every power cycle.
-    '''
-    def __init__(self):
-        ##
-        self.aer = NVMeAER()
-        ##
-        self.last_trace = []
-        self.current_trace = []
-
-    def set_log(self, aer_trace):
-        if self.current_trace:
-            self.last_trace = self.current_trace
-            self.current_trace = aer_trace
-        else:
-            self.current_trace = aer_trace
-
-    def get_log_once(self):
-        aer = self.aer.check_trace_once()
-        self.set_log(aer)
-
-    def diff_trace(self):
-        if self.current_trace:
-            result = []
-            for i in self.current_trace:
-                if i not in self.last_trace:
-                    result.append(i)
             return result
 
 

@@ -351,6 +351,14 @@ def self_test_log_decode(raw_data):
             result["LogEntry%s" % i] = temp
     return result
 
+def decode_ctrl_list_format(raw_data):
+    target = []
+    max_cycle = scsi_ba_to_int(raw_data[0:2], 'little')
+    for i in range(max_cycle):
+        v = scsi_ba_to_int(raw_data[i*2+2:i*2+4], 'little')
+        target.append(v)
+    return target
+
 def decode_ns_list_format(raw_data):
     target = []
     max_cycle = int(len(raw_data) / 4)

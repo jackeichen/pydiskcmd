@@ -8,7 +8,8 @@ _pysata_cmds="check-PowerMode accessible-MaxAddress identify self-test \
 
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
           format persistent_event_log device-self-test self-test-log get-feature \
-          set-feature version help"
+          set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns nvme-attach-ns \
+          nvme-detach-ns version help"
 
 _pyscsi_cmds="inq version help"
 
@@ -182,6 +183,27 @@ pynvme_list_opts () {
         "set-feature")
 		opts+=" -n --namespace-id= -f --feature-id= -v --value= -d --data= \
             -c --cdw12= -s --save -h --help"
+        ;;
+        "list-ctrl")
+		opts+=" -c --cntid= -n --namespace-id= -o --output-format= \
+            -h --help"
+        ;;
+        "list-ns")
+		opts+=" -a --all -n --namespace-id= -o --output-format= \
+            -h --help"
+        ;;
+        "nvme-create-ns")
+		opts+=" -s --nsze= -c --ncap= -f --flbas= -d --dps= -m --nmic= \
+            -a --anagrp-id= -i --nvmset-id -h --help"
+        ;;
+        "nvme-delete-ns")
+		opts+=" -n --namespace-id= -h --help"
+        ;;
+        "nvme-attach-ns")
+		opts+=" -n --namespace-id= -c --controllers= -h --help"
+        ;;
+        "nvme-detach-ns")
+		opts+=" -n --namespace-id= -c --controllers= -h --help"
 		;;
         "version")
 		opts+=""

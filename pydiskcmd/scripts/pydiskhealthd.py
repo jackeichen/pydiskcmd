@@ -18,12 +18,14 @@ from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,AERTrace
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
 from pydiskcmd.pydiskhealthd.some_path import SMARTTracePath
-
 ####
 ## the disk info store path
 DisksInfoPath = os.path.join(SMARTTracePath, "AllDisksInfo.json")
 ##
 tool_version = '0.1.1'
+##
+DiskWarningTemp = 60
+DiskCriticalTemp = 70
 ####
 
 def get_disk_context(devices):
@@ -49,7 +51,13 @@ def get_disk_context(devices):
                     ## change device to SATA Device interface
                     dev_context = ATADevice(dev_path)
                     logger.info("Device %s, change from scsi to sata" % dev_path)
-                if dev_context.device_id not in devices:
+                if dev_context.device_id in devices:
+                    # check if dev path changed, update it
+                    if dev_context.dev_path != devices[dev_context.device_id].dev_path:
+                        ## dev path changed, update it to the target
+                        logger.warning("Device(ID: %s) path changed from %s to %s" % (dev_context.device_id, devices[dev_context.device_id].dev_path, dev_context.dev_path))
+                        devices[dev_context.device_id].dev_path = dev_context.dev_path
+                else:
                     dev_context.init_db()
                     devices[dev_context.device_id] = dev_context
                     logger.info("Find new ATA device %s, ID: %s" % (dev_path, dev_context.device_id))
@@ -63,7 +71,13 @@ def get_disk_context(devices):
         except:
             logger.error(traceback.format_exc())
         else:
-            if dev_context.device_id not in devices:
+            if dev_context.device_id in devices:
+                # check if dev path changed, update it
+                if dev_context.dev_path != devices[dev_context.device_id].dev_path:
+                    ## dev path changed, update it to the target
+                    logger.warning("Device(ID: %s) path changed from %s to %s" % (dev_context.device_id, devices[dev_context.device_id].dev_path, dev_context.dev_path))
+                    devices[dev_context.device_id].dev_path = dev_context.dev_path
+            else:
                 dev_context.init_db()
                 devices[dev_context.device_id] = dev_context
                 logger.info("Find new nvme device %s, ID: %s" % (dev_path, dev_context.device_id))
@@ -148,8 +162,11 @@ def pydiskhealthd():
                 message = "Lost the Disk ID: %s, compared to the last time to run" % i
                 syslog.info(message)
                 logger.warning(message)
-    # init aer
-    aer_trace = AERTrace()
+    try:
+        # init aer
+        aer_trace = AERTrace()
+    except:
+        aer_trace = None
     ## check start
     while True:
         start_t = time.time()
@@ -159,15 +176,16 @@ def pydiskhealthd():
         store_all_disks_id(dev_pool)
         ### check process Now
         logger.info("Check Device ...")
-        ## check nvme aer now
-        aer_trace.get_log_once()
-        diff = aer_trace.diff_trace()
-        if diff:
-            for i in diff:
-                logger.info("AER triggered, below is the details: ")
-                for k,v in i.items():
-                    logger.info("%-10s : %s" % (k, str(v)))
-                logger.info("-")
+        if aer_trace:
+            ## check nvme aer now
+            aer_trace.get_log_once()
+            diff = aer_trace.diff_trace()
+            if diff:
+                for i in diff:
+                    logger.info("AER triggered, below is the details: ")
+                    for k,v in i.items():
+                        logger.info("%-10s : %s" % (k, str(v)))
+                    logger.info("-")
         ##
         for dev_id,dev_context in dev_pool.items():
             if dev_context.device_type == 'nvme':
@@ -405,11 +423,20 @@ def pydiskhealthd():
                             message2 = "The event log event data is %s" % event["event_log_event_data"] #
                             logger.info(message, message1, message2)
                             syslog.info(message, message1, message2)
-                ## Record Current Tempeture
+                ## Record and check Current Tempeture
                 if "Composite Temperature" in current_smart.smart_info:
                     temperature = round(current_smart.smart_info["Composite Temperature"] - 273.15)
-                    message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
-                    logger.info(message)
+                    if temperature >= DiskCriticalTemp:
+                        message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskCriticalTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskCriticalTemp)
+                        logger.warning(message)
+                        syslog.info(message)
+                    elif temperature >= DiskWarningTemp:
+                        message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskWarningTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskWarningTemp)
+                        logger.warning(message)
+                        syslog.info(message)
+                    else:
+                        message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
+                        logger.info(message)
                 ### PCIe Check
                 ## check link status
                 link_status = dev_context.pcie_context.express_link
@@ -549,11 +576,20 @@ def pydiskhealthd():
                             message1 = "Device: %s(ID: %s), smart #ID(Old_age) %s value reduce more than 15. " % (dev_context.dev_path, dev_context.device_id, _id)
                             syslog.info(message1)
                             logger.info(message1)
-                ## Record Current Tempeture
+                ## Record and check Current Tempeture
                 if 194 in current_smart.smart_info:
                     temperature = (current_smart.smart_info[194].raw_value_int & 0xFFFF)
-                    message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
-                    logger.info(message)
+                    if temperature >= DiskCriticalTemp:
+                        message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskCriticalTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskCriticalTemp)
+                        logger.warning(message)
+                        syslog.info(message)
+                    elif temperature >= DiskWarningTemp:
+                        message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskWarningTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskWarningTemp)
+                        logger.warning(message)
+                        syslog.info(message)
+                    else:
+                        message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
+                        logger.info(message)
             else:  # SCSI(SAS) Disk
                 pass
         logger.info("Check done")

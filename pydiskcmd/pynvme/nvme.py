@@ -118,6 +118,46 @@ class NVMe(object):
         ret.check_status()
         return ret
 
+    def allocated_ns_ids(self, ns_id=0):
+        ### build command
+        cdw10 = build_command({"CNS": (0xFF, 0, 0x10)})
+        ##
+        cmd_struc = CmdStructure(opcode=0x06,
+                                 nsid=ns_id,
+                                 data_len=4096,
+                                 cdw10=cdw10)
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
+
+    def cnt_ids(self, cnt_id=0):
+        ### build command
+        cdw10 = build_command({"CNS": (0xFF, 0, 0x13),
+                               "CNTID": (0xFFFF, 2, cnt_id)})
+        ##
+        cmd_struc = CmdStructure(opcode=0x06,
+                                 data_len=4096,
+                                 cdw10=cdw10)
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
+
+    def ns_attached_cnt_ids(self, ns_id, cnt_id=0):
+        ### build command
+        cdw10 = build_command({"CNS": (0xFF, 0, 0x12),
+                               "CNTID": (0xFFFF, 2, cnt_id)})
+        ##
+        cmd_struc = CmdStructure(opcode=0x06,
+                                 nsid=ns_id,
+                                 data_len=4096,
+                                 cdw10=cdw10)
+        ###
+        ret = self.execute(cmd_struc)
+        ret.check_status()
+        return ret
+
     def set_feature(self, feature_id, ns_id=0 ,sv=0, uuid_index=0, cdw11=0, cdw12=0, cdw13=0, cdw15=0, data_in=None):
         ### build command
         cdw10 = build_command({"FID": (0xFF, 0, feature_id),
