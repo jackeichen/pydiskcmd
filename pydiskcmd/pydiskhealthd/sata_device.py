@@ -7,14 +7,16 @@ from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
 from pydiskcmd.pysata.sata_spec import decode_bits,SMART_KEY,decode_smart_info,decode_smart_thresh,decode_smart_flag
 from pydiskcmd.pydiskhealthd.DB import my_tinydb,encode_byte,decode_str
-
+from pydiskcmd.pydiskhealthd.disk_health_calculation import get_ata_diskhealth
 
 class SmartInfo(object):
-    def __init__(self, vs_value, time_t):
+    def __init__(self, vs_value, time_t, thresh_info):
         self.raw_vs_value = vs_value
         self.time_t = time_t
         ##
         self.smart_info = decode_smart_info(self.raw_vs_value)
+        ##
+        self.disk_health = get_ata_diskhealth(self.smart_info, thresh_info)
 
     def get_attr_by_id(self, _id):
         return self.smart_info.get(_id)
@@ -88,7 +90,7 @@ class SmartTrace(object):
         ## decode the smart info
         smart_all = {}
         decode_bits(raw_data, SMART_KEY, smart_all)
-        smart = SmartInfo(smart_all.get("smartInfo"), time_t)
+        smart = SmartInfo(smart_all.get("smartInfo"), time_t, self.thresh_info)
         ## current value handle
         if self.__current_value:
             ## first update vs_smart_calculated_value

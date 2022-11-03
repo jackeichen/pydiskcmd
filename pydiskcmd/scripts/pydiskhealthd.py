@@ -14,7 +14,7 @@ from pydiskcmd.exceptions import DeviceTypeError
 from pydiskcmd.pyscsi import scsi_enum_inquiry as INQUIRY
 ## 
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice
-from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,AERTrace
+from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,AERTrace,AERTraceRL
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
 from pydiskcmd.pydiskhealthd.some_path import SMARTTracePath
@@ -26,6 +26,9 @@ tool_version = '0.1.1'
 ##
 DiskWarningTemp = 60
 DiskCriticalTemp = 70
+#
+DiskCalculatedHealthWarningLevel = 0.3
+DiskCalculatedHealthErrorLevel = 0
 ####
 
 def get_disk_context(devices):
@@ -108,6 +111,8 @@ def pydiskhealthd():
     parser = optparse.OptionParser(usage,version="pydiskhealthd " + tool_version)
     parser.add_option("-t", "--check_interval", type="int", dest="check_interval", action="store", default=3600,
         help="Check inetrval time to check device health, default 1 hour.")
+    parser.add_option("", "--nvme_aer_t", type="choice", dest="nvme_aer_type", action="store", choices=["loop", "real_time", "off"],default="real_time",
+        help="How to check nvme aer with linux trace methmod: loop|real_time|off")
     parser.add_option("", "--check_daemon_running", dest="check_daemon_running", action="store_true", default=True,
         help="If check the pydiskheald daemon runnning, default true.")
 
@@ -162,11 +167,20 @@ def pydiskhealthd():
                 message = "Lost the Disk ID: %s, compared to the last time to run" % i
                 syslog.info(message)
                 logger.warning(message)
-    try:
-        # init aer
-        aer_trace = AERTrace()
-    except:
-        aer_trace = None
+    ## init aer
+    aer_trace = None
+    if options.nvme_aer_type == 'loop':
+        try:
+            # init aer
+            aer_trace = AERTrace()
+        except:
+            pass
+    elif options.nvme_aer_type == 'real_time':
+        try:
+            # init aer
+            aer_trace = AERTraceRL()
+        except:
+            pass
     ## check start
     while True:
         start_t = time.time()
@@ -175,18 +189,8 @@ def pydiskhealthd():
         ## store all the disk info
         store_all_disks_id(dev_pool)
         ### check process Now
-        logger.info("Check Device ...")
-        if aer_trace:
-            ## check nvme aer now
-            aer_trace.get_log_once()
-            diff = aer_trace.diff_trace()
-            if diff:
-                for i in diff:
-                    logger.info("AER triggered, below is the details: ")
-                    for k,v in i.items():
-                        logger.info("%-10s : %s" % (k, str(v)))
-                    logger.info("-")
-        ##
+        logger.info("Check all Device(s) ...")
+        ## check every disk
         for dev_id,dev_context in dev_pool.items():
             if dev_context.device_type == 'nvme':
                 try:
@@ -519,7 +523,23 @@ def pydiskhealthd():
                 ### 
                 current_smart = smart_trace.current_value  # current_smart is a SmartInfo object
                 last_smart = smart_trace.get_cache_last_value()
-                ## check start
+                message1 = "Device: %s(ID: %s), Calculated Disk Health is %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100))
+                logger.debug(message1)
+                ## check disk health
+                if last_smart:
+                    if current_smart.disk_health <= DiskCalculatedHealthWarningLevel and last_smart.disk_health > DiskCalculatedHealthWarningLevel:
+                        message1 = "Device: %s(ID: %s), Calculated Disk Health(%d%%) fallen below to %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100), int(DiskCalculatedHealthWarningLevel*100))
+                        logger.warning(message1)
+                        syslog.info(message1)
+                    elif current_smart.disk_health <= DiskCalculatedHealthErrorLevel and last_smart.disk_health > DiskCalculatedHealthErrorLevel:
+                        message1 = "Device: %s(ID: %s), Calculated Disk Health(%d%%) fallen below to %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100), int(DiskCalculatedHealthErrorLevel*100))
+                        logger.warning(message1)
+                        syslog.warning(message1)
+                else:
+                    message1 = "Device: %s(ID: %s), Init Calculated Disk Health is %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100))
+                    logger.info(message1)
+                    syslog.info(message1)
+                ## check smart start
                 for _id,smart_attr in current_smart.smart_info.items():
                     ## check current_smart.value and current_smart.worst with smart thresh
                     if _id in smart_trace.thresh_info and smart_trace.thresh_info[_id] > 0: # valid if thresh value > 0
@@ -592,7 +612,32 @@ def pydiskhealthd():
                         logger.info(message)
             else:  # SCSI(SAS) Disk
                 pass
-        logger.info("Check done")
+        ## check aer for nvme
+        if aer_trace and options.nvme_aer_type == 'loop':
+            ## check nvme aer now
+            aer_trace.get_log_once()
+            diff = aer_trace.diff_trace()
+            if diff:
+                for i in diff:
+                    logger.info("AER triggered, below is the details: ")
+                    logger.info("-"*30)
+                    for k,v in i.items():
+                        logger.info("%-10s : %s" % (k, str(v)))
+                    logger.info("-"*30)
+        ### we will real-time to check aer
         time_left = options.check_interval - time.time() + start_t
-        if time_left > 0:
-            time.sleep(time_left)
+        if aer_trace and options.nvme_aer_type == 'real_time':
+            while (time_left > 0):
+                trace_description = aer_trace.get_once(time_left)
+                if trace_description:
+                    logger.info("AER triggered, below is the details: ")
+                    logger.info("-"*30)
+                    for k,v in trace_description.items():
+                        logger.info("%-10s : %s" % (k, str(v)))
+                    logger.info("-"*30)
+                time_left = options.check_interval - time.time() + start_t
+        else:  
+            ## check done
+            logger.info("Check done")
+            if time_left > 0:
+                time.sleep(time_left)

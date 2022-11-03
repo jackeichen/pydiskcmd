@@ -11,7 +11,7 @@ from pydiskcmd.pynvme.nvme_spec import persistent_event_log_header_decode,persis
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmd.pynvme.command_structure import DataBuffer
 from pydiskcmd.pydiskhealthd.DB import my_tinydb,encode_byte,decode_str
-from pydiskcmd.pynvme.linux_nvme_aer import AERTrace
+from pydiskcmd.pydiskhealthd.linux_nvme_aer import AERTrace,AERTraceRL
 from pydiskcmd.pydiskhealthd.some_path import SMARTTracePath
 ###
 PCIeMappingPath = "/sys/class/nvme/%s/address"
