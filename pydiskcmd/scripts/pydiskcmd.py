@@ -30,7 +30,9 @@ def pydiskcmd():
     elif options.en_diskhealth_daemon:
         enable_systemd_pydiskhealthd()
     elif options.show_temperature:
-        from pydiskcmd.pydiskhealthd.DB import my_tinydb
+        from pydiskcmd.pydiskhealthd.DB import disk_trace_pool
+        for disk_id,table in disk_trace_pool.disk_trace_pool.items():
+            pass
     elif options.code_version:
         if options.code_version == "pydiskcmd":
             print ('')

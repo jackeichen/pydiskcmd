@@ -10,9 +10,9 @@ from pydiskcmd.pynvme.nvme_spec import nvme_smart_decode,nvme_id_ctrl_decode
 from pydiskcmd.pynvme.nvme_spec import persistent_event_log_header_decode,persistent_event_log_events_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmd.pynvme.command_structure import DataBuffer
-from pydiskcmd.pydiskhealthd.DB import my_tinydb,encode_byte,decode_str
+from pydiskcmd.pydiskhealthd.DB import disk_trace_pool
 from pydiskcmd.pydiskhealthd.linux_nvme_aer import AERTrace,AERTraceRL
-from pydiskcmd.pydiskhealthd.some_path import SMARTTracePath
+from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
 ###
 PCIeMappingPath = "/sys/class/nvme/%s/address"
 ###
@@ -126,37 +126,25 @@ class PCIeTrace(object):
 
 class PersistentEventTrace(object):
     def __init__(self, device_id):
-        self.__persistent_event_trace_file = os.path.join(SMARTTracePath, "%s_pe_trace.json" % device_id)
         ##
-        self.last_trace = []
+        # self.last_trace
+        self.last_trace_event_begin = {}
         self.current_trace = []
         ##
         self.__data_buffer = DataBuffer(16384)
-        ## read from stored
-        content = self.read_trace_from_file()
-        if content:
-            self.set_log(content)
 
-    def store_trace(self, content):
-        with open(self.__persistent_event_trace_file, 'wb') as f:
-            f.write(content)
-
-    def read_trace_from_file(self):
-        if os.path.exists(self.__persistent_event_trace_file):
-            with open(self.__persistent_event_trace_file, 'rb') as f:
-                content = f.read()
-            return content
+    def init_last_trace_event_begin(self, raw_data):
+        event_log_events = persistent_event_log_events_decode(raw_data, 1)
+        self.last_trace_event_begin = event_log_events[0]
 
     def set_log(self, persistent_event_log_data):
         event_log_header = persistent_event_log_header_decode(persistent_event_log_data[0:512])
         event_log_events = persistent_event_log_events_decode(persistent_event_log_data[512:], scsi_ba_to_int(event_log_header.get("TNEV"), 'little'))
         if self.current_trace:
-            self.last_trace = self.current_trace
+            self.last_trace_event_begin = self.current_trace[1][0]
             self.current_trace = [event_log_header, event_log_events]
         else:
             self.current_trace = [event_log_header, event_log_events]
-        ## stire it to file
-        self.store_trace(persistent_event_log_data)
 
     @property
     def current_trace_timestamp(self):
@@ -167,11 +155,20 @@ class PersistentEventTrace(object):
     def data_buffer(self):
         return self.__data_buffer
 
+    def get_current_first_event_offset(self):
+        if self.current_trace:
+            event_log_event_header = self.current_trace[1][0]["event_log_event_header"]
+            #
+            ehl_int = scsi_ba_to_int(event_log_event_header.get("EHL"), 'little')
+            el_int = scsi_ba_to_int(event_log_event_header.get("EL"), 'little')
+            ## offset+ehl_int+el_int+2+1
+            return ehl_int+el_int+2+1
+
     def diff_trace(self):
-        if self.last_trace and self.current_trace:
+        if self.last_trace_event_begin and self.current_trace:
             result = []
             for k,v in self.current_trace[1].items():
-                if v in self.last_trace[1].values():
+                if v == self.last_trace_event_begin:
                     break
                 result.append(v)
             return result
@@ -219,15 +216,20 @@ class NVMeDevice(object):
         pass
 
     def init_db(self):
-        if my_tinydb:
-            self.__device_info_db = my_tinydb.get_table_by_id(self.device_id)
+        if disk_trace_pool:
+            self.__device_info_db = disk_trace_pool.get_table_by_id(self.device_id)
             ## try to initial smart info, stored in last time.
-            last_doc_id = self.__device_info_db.get_last_doc_id()
-            if last_doc_id > 1:
-                e = self.__device_info_db.get_doc_by_doc_id(last_doc_id)
-                self.__smart_trace.set_smart(decode_str(e["smart"]), e["time"])
-                print ("Init nvme  smart: ")
-                print (e)
+            res = self.__device_info_db.get_dev_current_info()
+            if res:
+                timestamp,smart,last_persistent = res
+                if smart:
+                    self.__smart_trace.set_smart(smart, timestamp)
+                    print ("Init nvme  smart: ")
+                    print (smart)
+                if last_persistent:
+                    self.__persistent_event_log.init_last_trace_event_begin(last_persistent)
+                    print ("Init persistent_event_log begin:")
+                    print (self.__persistent_event_log.last_trace_event_begin)
 
     @property
     def device_type(self):
@@ -281,15 +283,20 @@ class NVMeDevice(object):
                 persistent_event_log_data = d.get_persistent_event_log(1, data_buffer=self.__persistent_event_log.data_buffer)
                 if persistent_event_log_status == 0: # if not open, then close it.
                     d.get_persistent_event_log(2, data_buffer=self.__persistent_event_log.data_buffer)
-        current_t = int(time.time())
+        current_t = float(time.time())
         if smart_data:
             self.__smart_trace.set_smart(smart_data, current_t)
-            ## store it to db, if tinydb installed.
-            if self.__device_info_db:
-                self.__device_info_db.insert({"time": current_t, "smart": encode_byte(smart_data)})
         ##
         if persistent_event_log_data:
             self.__persistent_event_log.set_log(persistent_event_log_data)
+        ## store it to db
+        if self.__device_info_db:
+            current_trace_event_begin = None
+            offset = self.__persistent_event_log.get_current_first_event_offset()
+            if offset is not None:
+                current_trace_event_begin = persistent_event_log_data[512:512+offset]
+            ##
+            self.__device_info_db.update_dev_info(current_t, smart_data, current_trace_event_begin)
         return self.__smart_trace,self.__persistent_event_log
 
     def update_pcie_trace(self):

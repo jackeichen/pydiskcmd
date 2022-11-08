@@ -3,16 +3,12 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
 import base64
-from pydiskcmd.pydiskhealthd.some_path import SMARTTracePath
-_db_file = os.path.join(SMARTTracePath, "tinydb_trace.json")
+import sqlite3
+from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
 
-_has_tinydb = False
-try:
-    from tinydb import TinyDB,where
-    _has_tinydb = True
-except ModuleNotFoundError:
-    pass
-
+#####
+_sqlite3_db_file = os.path.join(DiskTracePath, "sqlite3_disk_trace.db")
+#####
 
 def encode_byte(b):
     temp = base64.b64encode(b)
@@ -23,112 +19,188 @@ def decode_str(string):
     return base64.b64decode(temp)
 
 
-class MyTinyTable(object):
-    def __init__(self, table, max_entry=10000):
-        self.__table = table
-        self.__max_entry = max_entry + 2
-        ## this is a snapshoot data, flush to database every self.__metadata_flush_num
-        self.__metadata_flush_num = 10
-        self.__metadata_flush_index = 0
-        self.__metadata = {"doc_id": 1, "rollover": False}
+class SQLiteTable(object):
+    '''
+    Must create table first 
+    '''
+    def __init__(self, parent, table_name, max_entry=2000):
+        self.__cursor = parent._cursor
+        self.__conn = parent._conn
+        self.__table_name = table_name
+        self.__max_entry = max_entry
         ##
-        temp = self.__table.get(doc_id=1)
-        if temp:
-            self.__metadata.update(temp)
-            self._locate_accurate_meta()
-        else:
-            self.__table.insert(self.__metadata)
+        self.__current_id = 0
+        self.__current_tag = 0
+        self.__roll_over = False
+        ##
+        self._table_init()
 
     @property
-    def table(self):
-        return self.__table
-
-    def get_last_doc_id(self):
-        return self.__metadata["doc_id"]
-
-    def get_next_doc_id(self, doc_id):
-        temp = doc_id + 1
+    def next_id(self):
+        temp = self.__current_id + 1
         if temp >= self.__max_entry:
-            temp = 2
+            temp = 0
         return temp
 
-    def get_doc_by_doc_id(self, doc_id):
-        return self.__table.get(doc_id=doc_id)
-
-    def _locate_accurate_meta(self):
-        doc_id = self.__metadata["doc_id"]
-        ## current doc_id
-        ## if doc_id == 0, then check if doc_id=2 exist,
-        #  if exist, then set it to 2.
-        if doc_id < 2:
-            next_doc_id = self.get_next_doc_id(doc_id)
-            doc = self.__table.get(doc_id=next_doc_id)
-            if doc and ("time" in doc):
-                doc_id = 2
-        if doc_id > 1:
-            last_doc = self.__table.get(doc_id=doc_id)
-            if last_doc and last_doc.get("time"):
-                last_doc_time = last_doc["time"]
-                el = self.__table.search(where("time") > last_doc_time)
-                if el:
-                    ## relocate, by search the max time
-                    max_time = 0
-                    for e in el:
-                        max_time = max(max_time, e["time"])
-                    ##
-                    e = self.__table.get(where('time') == max_time)
-                    self.__metadata["doc_id"] = e.doc_id
-                    next_doc_id = self.get_next_doc_id(e.doc_id)
-                    if self.__table.contains(doc_id=next_doc_id):
-                        self.__metadata["rollover"] = True
-
-    def insert(self, d):
-        _doc_id = self.get_next_doc_id(self.__metadata["doc_id"])
-        if _doc_id <= self.__metadata["doc_id"]:
-            self.__metadata["rollover"] = True
-        if self.__metadata["rollover"]:
-            ## update
-            self.__table.update(d, doc_ids=[_doc_id,])
-            self.__metadata["doc_id"] = _doc_id
+    def run_sql(self, sql, args=(), commit=False):
+        try:
+            ##
+            self.__cursor.execute(sql, args)
+        except:
+            import traceback
+            traceback.print_exc()
+            self.__conn.rollback()
+            return 1
         else:
-            self.__metadata["doc_id"] = self.__table.insert(d)
-        ## snapshoot a metadata to DB.
-        if self.__metadata_flush_index < self.__metadata_flush_num:
-            self.__metadata_flush_index += 1
+            ##
+            if commit:
+                self.__conn.commit()
+        return 0
+
+    def _table_init(self):
+        ## usually first to check it by timestamp;
+        sql = '''SELECT max(timestamp),ID,value_tag from %s
+              ''' % self.__table_name
+        self.__cursor.execute(sql)
+        res = self.__cursor.fetchall()
+        ## it should be only one result here,
+        #  but still get the last one.
+        if res[-1] and res[-1][0] is not None:  # it's Not a empty table
+            timestamp,self.__current_id,self.__current_tag = res[-1]
+            ## to ensure it is the last value to update
+            #  get the next id content
+            sql = '''SELECT timestamp,ID,value_tag from %s WHERE ID = %d;
+                  ''' % (self.__table_name, self.next_id)
+            self.__cursor.execute(sql)
+            res = self.__cursor.fetchone()
+            if res and res[1] is not None:  # Full of max_entry
+                next_timestamp,next_id,next_tag = res
+                ## the tag 
+                if self.__current_tag > next_tag and (self.__current_tag - next_tag) == 1:
+                    ## do nothing, locate done
+                    pass
+                elif self.__current_tag == next_tag and next_id == 0: ## 
+                    ## do nothing, locate done
+                    pass
+                else:  # we need locate more, the timestamp may changed by user.
+                    ## We Do Not use timestamp to judge, 
+                    sql = '''SELECT COUNT(*) FROM %s;
+                          ''' % self.__table_name
+                    self.__cursor.execute(sql)
+                    res = self.__cursor.fetchone()
+                    if res and res[0] == self.__max_entry:  # Full of max_entry, seek by tag
+                        sql = '''SELECT timestamp,ID,value_tag from %s WHERE ID = %d OR ID = %d;
+                              ''' % (self.__table_name, 0, self.__max_entry-1)
+                        self.__cursor.execute(sql)
+                        res = self.__cursor.fetchall()
+                        temp_tag = 0
+                        for i in res:
+                            if i[2] is not None:
+                                if temp_tag == 255 and i[2] == 0:
+                                    temp_tag = 0
+                                else:
+                                    temp_tag = max(temp_tag, i[2])
+                        ## now we get the max value_tag, continue locate
+                        sql = '''SELECT timestamp,max(ID),value_tag from %s WHERE value_tag = %d;
+                              ''' % (self.__table_name, temp_tag)
+                        self.__cursor.execute(sql)
+                        timestamp,self.__current_id,self.__current_tag = self.__cursor.fetchone()
+                    else:   # not full of max_entry, seek by ID
+                        sql = '''SELECT timestamp,ID,value_tag from %s WHERE ID = %d;
+                              ''' % (self.__table_name, res[0]-1)
+                        self.__cursor.execute(sql)
+                        timestamp,self.__current_id,self.__current_tag = self.__cursor.fetchone()
+            else:   # Not full of max_entry
+                pass  # do nothing, locate done
+        else:   # it's a empty table
+            pass # do nothing, locate done
+        ## set roll over
+        if self.__current_tag == 0 and self.__current_id < self.__max_entry:
+            self.__roll_over = False
         else:
-            self.__table.update(self.__metadata, doc_ids=[1,])
-            self.__metadata_flush_index = 0
+            self.__roll_over = True
+
+    def update_dev_info(self, timestamp, smart, last_persistent_log=None):
+        ## Get next ID
+        next_id = self.__current_id + 1
+        current_tag = self.__current_tag
+        roll_over = self.__roll_over
+        if next_id >= self.__max_entry: # roll over
+            roll_over = True
+            next_id = 0
+            current_tag += 1
+            if current_tag > 255:
+                current_tag = 0
+        #####
+        if smart:
+            if roll_over:
+                sql = '''UPDATE %s
+                         set value_tag = %d,timestamp = %f,smart = %s
+                         WHERE ID = %d
+                      ''' % (self.__table_name, current_tag, timestamp, '?', next_id)
+            else:
+                sql = '''INSERT INTO %s (ID,value_tag,timestamp,smart)
+                         VALUES (%d, %d, %f, %s)
+                      ''' % (self.__table_name, next_id, current_tag, timestamp, '?')
+            ###
+            if self.run_sql(sql, args=(sqlite3.Binary(smart),), commit=False) == 0:
+                self.__current_id = next_id
+                self.__current_tag = current_tag
+                self.__roll_over = roll_over
+        if last_persistent_log:
+            sql = '''UPDATE %s
+                     set last_persistent = %s
+                     WHERE ID = %d
+                  ''' % (self.__table_name, '?', next_id)
+            self.run_sql(sql, args=(sqlite3.Binary(last_persistent_log),), commit=False)
+        self.__conn.commit()
+
+    def get_dev_current_info(self):
+        sql = '''SELECT timestamp,smart,last_persistent from %s WHERE ID = %d;
+              ''' % (self.__table_name, self.__current_id)
+        self.__cursor.execute(sql)
+        res = self.__cursor.fetchone()
+        return res
+
+    def get_dev_temperature_history(self):
+        sql = '''SELECT timestamp,smart from %s;
+              ''' % self.__table_name
+        self.__cursor.execute(sql)
+        return self.__cursor.fetchone()
 
 
-class MyTinyDB(object):
-    '''
-    For SATA Or NVMe Disk, usually about 800 Bytes per entry per disk，
-    example, if 2 sata disk and 1 nvme disk in system, and 30 entries per disk,
-    the TinyDB need max size = 3 * 30 * 800 = 72K.
-    '''
-    def __init__(self, db_file=_db_file, max_entry_per_disk=2000):
-        self.__db_file = db_file
+class SQLiteDB(object):
+    def __init__(self, db_path=_sqlite3_db_file, max_entry_per_disk=2000):
+        self.__db_path = db_path
         self.__max_entry_per_disk = max_entry_per_disk
         ##
-        self.db = TinyDB(self.__db_file)
+        self._conn = sqlite3.connect(self.__db_path)
+        self._cursor = self._conn.cursor()
         ##
         self.__disk_trace_pool = {}
 
     @property
-    def db_file(self):
-        return self.__db_file
+    def disk_trace_pool(self):
+        return self.__disk_trace_pool
 
     def get_table_by_id(self, dev_id):
+        table_name = "S%s" % dev_id
         if dev_id not in self.__disk_trace_pool:
-            self.__disk_trace_pool[dev_id] = MyTinyTable(self.db.table(dev_id), max_entry=self.__max_entry_per_disk)
+            ## first try to create a table
+            # do nothing if exist
+            sql = '''CREATE TABLE IF NOT EXISTS %s(
+                     ID  INT  PRIMARY KEY     NOT NULL,
+                     value_tag  INT  NOT NULL,
+                     timestamp  REAL  NOT NULL,
+                     smart  BLOB  NOT NULL,
+                     last_persistent  BLOB);
+                  ''' % table_name
+            self._cursor.execute(sql)
+            self._conn.commit()
+            ##
+            self.__disk_trace_pool[dev_id] = SQLiteTable(self, table_name, max_entry=self.__max_entry_per_disk)
         return self.__disk_trace_pool.get(dev_id)
 
-    def update_smart(self, dev_id, smart):
-        table = self.get_table_by_id(dev_id)
-        table.insert(smart)
-
-
-if _has_tinydb:
-    my_tinydb = MyTinyDB()
-else:
-    my_tinydb = None
+## init sqlite3 DB
+disk_trace_pool = SQLiteDB()
+##

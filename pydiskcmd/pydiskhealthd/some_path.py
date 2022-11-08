@@ -7,5 +7,5 @@ def check_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-SMARTTracePath = "/var/log/pydiskcmd/smart_trace/"
-check_dir(SMARTTracePath)
+DiskTracePath = "/var/log/pydiskcmd/disk_trace/"
+check_dir(DiskTracePath)

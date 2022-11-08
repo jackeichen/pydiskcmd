@@ -17,10 +17,10 @@ from pydiskcmd.pydiskhealthd.sata_device import ATADevice
 from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,AERTrace,AERTraceRL
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
-from pydiskcmd.pydiskhealthd.some_path import SMARTTracePath
+from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
 ####
 ## the disk info store path
-DisksInfoPath = os.path.join(SMARTTracePath, "AllDisksInfo.json")
+DisksInfoPath = os.path.join(DiskTracePath, "AllDisksInfo.json")
 ##
 tool_version = '0.1.1'
 ##
@@ -142,7 +142,7 @@ def pydiskhealthd():
             print ("Run pgrep command error, return code: %s" % proc.returncode)
             print (proc.stderr.read())
             return 2
-    ## notify
+    ## notify systemd here
     try:
         notifier = SystemdNotify()
         notifier.notify(READY=1)

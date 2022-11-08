@@ -31,7 +31,9 @@ def get_nvme_dev_info():
     """
     Return: a list that contain ctrl_id, like ["nvme0", "nvme1"]
     """
-    return [dev for dev in os.listdir('/sys/class/nvme') if dev.startswith("nvme")]
+    if os.path.exists('/sys/class/nvme'):
+        return [dev for dev in os.listdir('/sys/class/nvme') if dev.startswith("nvme")]
+    return []
 
 def get_nvme_block_dev_by_ctrl_id(ctrl_id):
     """
