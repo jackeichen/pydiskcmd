@@ -224,12 +224,12 @@ class NVMeDevice(object):
                 timestamp,smart,last_persistent = res
                 if smart:
                     self.__smart_trace.set_smart(smart, timestamp)
-                    print ("Init nvme  smart: ")
-                    print (smart)
+                    #print ("Init nvme  smart: ")
+                    #print (smart)
                 if last_persistent:
                     self.__persistent_event_log.init_last_trace_event_begin(last_persistent)
-                    print ("Init persistent_event_log begin:")
-                    print (self.__persistent_event_log.last_trace_event_begin)
+                    #print ("Init persistent_event_log begin:")
+                    #print (self.__persistent_event_log.last_trace_event_begin)
 
     @property
     def device_type(self):

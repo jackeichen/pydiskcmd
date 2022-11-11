@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import sys,os
-import re
 import optparse
 from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme import NVMe
@@ -62,27 +61,23 @@ def _list():
     print_format = "%-16s %-20s %-40s %-9s %-26s %-16s %-8s"
     print (print_format % ("Node", "SN", "Model", "Namespace", "Usage", "Format", "FW Rev"))
     print (print_format % ("-"*16, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
-    from pydiskcmd.system.os_tool import get_block_devs
-    blk_dev = get_block_devs(print_detail=False)
-    included_block_devices = ("nvme",)
-    for dev in blk_dev:
-        if dev.startswith(included_block_devices):
-            g = re.match(r"nvme([0-9]+)n([0-9]+)", dev)
-            ctrl_id = int(g[1])
-            ns_id = int(g[2])
-            #
-            nvme_ctrl_dev = "/dev/nvme%s" % ctrl_id
-            nvme_block_dev = "/dev/%s" % dev
+    from pydiskcmd.system.os_tool import scan_nvme_system
+    for ctrl_name,ctrl_info in scan_nvme_system().items():
+        ## Get Identify info
+        with NVMe(init_device(ctrl_info.dev_path)) as d:
+            cmd_id_ctrl = d.id_ctrl()
+        ## para data
+        result = nvme_id_ctrl_decode(cmd_id_ctrl.data)
+        sn = ba_to_ascii_string(result.get("SN"), "")
+        mn = ba_to_ascii_string(result.get("MN"), "")
+        fw = ba_to_ascii_string(result.get("FR"), "")
+        ##
+        for ns_info in ctrl_info.retrieve_ns():
+            ## Get information now!
             ## send identify controller and identify namespace
-            with NVMe(init_device(nvme_ctrl_dev)) as d:
-                cmd_id_ctrl = d.id_ctrl()
-                cmd_id_ns = d.id_ns(ns_id)
+            with NVMe(init_device(ctrl_info.dev_path)) as d:
+                cmd_id_ns = d.id_ns(ns_info.ns_id)
             ## para data
-            result = nvme_id_ctrl_decode(cmd_id_ctrl.data)
-            sn = ba_to_ascii_string(result.get("SN"), "")
-            mn = ba_to_ascii_string(result.get("MN"), "")
-            fw = ba_to_ascii_string(result.get("FR"), "")
-            ##
             result = nvme_id_ns_decode(cmd_id_ns.data)
             #
             lbaf = result.get("LBAF%s" % scsi_ba_to_int(result.get("FLBAS"), 'little'))
@@ -94,7 +89,7 @@ def _list():
             NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
             usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
             if options.output_format == "normal":
-                print (print_format % (nvme_block_dev, sn, mn, ns_id, usage, _format, fw))
+                print (print_format % (ns_info.dev_path, sn, mn, ns_info.ns_id, usage, _format, fw))
 
 def smart_log():
     usage="usage: %prog smart-log <device> [OPTIONS]"

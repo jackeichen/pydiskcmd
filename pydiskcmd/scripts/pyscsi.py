@@ -11,7 +11,9 @@ from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scs
 from pydiskcmd.utils.format_print import format_dump_bytes
 ##
 from pydiskcmd.pyscsi import scsi_enum_inquiry as INQUIRY
-
+from pydiskcmd.pyscsi.scsi_enum_getlbastatus import P_STATUS
+from pydiskcmd.pyscsi import scsi_enum_modesense as MODESENSE6
+from pydiskcmd.pyscsi import scsi_enum_readelementstatus as READELEMENTSTATUS
 
 Version = '0.1.0'
 
@@ -32,6 +34,9 @@ def print_help():
     print ("")
     print ("The following are all implemented sub-commands:")
     print ("  inq                         Check Disk Power Mode")
+    print ("  getlbastatus                Get LBA Status from target SCSI device")
+    print ("  swp                         Set device swp status")
+    print ("  mtx                         Device tool of mtx")
     print ("  version                     Shows the program version")
     print ("  help                        Shows the program version")
     print ("")
@@ -321,9 +326,201 @@ def inq():
     else:
         parser.print_help()
 ############################
+
+def getlbastatus():
+    usage="usage: %prog getlbastatus <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-l", "--lba", type="int", dest="lba", action="store", default=0,
+        help="the lba to get status")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with SCSI(init_device(dev), 512) as d:
+            print ('issuing getlbastatus command')
+            print ("%s:" % d.device._file_name)
+            ##
+            r = d.readcapacity16().result
+            if not r['lbpme']:
+                print('LUN is fully provisioned.')
+                return
+            ##
+            r = d.getlbastatus(options.lba).result
+            for i in range(len(r['lbas'])):
+                print('LBA:%d-%d %s' % (
+                    r['lbas'][i]['lba'],
+                    r['lbas'][i]['lba'] + r['lbas'][i]['num_blocks'] - 1,
+                    P_STATUS[r['lbas'][i]['p_status']]
+                ))
+############################
+def swp():
+    usage="usage: %prog swp <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-s", "--status", type="choice", dest="status", action="store", choices=["on", "off"], default='on',
+        help="device swp status to set, on|off")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with SCSI(init_device(dev), 512) as d:
+            print ('issuing swp command')
+            print ("%s:" % d.device._file_name)
+            ##
+            i = d.modesense6(page_code=MODESENSE6.PAGE_CODE.CONTROL).result
+            if options.status == 'on':
+                i['mode_pages'][0]['swp'] = 1
+                d.modeselect6(i)
+                print('Set SWP ON')
+            elif options.status == 'off':
+                i['mode_pages'][0]['swp'] = 0
+                d.modeselect6(i)
+                print('Set SWP OFF')
+            else:
+                pass
+
+###########################
+def mtx_status(scsi, dte, se):
+    # For ease of use we renumber the element addresses to start at
+    # 0 for data transfer elements and to start at num_data_transfer_elements
+    # for the storage elements.
+    _fdte = 99999999
+    for element in dte:
+        if element['element_address'] < _fdte:
+            _fdte = element['element_address']
+    _fse = 99999999
+    for element in se:
+        if element['element_address'] < _fse:
+            _fse = element['element_address']
+
+    for element in dte:
+        if element['full']:
+            print('Data Transfer Element: %d:Full VolumeTag:%s' % (
+                element['element_address'] - _fdte,
+                element['primary_volume_tag'][0:32]))
+        else:
+            print('Data Transfer Element: %d:Empty' % (
+                element['element_address'] - _fdte))
+    for element in se:
+        if element['full']:
+            print('      Storage Element: %d:Full VolumeTag:%s' % (
+                element['element_address'] - _fse + len(dte),
+                element['primary_volume_tag'][0:32]))
+        else:
+            print('      Storage Element: %d:Empty' % (
+                element['element_address'] - _fse + len(dte)))
+
+
+def mtx_load(scsi, mte, dte, se, storage_element, data_transfer_element):
+    _fmte = 99999999
+    for element in mte:
+        if element['element_address'] < _fmte:
+            _fmte = element['element_address']
+    _fdte = 99999999
+    for element in dte:
+        if element['element_address'] < _fdte:
+            _fdte = element['element_address']
+    _fse = 99999999
+    for element in se:
+        if element['element_address'] < _fse:
+            _fse = element['element_address']
+
+    res = scsi.movemedium(_fmte,
+                          storage_element + _fse - _fdte,
+                          data_transfer_element + _fdte).result
+    print('Loaded Storage Element %d into Data Transfer drive %d' % (storage_element, data_transfer_element))
+
+
+def mtx_unload(scsi, mte, dte, se, storage_element, data_transfer_element):
+    _fmte = 99999999
+    for element in mte:
+        if element['element_address'] < _fmte:
+            _fmte = element['element_address']
+    _fdte = 99999999
+    for element in dte:
+        if element['element_address'] < _fdte:
+            _fdte = element['element_address']
+    _fse = 99999999
+    for element in se:
+        if element['element_address'] < _fse:
+            _fse = element['element_address']
+
+    res = scsi.movemedium(_fmte,
+                          data_transfer_element + _fdte,
+                          storage_element + _fse - _fdte).result
+    print('Unloaded Data Transfer drive %d into Storage Element %d ' % (data_transfer_element, storage_element))
+
+def mtx():
+    usage="usage: %prog mtx <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-f", "--func", type="choice", dest="func", action="store", choices=["status", "load", "unload"], default='status',
+        help="mtx function to do, status|load|unload")
+    parser.add_option("-s", "--source", type="int", dest="source", action="store", default=0,
+        help="mtx source when load or unload")
+    parser.add_option("-d", "--dst", type="int", dest="dst", action="store", default=0,
+        help="mtx destination when load or unload")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not os.path.exists(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with SCSI(init_device(dev), 512) as d:
+            print ('issuing mtx command')
+            print ("%s:" % d.device._file_name)
+            ##
+            i = d.inquiry().result
+            if i['peripheral_device_type'] != INQUIRY.DEVICE_TYPE.MEDIA_CHANGER_DEVICE:
+                print('%s is not a MediaChanger device' % d.device._file_name)
+                return 1
+            ##
+            eaa = d.modesense6(page_code=MODESENSE6.PAGE_CODE.ELEMENT_ADDRESS_ASSIGNMENT).result['mode_pages'][0]
+            # get the data transfer elements
+            dte = d.readelementstatus(
+                start=eaa['first_data_transfer_element_address'],
+                num=eaa['num_data_transfer_elements'],
+                element_type=READELEMENTSTATUS.ELEMENT_TYPE.DATA_TRANSFER,
+                voltag=1, curdata=1, dvcid=1,
+                alloclen=16384).result['element_status_pages'][0]['element_descriptors']
+            # get all the storage elements
+            se = d.readelementstatus(
+                start=eaa['first_storage_element_address'],
+                num=eaa['num_storage_elements'],
+                element_type=READELEMENTSTATUS.ELEMENT_TYPE.STORAGE,
+                voltag=1, curdata=1, dvcid=1,
+                alloclen=16384).result['element_status_pages'][0]['element_descriptors']
+            # get all the medium transport elements
+            mte = d.readelementstatus(
+                start=eaa['first_medium_transport_element_address'],
+                num=eaa['num_medium_transport_elements'],
+                element_type=READELEMENTSTATUS.ELEMENT_TYPE.MEDIUM_TRANSPORT,
+                voltag=1, curdata=1, dvcid=1,
+                alloclen=16384).result['element_status_pages'][0]['element_descriptors']
+            ##
+            if options.func == 'status':
+                return mtx_status(d, dte, se)
+            if options.func == 'load':
+                return mtx_load(d, mte, dte, se, options.source, options.dst)
+            if options.func == 'unload':
+                return mtx_unload(d, mte, dte, se, options.dst, options.source)
+############################
 ############################
 
 commands_dict = {"inq": inq,
+                 "getlbastatus": getlbastatus,
+                 "swp": swp,
+                 "mtx": mtx,
                  "version": version,
                  "help": print_help}
 

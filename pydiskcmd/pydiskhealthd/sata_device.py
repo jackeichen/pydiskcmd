@@ -176,8 +176,9 @@ class ATADevice(object):
                 timestamp,smart,last_persistent = res
                 if smart:
                     self.__smart_trace.set_smart(smart, timestamp)
-                    print ("Init sata smart: ")
-                    print (smart)
+                    #print ("Init sata smart: ")
+                    #print (smart)
+
     @property
     def device_type(self):
         return self.__device_type
