@@ -3,24 +3,17 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import sys,os
 import optparse
-import binascii
 from pydiskcmd.pyscsi.scsi import SCSI
 from pydiskcmd.utils import init_device
-from pydiskcmd.pyscsi.scsi_sense import SCSICheckCondition
-from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scsi_ba_to_int
 from pydiskcmd.utils.format_print import format_dump_bytes
-##
-from pydiskcmd.pyscsi import scsi_enum_inquiry as INQUIRY
-from pydiskcmd.pyscsi.scsi_enum_getlbastatus import P_STATUS
-from pydiskcmd.pyscsi import scsi_enum_modesense as MODESENSE6
-from pydiskcmd.pyscsi import scsi_enum_readelementstatus as READELEMENTSTATUS
+# import from python-scsi
+from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
+from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
+from pyscsi.pyscsi.scsi_enum_getlbastatus import P_STATUS
+from pyscsi.pyscsi import scsi_enum_modesense as MODESENSE6
+from pyscsi.pyscsi import scsi_enum_readelementstatus as READELEMENTSTATUS
 
 Version = '0.1.0'
-
-def bytearray2hex_l(data,start,offset):
-    a = data[start:start+offset][::-1]
-    t = binascii.hexlify(a)
-    return int(t,16)
 
 def version():
     print ("pyscsi version %s" % Version)

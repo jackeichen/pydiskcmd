@@ -1,11 +1,12 @@
 # this for handle sense data
 # 2019/10/12, GaoZH.
 from pydiskcmd.utils.enum import Enum
-from pydiskcmd.pyscsi.scsi_sense import SCSICheckCondition,decode_bits
+from pydiskcmd.exceptions import DeviceTypeError
+##
+from pyscsi.pyscsi.scsi_sense import SCSICheckCondition,decode_bits
 
 
 class ATACheckReturnDescriptorCondition(SCSICheckCondition):
-
     _extend_ata_status_return_descriptor=         {'descriptor_code': [0xff, 0],
                                                    'additional_descriptor_length': [0xff, 1],
                                                    'extend': [0x01, 2],
@@ -16,8 +17,8 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
                                                    'lba_low': [0xff, 7],
                                                    'lba_mid_rsvd': [0xff, 8],
                                                    'lba_mid': [0xff, 9],
-                                                   'lba_hign_rsvd': [0xff, 10],
-                                                   'lba_hign': [0xff, 11],
+                                                   'lba_high_rsvd': [0xff, 10],
+                                                   'lba_high': [0xff, 11],
                                                    'device': [0xff, 12],
                                                    'status': [0xff, 13], }        
 
@@ -27,7 +28,9 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
         super(ATACheckReturnDescriptorCondition, self).__init__(sense, print_data=print_data)
         ##
         if self.asc == 0 and self.ascq == 29: ## ATA PASS THROUGH INFORMATION AVAILABLE
-            self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:22])
+            self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
+        else:
+            raise DeviceTypeError("May Not a valid ATA Device.")
 
     @property
     def ata_pass_thr_return_descriptor(self):
@@ -37,7 +40,7 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
     def unmarshall_extend_ata_status_return_descriptor_data(data):
         result = {}
         decode_bits(data,
-                    SCSICheckCondition._extend_ata_status_return_descriptor,
+                    ATACheckReturnDescriptorCondition._extend_ata_status_return_descriptor,
                     result)
         return result
 

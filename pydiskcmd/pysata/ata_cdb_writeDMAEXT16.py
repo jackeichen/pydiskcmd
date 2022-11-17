@@ -14,29 +14,26 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.ata_command import ATACommand16
 
 
-class WriteDMAEXT16(PassThrough16):
+class WriteDMAEXT16(ATACommand16):
     """
     A class to send write dma command to a ATA device
     """
     def __init__(self,
-                 opcode,
-                 blocksize,
                  lba,
-                 tl,
+                 count,
                  data):
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             lba,
-                             0x6,
-                             2,
-                             0,
-                             0,
-                             tl,
-                             0x35,
-                             dataout=data,
-                             ck_cond=1)
-        
+        if count == 0:
+            count = 65536
+        ATACommand16.__init__(self,
+                              0,         # fetures
+                              count,     # count
+                              lba,       # lba
+                              0,         # device
+                              0x35,      # command
+                              0x06,      # protocal
+                              2,         # t_length
+                              0,         # t_dir
+                              data=data) 

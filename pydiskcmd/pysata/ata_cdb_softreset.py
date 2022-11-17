@@ -14,10 +14,10 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.ata_command import ATACommand16
 
 
-class SoftReset(PassThrough16):
+class SoftReset(ATACommand16):
     """
     A class to send soft reset command to a ATA device
     
@@ -26,20 +26,16 @@ class SoftReset(PassThrough16):
     fields are valid. The SATL shall ignore all other fields in the CDB.
     """
     
-    def __init__(self,
-                 opcode,
-                 blocksize):
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0,  #lba
-                             1,  #protocal
-                             0,  #t_length 
-                             0,  #t_dir
-                             0,  #feature
-                             0,  #sector_count
-                             0,  # command
-                             ck_cond=1,
-                             off_line=3)
+    def __init__(self):
+        ATACommand16.__init__(self,
+                              0,         # fetures
+                              0,         # count
+                              0,         # lba
+                              0,         # device
+                              0,         # command
+                              0x01,      # protocal
+                              0,         # t_length
+                              0,         # t_dir
+                              off_line=3)
 
         

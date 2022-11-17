@@ -4,10 +4,6 @@
 # SPDX-FileCopyrightText: 2014 The python-scsi Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
-from pydiskcmd.pyscsi.scsi_enum_command import spc, sbc, smc, ssc, mmc
-from pydiskcmd.utils.converter import get_opcode
-from pydiskcmd.pyscsi.scsi_cdb_inquiry import Inquiry
-## cover before
 from pydiskcmd.pysata.ata_cdb_AccessibleMaxAddress import AccessibleMaxAddressCfg
 from pydiskcmd.pysata.ata_cdb_smart import SmartReadData,SmartReadThresh,SmartExeOffLineImm
 from pydiskcmd.pysata.ata_cdb_readDMAEXT16 import ReadDMAEXT16
@@ -22,7 +18,9 @@ from pydiskcmd.pysata.ata_cdb_softreset import SoftReset
 from pydiskcmd.pysata.ata_cdb_DeviceReset import DeviceReset
 from pydiskcmd.pysata.ata_cdb_executeDeviceDiagnostic import ExecuteDeviceDiagnostic
 from pydiskcmd.pysata.ata_cdb_downloadmicrocode import DownloadMicrocode,ActivateMicrocode
-
+###
+from pyscsi.pyscsi.scsi_enum_command import spc, sbc, smc, ssc, mmc
+from pyscsi.pyscsi.scsi_cdb_inquiry import Inquiry
 
 code_version = "0.1.0"
 
@@ -97,7 +95,6 @@ class SATA(object):
         """
         try:
             self._execute(cmd)
-            cmd.decode_sense()
         except Exception as e:
             raise e
 
@@ -145,27 +142,23 @@ class SATA(object):
         return cmd
 
     def getAccessibleMaxAddress(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = AccessibleMaxAddressCfg(opcode, self.blocksize, 0)
+        cmd = AccessibleMaxAddressCfg(0)
         self.execute(cmd)   # information need be reported in sense data
         return cmd
 
     def smart_read_data(self, smart_key=None):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = SmartReadData(opcode, self.blocksize, smart_key)
+        cmd = SmartReadData(smart_key)
         self.execute(cmd)
         cmd.unmarshall()
         return cmd
 
     def smart_read_thresh(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = SmartReadThresh(opcode, self.blocksize)
+        cmd = SmartReadThresh()
         self.execute(cmd)
         return cmd
 
     def smart_exe_offline_imm(self, subcommand):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = SmartExeOffLineImm(opcode, self.blocksize, subcommand)
+        cmd = SmartExeOffLineImm(subcommand)
         self.execute(cmd)
         return cmd
 
@@ -180,8 +173,7 @@ class SATA(object):
         
         :return: a read16 instance
         """
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = ReadDMAEXT16(opcode, self.blocksize, lba, tl)
+        cmd = ReadDMAEXT16(lba, tl)
         self.execute(cmd)
         return cmd
 
@@ -189,8 +181,7 @@ class SATA(object):
                        lba,
                        tl,
                        data):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = WriteDMAEXT16(opcode, self.blocksize, lba, tl, data)
+        cmd = WriteDMAEXT16(lba, tl, data)
         self.execute(cmd)
         return cmd
 
@@ -229,15 +220,14 @@ class SATA(object):
             data[data_index] = (lba_length & 0xFF00) >> 8
             data_index += 1
         ##
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = DSM(opcode, self.blocksize, fetures, data)
+        cmd = DSM(fetures, data)
         self.execute(cmd)
         return cmd
 
     def trim(self, *args, **kwargs):
         return self.dsm(*args, **kwargs)
 
-    def trimall(self,LBAS,fetures=1):
+    def trimall(self, LBAS, fetures=1):
         single_cmd_num = 64
         single_cmd_unit_lbas = 4624
         LBAS = int(LBAS)
@@ -277,57 +267,48 @@ class SATA(object):
             for i in (data_index,512):
                 data[i] = 0
             #
-            opcode = self.device.opcodes.PASS_THROUGH_16
-            cmd = DSM(opcode, self.blocksize, fetures, data)
+            cmd = DSM(fetures, data)
             self.execute(cmd)
         return cmd
 
     def identify(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = Identify(opcode, self.blocksize)
+        cmd = Identify()
         self.execute(cmd)
         cmd.unmarshall()
         return cmd
 
     def flush(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = Flush(opcode, self.blocksize)
+        cmd = Flush()
         self.execute(cmd)
         return cmd
     
     def check_power_mode(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = CheckPowerMode(opcode, self.blocksize)
+        cmd = CheckPowerMode()
         self.execute(cmd)
         return cmd
 
     def standby_imm(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = StandbyImm(opcode, self.blocksize)
+        cmd = StandbyImm()
         self.execute(cmd)
         return cmd
 
     def hard_reset(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = Hardreset(opcode, self.blocksize)
+        cmd = Hardreset()
         self.execute(cmd)
         return cmd
 
     def soft_reset(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = SoftReset(opcode, self.blocksize)
+        cmd = SoftReset()
         self.execute(cmd)
         return cmd
 
     def device_reset(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = DeviceReset(opcode, self.blocksize)
+        cmd = DeviceReset()
         self.execute(cmd)
         return cmd
 
     def execute_device_diagnostic(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = ExecuteDeviceDiagnostic(opcode, self.blocksize)
+        cmd = ExecuteDeviceDiagnostic()
         self.execute(cmd)
         return cmd
 
@@ -336,14 +317,17 @@ class SATA(object):
                            lba,
                            tl,
                            data):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = DownloadMicrocode(opcode, self.blocksize, lba, tl, data, feature=feature)
+        ##
+        count_l = (tl & 0xff)
+        count_h = (tl >> 8)
+        lba_pass = (lba << 8) + count_h
+        ##
+        cmd = DownloadMicrocode(lba_pass, count_l, data, feature=feature)
         self.execute(cmd)
         return cmd
 
     def active_delayed_microcode(self):
-        opcode = self.device.opcodes.PASS_THROUGH_16
-        cmd = ActivateMicrocode(opcode, self.blocksize)
+        cmd = ActivateMicrocode()
         self.execute(cmd)
         return cmd
 

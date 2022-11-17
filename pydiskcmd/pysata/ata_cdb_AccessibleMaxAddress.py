@@ -14,29 +14,25 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.ata_command import ATACommand16
 
 
-class AccessibleMaxAddressCfg(PassThrough16):
+class AccessibleMaxAddressCfg(ATACommand16):
     """
     A class to send GetAccessibleMaxAddress command to a ATA device
     """
-    _cmd_error_descriptor = {0: "success", 1:"sense not available", 2:"command abort", 3: "Other errors"}
+    #_cmd_error_descriptor = {0: "success", 1:"sense not available", 2:"command abort", 3: "Other errors"}
     def __init__(self,
-                 opcode,
-                 blocksize,
                  feature):
         if feature not in (0,1,2):
             raise RuntimeError("feature should be 0/1/2")
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0,  #lba
-                             3,  #protocal
-                             0,  #t_length 
-                             1,  #t_dir
-                             feature,  #feature
-                             0,  #sector_count
-                             0x78, # command
-                             ck_cond=1)
+        ATACommand16.__init__(self,
+                              feature,   # fetures
+                              0,         # count
+                              0,         # lba
+                              0,         # device
+                              0x78,      # command
+                              0x03,      # protocal
+                              0,         # t_length
+                              0)         # t_dir
 

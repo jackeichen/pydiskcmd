@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import time
 from pydiskcmd.pyscsi.scsi import SCSI
-from pydiskcmd.pyscsi import scsi_enum_inquiry as INQUIRY
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
-
+##
+from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 
 def get_dev_id(dev_path):
     ## get device ID

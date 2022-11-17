@@ -14,24 +14,20 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.ata_command import ATACommand16
 
 
-class Flush(PassThrough16):
+class Flush(ATACommand16):
     """
     A class to send flush command to a ATA device
     """
-    def __init__(self,
-                 opcode,
-                 blocksize):
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0,   # lba
-                             3,   # protocal
-                             2,   # t_length 
-                             0,   # t_dir
-                             0,   # feature
-                             0,   # sector_count
-                             0xea,# command
-                             ck_cond=1)
+    def __init__(self):
+        ATACommand16.__init__(self,
+                              0,        # fetures
+                              0,         # count
+                              0,         # lba
+                              0,         # device
+                              0xea,      # command
+                              0x03,      # protocal
+                              0,         # t_length
+                              0)         # t_dir

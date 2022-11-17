@@ -14,30 +14,42 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.ata_command import ATACommand16
+from pydiskcmd.utils.converter import scsi_ba_to_int
 
 
-class SanitizeDevice(PassThrough16):
+class SanitizeDevice(ATACommand16):
     """
     A class to send Sanitize Device command to a ATA device
     """
     _cmd_error_descriptor = {0: "success", 1:"sense not available", 2:"command abort", 3: "Other errors"}
     def __init__(self,
-                 opcode,
-                 blocksize,
-                 feature):
-        values = (0x0000,0x0011,0x0012,0x0013,0x0014,0x0020,0x0040)
-        if feature not in values:
-            raise RuntimeError("feature should be value in %s" % str(values))
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0,  #lba
-                             3,  #protocal
-                             0,  #t_length 
-                             1,  #t_dir
-                             feature,  #feature
-                             0,  #sector_count
-                             0xB4, # command
-                             ck_cond=1)
-
+                 feature,
+                 count,
+                 over_write_pattern=b''):
+        if feature == 0x0012:
+            lba = 0x4572 + (0x426B << 16)
+        elif feature == 0x0011:
+            lba = 0x7970 + (0x4372 << 16)
+        elif feature == 0x0014 and over_write_pattern:
+            lba = scsi_ba_to_int(over_write_pattern, 'little') + (0x4F57 << 32)
+        elif feature == 0x0040:
+            lba = 0x7469 + (0x416E << 16)
+            count = 0
+        elif feature == 0x0020:
+            lba = 0x4C6B + (0x4672 << 16)
+            count = 0
+        elif feature == 0:
+            lba = 0
+        else:
+            raise RuntimeError("feature(%s) invalid" % feature)
+        
+        ATACommand16.__init__(self,
+                              feature,   # fetures
+                              count,     # count
+                              lba,       # lba
+                              0,         # device
+                              0xB4,      # command
+                              0x03,      # protocal
+                              0,         # t_length
+                              0)         # t_dir

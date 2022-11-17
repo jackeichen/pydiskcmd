@@ -324,7 +324,7 @@ def self_test():
                 print ('issuing selftest command - short test')
                 print ("%s:" % d.device._file_name)
                 print ('')
-                cmd = d.smart()
+                cmd = d.smart_read_data()
                 data = cmd.result
                 print ('ShortSelftestPollingTimeInMin: %s min' % data['ShortSelftestPollingTimeInMin'][0])
                 print ('')
@@ -338,7 +338,7 @@ def self_test():
                 print ('issuing selftest command - long test')
                 print ("%s:" % d.device._file_name)
                 print ('')
-                cmd = d.smart()
+                cmd = d.smart_read_data()
                 data = cmd.result
                 print ('longSelftestPollingTimeInMin: %s min' % data['longSelftestPollingTimeInMin'][0])
                 print ('')

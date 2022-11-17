@@ -50,7 +50,7 @@ def GetOptions():
             pass
     else:
         raise RuntimeError("You need some data to write in.")
-    
+
 def main():
     GetOptions()
     device = pydiskcmd.utils.init_device(dev)

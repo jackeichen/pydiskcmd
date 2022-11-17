@@ -14,32 +14,29 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.ata_command import ATACommand12
 from pydiskcmd.pysata.sata_spec import Identify_Info
 import pydiskcmd.utils.converter as convert
 
 
-class Identify(PassThrough16):
+class Identify(ATACommand12):
     """
     A class to send identify command to a ATA device
     """
     _standard_bits =  Identify_Info
 
-    def __init__(self,
-                 opcode,
-                 blocksize):
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0,
-                             0x4,
-                             2,
-                             1,
-                             0,
-                             1,
-                             0xec,
-                             ck_cond=1)
-    
+    def __init__(self):
+        ATACommand12.__init__(self,
+                              0,         # fetures
+                              0,         # count
+                              0,         # lba
+                              0,         # device
+                              0xec,      # command
+                              0x04,      # protocal
+                              3,         # t_length
+                              1,         # t_dir
+                              extra_tl=1) 
+
     @classmethod
     def unmarshall_datain(cls, data):
         """

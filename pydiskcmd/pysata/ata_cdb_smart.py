@@ -14,13 +14,13 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
-from pydiskcmd.pyscsi.scsi_cdb_passthrough12 import PassThrough12
+from pydiskcmd.pysata.ata_command import ATACommand12
+from pydiskcmd.pysata.ata_command import ATACommand16
 import pydiskcmd.utils.converter as convert
 from pydiskcmd.pysata.sata_spec import SMART_KEY
 
 
-class SmartReadData(PassThrough16):
+class SmartReadData(ATACommand12):
     """
     A class to send smart command to a ATA device
     """
@@ -28,20 +28,18 @@ class SmartReadData(PassThrough16):
     _standard_bits = SMART_KEY
 
     def __init__(self,
-                 opcode,
-                 blocksize,
                  smart_key=None):
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0xC24F << 8, # lba
-                             0x4,         # protocal
-                             2,           # t_length
-                             1,           # t_dir
-                             0xD0,        # features
-                             0x1,         # sector_count
-                             0xB0,        # command
-                             ck_cond=1)
+        ATACommand12.__init__(self,
+                              0xD0,        # fetures
+                              0,           # count
+                              0xC24F << 8, # lba
+                              0,           # device
+                              0xB0,        # command
+                              0x04,        # protocal
+                              3,           # t_length
+                              1,           # t_dir
+                              extra_tl=1)             
+
         if smart_key:
             SmartReadData._standard_bits.update(smart_key)
 
@@ -60,46 +58,39 @@ class SmartReadData(PassThrough16):
         return result
 
 
-class SmartReadThresh(PassThrough16):
+class SmartReadThresh(ATACommand12):
     """
     A class to send smart command to a ATA device
     """
-    def __init__(self,
-                 opcode,
-                 blocksize,):
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0xC24F << 8, # lba
-                             0x4,         # protocal
-                             2,           # t_length
-                             1,           # t_dir
-                             0xD1,        # features
-                             0x1,         # sector_count
-                             0xB0,        # command
-                             ck_cond=1)
+    def __init__(self):
+        ATACommand12.__init__(self,
+                              0xD1,        # fetures
+                              0,           # count
+                              0xC24F << 8, # lba
+                              0,           # device
+                              0xB0,        # command
+                              0x04,        # protocal
+                              3,           # t_length
+                              1,           # t_dir
+                              extra_tl=1)
 
 
-class SmartExeOffLineImm(PassThrough16):
+class SmartExeOffLineImm(ATACommand12):
     """
     A class to send SMART EXECUTE OFF-LINE IMMEDIATE command to a ATA device
     """
     def __init__(self,
-                 opcode,
-                 blocksize,
                  subcommand):
         #             LL(8:15)     LL(0:7)       LM(8:15)       LM(0:7)        LH(8:15)       LH(0:7)
         lba_filed = subcommand + (0x4F << 8) + (0xC2 << 16) + (0x00 << 24) + (0x00 << 32) + (0x00 << 40)
         ##
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             lba_filed,   # lba
-                             0x3,         # protocal
-                             0,           # t_length
-                             0,           # t_dir
-                             0xD4,        # features
-                             0,           # sector_count
-                             0xB0,        # command
-                             ck_cond=1)
-    
+        ATACommand12.__init__(self,
+                              0xD4,        # fetures
+                              0,           # count
+                              lba_filed,   # lba
+                              0,           # device
+                              0xB0,        # command
+                              0x03,        # protocal
+                              0,           # t_length
+                              0,           # t_dir
+                              )

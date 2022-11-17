@@ -14,24 +14,20 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.ata_command import ATACommand12
 
 
-class CheckPowerMode(PassThrough16):
+class CheckPowerMode(ATACommand12):
     """
     A class to send CheckPowerMode command to a ATA device
     """
-    def __init__(self,
-                 opcode,
-                 blocksize):
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0,  #lba
-                             3,  #protocal
-                             0,  #t_length 
-                             1,  #t_dir
-                             0,  #feature
-                             0,  #sector_count
-                             0xe5, # command
-                             ck_cond=1,)
+    def __init__(self):
+        ATACommand12.__init__(self,
+                              0,         # fetures
+                              0,         # count
+                              0,         # lba
+                              0,         # device
+                              0xe5,      # command
+                              0x03,      # protocal
+                              0,         # t_length
+                              0)         # t_dir

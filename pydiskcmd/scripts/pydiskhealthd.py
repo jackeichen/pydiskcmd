@@ -11,13 +11,14 @@ from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs,get_nvme_dev_i
 from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
 from pydiskcmd.exceptions import DeviceTypeError
-from pydiskcmd.pyscsi import scsi_enum_inquiry as INQUIRY
 ## 
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice
 from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,AERTrace,AERTraceRL
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
 from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
+##
+from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 ####
 ## the disk info store path
 DisksInfoPath = os.path.join(DiskTracePath, "AllDisksInfo.json")

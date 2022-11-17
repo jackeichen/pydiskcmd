@@ -14,28 +14,23 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmd.pyscsi.scsi_cdb_passthrough16 import PassThrough16
+from pydiskcmd.pysata.ata_command import ATACommand16
 
 
-class DSM(PassThrough16):
+class DSM(ATACommand16):
     """
     A class to send trim command to a ATA device
     """
     def __init__(self,
-                 opcode,
-                 blocksize,
-                 fetures,
+                 feature,
                  data):
-        PassThrough16.__init__(self,
-                             opcode,
-                             blocksize,
-                             0,
-                             6,
-                             2,
-                             0,
-                             fetures,
-                             fetures,
-                             0x6,
-                             dataout=data,
-                             ck_cond=1)
-                            
+        ATACommand16.__init__(self,
+                              feature,   # fetures
+                              1,         # count
+                              0,         # lba
+                              0,         # device
+                              0x06,      # command
+                              0x06,      # protocal
+                              2,         # t_length
+                              0,
+                              data=data)

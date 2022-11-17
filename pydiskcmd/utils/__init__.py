@@ -12,7 +12,7 @@ def init_device(dev, read_write=False, open_t=None):
             from pydiskcmd.pynvme.nvme_device import NVMeDevice
             device = NVMeDevice(dev, read_write)
         elif dev[:5] == '/dev/':
-            from pydiskcmd.pyscsi.scsi_device import SCSIDevice
+            from pyscsi.pyscsi.scsi_device import SCSIDevice
             device = SCSIDevice(dev, read_write)
         elif dev[:8] == 'iscsi://':
             from pyscsi.pyiscsi.iscsi_device import ISCSIDevice
@@ -20,7 +20,7 @@ def init_device(dev, read_write=False, open_t=None):
         else:
             raise NotImplementedError('No backend implemented for %s' % dev)
     elif open_t == 'scsi' or open_t == 'ata':
-        from pydiskcmd.pyscsi.scsi_device import SCSIDevice
+        from pyscsi.pyscsi.scsi_device import SCSIDevice
         device = SCSIDevice(dev, read_write)
     elif open_t == 'nvme':
         from pydiskcmd.pynvme.nvme_device import NVMeDevice
