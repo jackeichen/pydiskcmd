@@ -7,10 +7,10 @@
 # coding: utf-8
 import sys
 
-from pydiskcmd.pyscsi.scsi_cdb_read16 import Read16
-from pydiskcmd.pyscsi.scsi_device import SCSIDevice
-from pydiskcmd.pyscsi.scsi_enum_command import sbc
-from pydiskcmd.utils import init_device
+from pyscsi.pyscsi.scsi_cdb_read16 import Read16
+from pyscsi.pyscsi.scsi_device import SCSIDevice
+from pyscsi.pyscsi.scsi_enum_command import sbc
+from pyscsi.utils import init_device
 
 
 def ba_to_int(ba):
