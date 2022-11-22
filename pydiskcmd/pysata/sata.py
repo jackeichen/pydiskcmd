@@ -85,7 +85,7 @@ class SATA(object):
 
         :param cmd: a SCSICommand object
         """
-        self.device.execute(cmd)
+        self.device.execute(cmd, en_raw_sense=True)
 
     def execute(self, cmd):
         """

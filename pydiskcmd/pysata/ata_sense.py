@@ -1,7 +1,7 @@
 # this for handle sense data
 # 2019/10/12, GaoZH.
 from pydiskcmd.utils.enum import Enum
-from pydiskcmd.exceptions import DeviceTypeError
+from pydiskcmd.exceptions import DeviceTypeError,ExecuteCmdErr
 ##
 from pyscsi.pyscsi.scsi_sense import SCSICheckCondition,decode_bits
 
@@ -27,10 +27,11 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
                  print_data=False):
         super(ATACheckReturnDescriptorCondition, self).__init__(sense, print_data=print_data)
         ##
-        if self.asc == 0 and self.ascq == 29: ## ATA PASS THROUGH INFORMATION AVAILABLE
+        if self.asc == 0 and self.ascq == 29: ## ATA PASS THROUGH INFORMATION AVAILABLE, success to handle
             self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
         else:
-            raise DeviceTypeError("May Not a valid ATA Device.")
+            hint = str(SCSICheckCondition.__str__(self))
+            raise ExecuteCmdErr(hint)
 
     @property
     def ata_pass_thr_return_descriptor(self):
