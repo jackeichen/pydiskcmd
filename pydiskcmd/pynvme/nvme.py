@@ -705,3 +705,6 @@ class NVMe(object):
         ret = self.execute(cmd_struc)
         ret.check_status()
         return ret
+
+    def sanitize(self, sanact, ause):
+        pass

@@ -51,17 +51,9 @@ Requirements:
 
     * python3
     * python3-devel
-    * setuptools_scm
-    * cython-sgio
-    * libiscsi-dev(optional, need by cython-iscsi): 1.13 or later
-    * cython-iscsi(optional)
+    * pyscsi(Need download the latest python-scsi from github)
 
-A fresh installation usually need cython-sgio(or cython-iscsi if desired). 
 To build and install from the repository:
-
-    $ pip install .[iscsi,sgio]
-
-You can avoid installing the optional dependencies by omitting the "extras":
 
     $ pip install .
 
@@ -77,7 +69,7 @@ You can uninstall it by run:
 
 Usage
 =====
-Four executable programs should be added to environment variables after installation.
+Five executable programs should be added to environment variables after installation.
 
 pydiskcmd
 ---------
@@ -98,6 +90,13 @@ It is a sata command tool, to send ATA command to SATA Disk, with some limitted
 commands inside. Use bellow command to get help:
 
     $ pysata help
+
+pyscsi
+------
+It is a scsi command tool, to send scsi command to SAS Disk, with some limitted 
+commands inside. Use bellow command to get help:
+
+    $ pyscsi help
 
 pydiskhealthd
 -------------
@@ -124,6 +123,16 @@ For NVMe Disk:
   * Persistent Event Logs;
   * AER Event Check;
 
+The tool provide a real-time NVMe Asynchronous Event Request check by reading Linux trace file.
+You can set the event you want to trigger it by sending nvme set-feature command. 
+Examples(set temperature warning):
+
+    $ pynvme get-feature /dev/nvme0 -f 0x0B 
+
+and the value is 0x100 now, set the Critical Warning temperature check:
+
+    $ pynvme set-feature /dev/nvme0 -f 0x0B -v 0x102
+
 For SATA Disk:
 
   * Smart Pre-fail/Old_age attributes; 
@@ -141,7 +150,6 @@ After that, the user can manage the pydiskhealthd with command "systemctl". Auto
 Advanced Usage
 ==============
 You can find some examples about how to use this tool in the dir of pydiskcmd/examples/.
-And some scsi tools in the dir of pydiskcmd/tools/, which are from python-scsi.
 
 
 Email
