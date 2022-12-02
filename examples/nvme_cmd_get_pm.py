@@ -31,9 +31,9 @@ def main():
     with NVMe(device) as d:
         cmd = d.get_feature(2, sel=0)
     if options.output_format == "binary":
-        print (cmd.cmd_spec)
+        print (cmd.cq_cmd_spec)
     elif options.output_format == "normal":
-        result = nvme_power_management_cq_decode(cmd.cmd_spec)
+        result = nvme_power_management_cq_decode(cmd.cq_cmd_spec)
         for k,v in result.items():
             print ("%-5s: %s" % (k,v))
 

@@ -13,18 +13,6 @@ the command set specs(sata,nvme).
 The project is under development now. 
 
 
-Acknowledgements
-================
-Really appreciate the project python-scsi in github.
-
-* Python-scsi: https://github.com/python-scsi/python-scsi
-
-pcicrawler is a CLI tool to display/filter/export information about PCI or 
-PCI Express devices and their topology.
-
-* pcicrawler: https://github.com/facebook/pcicrawler
-
-
 License
 =======
 pydiskcmd is distributed under LGPLv2.1.
@@ -150,6 +138,18 @@ After that, the user can manage the pydiskhealthd with command "systemctl". Auto
 Advanced Usage
 ==============
 You can find some examples about how to use this tool in the dir of pydiskcmd/examples/.
+
+
+Acknowledgements
+================
+Really appreciate the project python-scsi in github.
+
+* Python-scsi: https://github.com/python-scsi/python-scsi
+
+pcicrawler is a CLI tool to display/filter/export information about PCI or 
+PCI Express devices and their topology.
+
+* pcicrawler: https://github.com/facebook/pcicrawler
 
 
 Email
