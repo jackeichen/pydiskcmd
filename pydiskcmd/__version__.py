@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-VendorSpec = {(r'INTEL SSDSC2KG.*GZ',): {},   # intel S45xx series
-             }
+version = "0.2.2"
 
+## version format
+vresion_format = [int(i) for i in version.split(".")]

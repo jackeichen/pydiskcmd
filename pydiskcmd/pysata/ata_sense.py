@@ -1,5 +1,6 @@
-# this for handle sense data
-# 2019/10/12, GaoZH.
+# SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmd.utils.enum import Enum
 from pydiskcmd.exceptions import DeviceTypeError,ExecuteCmdErr
 ##

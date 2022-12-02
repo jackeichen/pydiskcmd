@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
+# SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import optparse
@@ -8,8 +8,7 @@ from pydiskcmd.pysata.sata import code_version as ata_version
 from pydiskcmd.pyscsi.scsi import code_version as scsi_version
 from pydiskcmd.system.bash_completion import update_pydiskcmd_completion
 from pydiskcmd.system.pydiskhealth_daemon import enable_systemd_pydiskhealthd
-
-ToolVersion = "0.2.1"
+from pydiskcmd.__version__ import version as ToolVersion
 
 def pydiskcmd():
     usage="usage: %prog [OPTION] [args...]"

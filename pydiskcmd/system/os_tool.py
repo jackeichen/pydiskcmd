@@ -6,8 +6,11 @@ import os
 import time
 import socket
 from typing import List
+from pydiskcmd.system.env_var import os_type
 
+###
 excluded_block_devices = ('sr', 'zram', 'dm-', 'md', 'loop')
+
 
 def timeit(func):
     def wrap(*args, **kwargs):

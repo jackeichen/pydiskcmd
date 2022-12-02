@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
+# SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
@@ -9,7 +9,7 @@ from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme_spec import nvme_smart_decode,nvme_id_ctrl_decode
 from pydiskcmd.pynvme.nvme_spec import persistent_event_log_header_decode,persistent_event_log_events_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
-from pydiskcmd.pynvme.command_structure import DataBuffer
+from pydiskcmd.pynvme.nvme_command import DataBuffer
 from pydiskcmd.pydiskhealthd.DB import disk_trace_pool
 from pydiskcmd.pydiskhealthd.linux_nvme_aer import AERTrace,AERTraceRL
 from pydiskcmd.pydiskhealthd.some_path import DiskTracePath

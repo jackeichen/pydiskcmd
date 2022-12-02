@@ -16,10 +16,11 @@ CheckDict = Mapping[
     ]]
 
 def scsi_int_to_ba(to_convert=0,
-                   array_size=4):
+                   array_size=4,
+                   byte_order="big"):
     """
     This function converts a  integer of (8 *array_size)-bit to a bytearray(array_size) in
-    BigEndian byte order. Here we use the 32-bit as default.
+    BigEndian Or LittleEndian byte order. Here we use the 32-bit as default.
 
     example:
 
@@ -30,9 +31,13 @@ def scsi_int_to_ba(to_convert=0,
 
     :param to_convert: a integer
     :param array_size: a integer defining the size of the byte array
+    :param byte_order: a string defining BigEndian Or LittleEndian byte order
     :return: a byte array
     """
-    return bytearray((to_convert >> i * 8) & 0xff for i in reversed(range(array_size)))
+    if byte_order == 'big':
+        return bytearray((to_convert >> i * 8) & 0xff for i in reversed(range(array_size)))
+    else:
+        return bytearray((to_convert >> i * 8) & 0xff for i in range(array_size))
 
 
 def scsi_ba_to_int(ba, byteorder='big'):

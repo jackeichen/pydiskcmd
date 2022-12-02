@@ -1,0 +1,14 @@
+Install Issues:
+
+Q1. How to work around when pip3 install cython-sgio "LookupError: setuptools-scm was unable to 
+    detect version for /tmp/pip-XXX" with the source code package?
+    
+    Run below command:
+    # SETUPTOOLS_SCM_PRETEND_VERSION="$(python3 setup.py --version)" pip3 install .
+
+Q2. How to work around when pip3 install python-scsi "PYSCSI requires Python '~=3.7' but the 
+    running Python is 3.X.Y"?
+
+    This will occur when X < 7, in my case the python version is 3.6.8(default installed in OS),
+    it works well when I replace the "python_requires = ~= 3.7" to "python_requires = ~= 3.6" in
+    setup.cfg.

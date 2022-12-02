@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2014 The pydiskcmd Authors
+# SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import sys,os
@@ -106,6 +106,7 @@ def smart_log():
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.smart_log()
+        cmd.check_return_status()
         ##
         if options.output_format == "binary":
             format_dump_bytes(cmd.data, end=511)
@@ -138,6 +139,7 @@ def id_ctrl():
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.id_ctrl()
+        cmd.check_return_status()
         if options.output_format == "binary":
             format_dump_bytes(cmd.data, byteorder='big')
         elif options.output_format == "normal":
@@ -184,6 +186,7 @@ def id_ns():
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.id_ns(options.namespace_id)
+        cmd.check_return_status()
         ##
         if options.output_format == "binary":
             format_dump_bytes(cmd.data)
@@ -223,6 +226,7 @@ def error_log():
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.error_log_entry()
+        cmd.check_return_status()
         ##
         if options.output_format == "binary":
             format_dump_bytes(cmd.data)
@@ -266,6 +270,7 @@ def fw_log():
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.fw_slot_info()
+        cmd.check_return_status()
         ##
         if options.output_format == "binary":
             format_dump_bytes(cmd.data, end=511)
@@ -324,6 +329,7 @@ def fw_commit():
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.nvme_fw_commit(options.slot, options.action)
+        cmd.check_return_status()
     else:
         parser.print_help()
 
@@ -354,6 +360,7 @@ def nvme_format():
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.nvme_format(options.lbaf, nsid=options.namespace_id, mset=options.ms, pi=options.pi, pil=options.pil, ses=options.ses)
+        cmd.check_return_status()
     else:
         parser.print_help()
 
@@ -391,12 +398,10 @@ def persistent_event_log():
                     print ("Context Established!")
                 else:
                     print ("Command failed.")
-            elif isinstance(ret, int):
-                if ret == 0:
-                    print ("Command success.")
-                else:
-                    print ("Command failed.")
             elif options.action == 1:
+                if not ret:
+                    print ("No avaliable data, please check if support persistent event log Or if open the context")
+                    return
                 event_log_header = persistent_event_log_header_decode(ret[0:512])
                 event_log_events = persistent_event_log_events_decode(ret[512:], scsi_ba_to_int(event_log_header.get("TNEV"), 'little'))
                 if options.output_format == "binary":
@@ -436,6 +441,12 @@ def persistent_event_log():
                         print ('......................')
                 else:
                     print (ret)
+            elif isinstance(ret, int):
+                if ret == 0:
+                    print ("Command success.")
+                else:
+                    print ("Command failed.")
+            
     else:
         parser.print_help()
 
@@ -464,7 +475,7 @@ self-test command:                                     \
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.self_test(options.test_code, ns_id=options.namespace_id)
-        cmd.check_status(success_hint=True)
+        cmd.check_return_status(success_hint=True)
 
 
 def self_test_log():
@@ -482,6 +493,7 @@ def self_test_log():
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.self_test_log()
+        cmd.check_return_status()
         ##
         if options.output_format == "binary":
             format_dump_bytes(cmd.data)
@@ -544,7 +556,7 @@ def get_feature():
         with NVMe(init_device(dev)) as d:
             if options.feature_id == 2:
                 cmd = _get_feature_power_management(d, options)
-                result = nvme_power_management_cq_decode(cmd.cmd_spec)
+                result = nvme_power_management_cq_decode(cmd.cq_cmd_spec)
             elif options.feature_id == 3:
                 cmd = _get_feature_lba_range_type(d, options)
             else:
@@ -553,9 +565,10 @@ def get_feature():
                                     sel=options.sel,
                                     cdw11=options.cdw11,
                                     data_len=options.data_len)
+        cmd.check_return_status()
         ##
         if options.output_format == "binary":
-            print ("cmd spec data: %#x" % cmd.cmd_spec)
+            print ("cmd spec data: %#x" % cmd.cq_cmd_spec)
             print ('')
             if options.data_len > 0:
                 print ('')
@@ -566,14 +579,14 @@ def get_feature():
                 for k,v in result.items():
                     print ("%-5s: %s" % (k,v))
             else:
-                print ("cmd spec data: %#x" % cmd.cmd_spec)
+                print ("cmd spec data: %#x" % cmd.cq_cmd_spec)
                 print ('')
                 if options.data_len > 0:
                     print ('')
                     print ("cmd data:")
                     format_dump_bytes(cmd.data)
         else:
-            print ("cmd spec data: %#x" % cmd.cmd_spec)
+            print ("cmd spec data: %#x" % cmd.cq_cmd_spec)
             print ('')
             if options.data_len > 0:
                 print ('')
@@ -628,7 +641,7 @@ def set_feature():
                                 cdw11=options.value,
                                 cdw12=options.cdw12,
                                 data_in=raw_data)
-        cmd.check_status(success_hint=True, fail_hint=False)
+        cmd.check_return_status(success_hint=True, fail_hint=True)
     else:
         parser.print_help()
 
@@ -671,9 +684,9 @@ def nvme_create_ns():
                               options.anagrpid,
                               options.nvmsetid,
                               )
-        sc,sct = cmd.check_status(success_hint=True, fail_hint=False)
+        sc,sct = cmd.check_return_status(success_hint=True, fail_hint=False)
         if sc == 0 and sct == 0:
-            print ("Namespace Identifier is: %s" % cmd.cmd_spec)
+            print ("Namespace Identifier is: %s" % cmd.cq_cmd_spec)
         ##
     else:
         parser.print_help()
@@ -695,7 +708,7 @@ def nvme_delete_ns():
         with NVMe(init_device(dev)) as d:
             cmd = d.ns_delete(options.namespace_id)
         ##
-        cmd.check_status(success_hint=True, fail_hint=False)
+        cmd.check_return_status(success_hint=True, fail_hint=True)
     else:
         parser.print_help()
 
@@ -724,7 +737,7 @@ def nvme_attach_ns():
         with NVMe(init_device(dev)) as d:
             cmd = d.ns_attachment(options.namespace_id, 0, ctrl_list)
         ##
-        cmd.check_status(success_hint=True, fail_hint=False)
+        cmd.check_return_status(success_hint=True, fail_hint=True)
     else:
         parser.print_help()
 
@@ -753,7 +766,7 @@ def nvme_detach_ns():
         with NVMe(init_device(dev)) as d:
             cmd = d.ns_attachment(options.namespace_id, 1, ctrl_list)
         ##
-        cmd.check_status(success_hint=True, fail_hint=False)
+        cmd.check_return_status(success_hint=True, fail_hint=True)
     else:
         parser.print_help()
 
@@ -781,6 +794,7 @@ def list_ns():
         else:
             with NVMe(init_device(dev)) as d:
                 cmd = d.active_ns_ids(options.namespace_id)
+        cmd.check_return_status(success_hint=False, fail_hint=True)
         ##
         if options.output_format == "binary":
             format_dump_bytes(cmd.data)
@@ -821,6 +835,7 @@ def list_ctrl():
         else:
             with NVMe(init_device(dev)) as d:
                 cmd = d.ns_attached_cnt_ids(options.namespace_id, options.cntid)
+        cmd.check_return_status(success_hint=False, fail_hint=True)
         ##
         if options.output_format == "binary":
             format_dump_bytes(cmd.data)

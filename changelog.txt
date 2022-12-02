@@ -1,0 +1,24 @@
+################################################################
+Changelog for pydiskcmd, a command tool for SATA/SAS/NVMe Disk
+################################################################
+
+Visit https://github.com/jackeichen/pydiskcmd to get current development
+versions of pydiskcmd and detailed changes.
+
+
+Version 0.2.2
+  * Initial version add in changelog
+  * Features support
+    * support send SATA/SAS/NVMe command to disk(as pynvme/pysata/pyscsi)
+    * support disk health checking and reporting(as pydiskhealth)
+    * trace SATA/NVMe disk smart to sqlite in pydiskhealth
+    * a realtime nvme Asynchronous Event checking in pydiskhealth
+    * support Linux Bash Completion for pynvme/pysata/pyscsi
+    * support Linux systemctl service for pydiskhealth
+  * Limited
+    * Only Linux supported
+    * Only a part of commands (in command spec) are supported in User-Level
+
+List of contributors to version 0.*.* branch:
+  Eric (author),
+################################################################################
