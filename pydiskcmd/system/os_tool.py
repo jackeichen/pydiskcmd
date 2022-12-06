@@ -119,3 +119,10 @@ class SystemdNotify(object):
             arg_list.append("%s=%s" % (k,v))
         arg = "\n".join(arg_list)
         self.sock.sendto(arg.encode("utf-8"), self.path)
+
+def check_device_exist(dev_path):
+    if os_type == "Linux":
+        return os.path.exists(dev_path)
+    elif os_type == "Windows":
+        return True
+    return True

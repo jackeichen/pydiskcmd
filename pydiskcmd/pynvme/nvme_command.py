@@ -6,10 +6,6 @@ from pydiskcmd.exceptions import *
 from pydiskcmd.utils.converter import scsi_int_to_ba
 
 
-class BuildNVMeCommandError(Exception):
-    pass
-
-
 class CmdStructure(LittleEndianStructure):
     _fields_ = [
         ("opcode", c_uint8),
@@ -98,6 +94,7 @@ class CmdStructure(LittleEndianStructure):
             self._metadata_buf = None
             self.metadata = metadata
         self.metadata_len = metadata_len
+
 
 
 class DataBuffer(LittleEndianStructure):

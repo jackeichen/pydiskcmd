@@ -6,6 +6,7 @@ import optparse
 from pydiskcmd.pyscsi.scsi import SCSI
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.format_print import format_dump_bytes
+from pydiskcmd.system.os_tool import check_device_exist
 # import from python-scsi
 from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
@@ -23,7 +24,7 @@ def print_help():
     print ("pyscsi %s" % Version)
     print ("usage: pyscsi <command> [<device>] [<args>]")
     print ("")
-    print ("The '<device>' is usually an sd character device (ex: /dev/sdb).")
+    print ("The '<device>' is usually an sd character device (ex: /dev/sdb or physicaldrive1).")
     print ("")
     print ("The following are all implemented sub-commands:")
     print ("  inq                         Check Disk Power Mode")
@@ -261,14 +262,14 @@ def inq():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         #
         evpd = 0
         if options.page_code:
             evpd = 1
         ##
-        with SCSI(init_device(dev), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing inquiry command')
             print ("%s:" % d.device._file_name)
             try:
@@ -332,10 +333,10 @@ def getlbastatus():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SCSI(init_device(dev), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing getlbastatus command')
             print ("%s:" % d.device._file_name)
             ##
@@ -362,10 +363,10 @@ def swp():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SCSI(init_device(dev), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing swp command')
             print ("%s:" % d.device._file_name)
             ##
@@ -466,10 +467,10 @@ def mtx():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SCSI(init_device(dev), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing mtx command')
             print ("%s:" % d.device._file_name)
             ##

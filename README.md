@@ -6,11 +6,21 @@ SPDX-License-Identifier: LGPL-2.1-or-later
 
 pydiskcmd
 =========
-pydiskcmd is a disk command interface for python3. This is a linux tool
-to send command to SATA/SAS/NVMe disk. I develop this tool to familiarize
-the command set specs(sata,nvme).
+pydiskcmd is a disk command tool for python3. It can send command to SATA/SAS/NVMe 
+disk, as also as monitor the disk health.
 
-The project is under development now. 
+In Linux, there is some tools to handle disk, like hdparm,smartctl,nvme-cli 
+and etc. But I still hope to develop a tool to cover all the sata,sas,nvme disks.
+It should be easily installed and should be able to send raw commands to target 
+disks, provide a high-level API to build raw command with different protocal. 
+Besides, it could monitor the health of the disks, especially take full advantage 
+of NVMe(which offer a better monitoring mechanism).
+
+While in Windows, rarely find out an open source user level disk tool. I hope it 
+is convenient to handle a disk in windows as if it is in Linux.
+
+This project is more of a code collection, it was born and grow in the open 
+source codes from github. Thanks to these contributors. 
 
 
 License
@@ -32,6 +42,19 @@ It is also available as a downloadable zip archive from:
     https://github.com/jackeichen/pydiskcmd/archive/master.zip
 
 
+Support List
+============
+
+| OS      | SCSI | ATA | NVME |
+|---------|------|-----|------|
+| Linux   | Y    | Y   | Y    |
+| Windows | Y    | Y   | N,D  |
+
+Y: support, N: Non-support, D: developing.
+
+Note: Only some of the commands are tested, Do Not guarantee all the other commands work.
+
+
 Building and installing
 =======================
 
@@ -39,14 +62,19 @@ Requirements:
 
     * python3
     * python3-devel
+    * setuptools_scm
     * pyscsi(Need download the latest python-scsi from github)
+
+Extra Requirements by Linux:
+
+    * cython-sgio(Need by pyscsi, download latest version from github)
 
 To build and install from the repository:
 
     $ pip install .
 
 After your installation, you can use command to enable Linux Bash Completion for 
-command pynvme&pysata:
+command pynvme&pysata(Only for Linux):
 
     $ pydiskcmd --en_completion
 
@@ -150,6 +178,11 @@ pcicrawler is a CLI tool to display/filter/export information about PCI or
 PCI Express devices and their topology.
 
 * pcicrawler: https://github.com/facebook/pcicrawler
+
+smartie is a pure-python library for getting basic disk information such as 
+model, serial number, disk health, temperature, etc...
+
+* smartie: https://github.com/TkTech/smartie
 
 
 Email

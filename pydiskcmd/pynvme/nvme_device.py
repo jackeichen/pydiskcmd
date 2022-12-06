@@ -68,6 +68,7 @@ if os_type == "Linux":
             return cmd
 
 elif os_type == "Windows":
+    raise NotImplementedError("Cannot support Windows NVMe Device!")
     import win32file
     class NVMeDevice(DeviceBase):
         def __init__(self, 

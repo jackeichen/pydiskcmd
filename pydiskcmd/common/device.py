@@ -66,4 +66,3 @@ class DeviceBase(object):
     def devicetype(self,
                    value):
         self._devicetype = value
-

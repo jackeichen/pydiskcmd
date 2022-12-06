@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmd.utils.enum import Enum
 from pydiskcmd.exceptions import DeviceTypeError,ExecuteCmdErr
+from pydiskcmd.system.os_tool import os_type
 ##
-from pyscsi.pyscsi.scsi_sense import SCSICheckCondition,decode_bits
+from pyscsi.pyscsi.scsi_sense import SCSICheckCondition,decode_bits,SENSE_FORMAT_CURRENT_DESCRIPTOR
 
 
 class ATACheckReturnDescriptorCondition(SCSICheckCondition):
@@ -29,6 +30,8 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
         super(ATACheckReturnDescriptorCondition, self).__init__(sense, print_data=print_data)
         ##
         if self.asc == 0 and self.ascq == 29: ## ATA PASS THROUGH INFORMATION AVAILABLE, success to handle
+            self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
+        elif self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR and os_type == "Windows":
             self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
         else:
             hint = str(SCSICheckCondition.__str__(self))

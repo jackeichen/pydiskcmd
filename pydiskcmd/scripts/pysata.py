@@ -9,6 +9,7 @@ from pydiskcmd.pysata.sata_spec import decode_smart_thresh
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scsi_ba_to_int
 from pydiskcmd.utils.format_print import format_dump_bytes
+from pydiskcmd.system.os_tool import check_device_exist
 
 Version = '0.1.0'
 
@@ -25,7 +26,7 @@ def print_help():
     print ("pysata-%s" % Version)
     print ("usage: pysata <command> [<device>] [<args>]")
     print ("")
-    print ("The '<device>' is usually an sd character device (ex: /dev/sdb).")
+    print ("The '<device>' is usually an sd character device (ex: /dev/sdb or physicaldrive1).")
     print ("")
     print ("The following are all implemented sub-commands:")
     print ("  check-PowerMode             Check Disk Power Mode")
@@ -61,10 +62,10 @@ def check_power_mode():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing check power mode command')
             print ("%s:" % d.device._file_name)
             cmd = d.check_power_mode()
@@ -114,10 +115,10 @@ def read_dma_ext():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing read DMA EXT command.')
             print ("%s:" % d.device._file_name)
             cmd = d.read_DMAEXT16(options.slba, options.nlb)
@@ -153,8 +154,8 @@ def write_dma_ext():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ## check data
         if options.data:
             options.data = bytearray(options.data, 'utf-8')
@@ -176,7 +177,7 @@ def write_dma_ext():
             parser.error("Lack of input data")
             return
         ##
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing write DMA EXT command')
             print ("%s:" % d.device._file_name)
             print ('')
@@ -199,10 +200,10 @@ def flush():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing flush command')
             print ("%s:" % d.device._file_name)
             cmd = d.flush()
@@ -224,10 +225,10 @@ def accessible_max_address():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing accessible max address command')
             print ("%s:" % d.device._file_name)
             cmd = d.getAccessibleMaxAddress()
@@ -267,11 +268,11 @@ def identify():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
         data = ''
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing identify command')
             print ("%s:" % d.device._file_name)
             cmd = d.identify()
@@ -316,10 +317,10 @@ def self_test():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             if options.self_test == "short":
                 print ('issuing selftest command - short test')
                 print ("%s:" % d.device._file_name)
@@ -363,12 +364,12 @@ def smart():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
         from pydiskcmd.pysata.sata_spec import SMART_KEY,SMART_ATTR
         data = ''
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing smart command')
             print ("%s:" % d.device._file_name)
             cmd = d.smart_read_data(SMART_KEY)
@@ -428,10 +429,10 @@ def standby_imm():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ##
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing standby immediate command')
             print ("%s:" % d.device._file_name)
             cmd = d.standby_imm()
@@ -455,8 +456,8 @@ def trim():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         ## check LBA format
         LBA_list = options.block_range.split(',')
         if 0 < len(LBA_list) < 65:
@@ -474,7 +475,7 @@ def trim():
         ##
         print ("Note: If you want trim command works, lba_description need 4k aligned!")
         print ('')
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing data set management(known as trim) command')
             print ("%s:" % d.device._file_name)
             cmd = d.trim(lba_description)
@@ -500,12 +501,12 @@ def download_fw():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
-            raise RuntimeError("Device not support!")
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
         if not os.path.isfile(options.fw_file):
             parser.error("Firmware file Not Exist.")
         ##
-        with SATA(init_device(dev), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing download microcode command')
             print ("%s:" % d.device._file_name)
             rc = d.download_fw(options.fw_file, transfer_size=options.xfer, feature=options.code)

@@ -7,7 +7,7 @@ import optparse
 import subprocess
 import traceback
 import json
-from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs,get_nvme_dev_info
+from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs,get_nvme_dev_info,os_type
 from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
 from pydiskcmd.exceptions import DeviceTypeError
@@ -118,6 +118,9 @@ def pydiskhealthd():
         help="If check the pydiskheald daemon runnning, default true.")
 
     (options, args) = parser.parse_args()
+    ## Do not support windows now
+    if os_type != "Linux":
+        raise NotImplementedError("pydiskhealth cannot run in OS:%s" % os_type)
     ## check parameter
     if options.check_daemon_running:
         ##
