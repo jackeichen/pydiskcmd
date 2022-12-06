@@ -11,7 +11,7 @@ from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scs
 from pydiskcmd.utils.format_print import format_dump_bytes
 from pydiskcmd.system.os_tool import check_device_exist
 
-Version = '0.1.0'
+Version = '0.2.0'
 
 def bytearray2hex_l(data,start,offset):
     a = data[start:start+offset][::-1]

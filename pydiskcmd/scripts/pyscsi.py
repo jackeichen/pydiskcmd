@@ -14,7 +14,7 @@ from pyscsi.pyscsi.scsi_enum_getlbastatus import P_STATUS
 from pyscsi.pyscsi import scsi_enum_modesense as MODESENSE6
 from pyscsi.pyscsi import scsi_enum_readelementstatus as READELEMENTSTATUS
 
-Version = '0.1.0'
+Version = '0.2.0'
 
 def version():
     print ("pyscsi version %s" % Version)
