@@ -54,6 +54,14 @@ Y: support, N: Non-support, D: developing.
 
 Note: Only some of the commands are tested, Do Not guarantee all the other commands work.
 
+OS Under Test
+-------------
+Linux: CentOS 7.6, CentOS 8.4
+
+Windwos: Windows 10 Pro
+
+Warn: Be Carefull using in other windows version.
+
 
 Building and installing
 =======================
