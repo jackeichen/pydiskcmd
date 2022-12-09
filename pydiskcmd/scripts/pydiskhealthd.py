@@ -467,7 +467,7 @@ def pydiskhealthd():
                         syslog.info(message)
                         logger.warning(message)
                     if link_status.cur_width != link_status.capable_width:
-                        message = "Device: %s(ID: %s), PCIe Speed is %s(downgrade), device capacity is %s." % (dev_context.dev_path, dev_context.device_id, link_status.cur_width, link_status.capable_width)
+                        message = "Device: %s(ID: %s), PCIe Width is %s(downgrade), device capacity is %s." % (dev_context.dev_path, dev_context.device_id, link_status.cur_width, link_status.capable_width)
                         message += " Attention for that!"
                         syslog.info(message)
                         logger.warning(message) 

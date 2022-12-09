@@ -25,7 +25,7 @@ class CmdStructure(LittleEndianStructure):
         ("cdw14", c_uint32),
         ("cdw15", c_uint32),
         ("timeout_ms", c_uint32),
-        ("result", c_uint32),
+        ("result", c_uint32),  ## spec 2.0 will be 2 DWs, total length 64 bytes
     ]
     _pack_ = 1
 

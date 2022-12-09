@@ -327,9 +327,20 @@ def fw_commit():
         if not os.path.exists(dev):
             raise RuntimeError("Device not support!")
         ##
+        smud = False
         with NVMe(init_device(dev)) as d:
+            # get nvme ver
+            smud = True if (d.ctrl_identify_info[260] & 0x20) else False
+            #
             cmd = d.nvme_fw_commit(options.slot, options.action)
-        cmd.check_return_status()
+        cmd.check_return_status(True, False)
+        ## nvme spec 2.0 
+        if smud:
+            # TODO
+            if (cmd.cq_cmd_spec & 0x01):
+                print ("Overlapping due to processing a command from an Admin Submission Queue.")
+            if (cmd.cq_cmd_spec & 0x02):
+                print ("Overlapping due to processing a command from a Management Endpoint.")
     else:
         parser.print_help()
 
@@ -475,8 +486,10 @@ self-test command:                                     \
         ##
         with NVMe(init_device(dev)) as d:
             cmd = d.self_test(options.test_code, ns_id=options.namespace_id)
-        cmd.check_return_status(success_hint=True)
-
+        if cmd.cq_status == 0x1D:
+            print ("The controller or NVM subsystem already has a device self-test operation in process.")
+        else:
+            print ("Command Specific Status ValuesL: %#x" % cmd.cq_status)
 
 def self_test_log():
     usage="usage: %prog self-test-log <device> [OPTIONS]"
@@ -662,6 +675,8 @@ def nvme_create_ns():
         help="ANA Gorup Identifier. If this value is 0h specifies that the controller determines the value to use")
     parser.add_option("-i", "--nvmset-id", type="int", dest="nvmsetid", action="store", default=0,
         help="This field specifies the identifier of the NVM Set.")
+    parser.add_option("-y", "--csi", type="int", dest="csi", action="store", default=0,
+        help="command set identifier (CSI)")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -683,6 +698,7 @@ def nvme_create_ns():
                               options.nmic,
                               options.anagrpid,
                               options.nvmsetid,
+                              csi=options.csi,
                               )
         sc,sct = cmd.check_return_status(success_hint=True, fail_hint=False)
         if sc == 0 and sct == 0:

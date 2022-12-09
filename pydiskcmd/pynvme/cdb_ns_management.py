@@ -21,9 +21,13 @@ if os_type == "Linux":
                      nmic, 
                      anagrp_id, 
                      nvmeset_id, 
+                     csi=0,
                      vendor_spec_data=b''):
             ### build command
             cdw10 = build_command({"SEL": (0x0F, 0, 0x00),      # Select (SEL): This field selects the type of management operation to perform
+                                  })
+            # for nvme spec 2.0
+            cdw10 = build_command({"CSI": (0xFF, 3, csi),      # Select (SEL): This field selects the type of management operation to perform
                                   })
             #
             data_dict = {"ns_size": ns_size,

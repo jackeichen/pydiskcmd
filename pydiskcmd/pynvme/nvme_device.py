@@ -123,7 +123,7 @@ elif os_type == "Windows":
                     self.open()
             try:
                 cmd.cq_status = win32file.DeviceIoControl(self._file,  # file
-                                                          cmd.req_id,      # IOControl Code to use, from winioctlcon
+                                                          cmd.req_id,  # IOControl Code to use, from winioctlcon
                                                           cmd.cdb,      # datain
                                                           cmd.cdb,      # dataout
                                                           None)

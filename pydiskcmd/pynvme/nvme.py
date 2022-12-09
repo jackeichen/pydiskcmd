@@ -52,6 +52,14 @@ class NVMe(object):
     def ctrl_identify_info(self):
         return self.__ctrl_identify_info
 
+    def get_nvme_ver(self):
+        '''
+        Get the device support nvme version
+        
+        :return: a tuple, (MJR,MNR,TER)
+        '''
+        return self.__ctrl_identify_info[82],self.__ctrl_identify_info[81],self.__ctrl_identify_info[80]
+
     def execute(self, cmd):
         """
         wrapper method to call the NVMeDevice.execute method
@@ -68,46 +76,55 @@ class NVMe(object):
     def id_ctrl(self):
         cmd = IDCtrl()
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def id_ns(self, ns_id=1):
         cmd = IDNS(ns_id)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def active_ns_ids(self, ns_id=0, uuid_index=0):
         cmd = IDActiveNS(ns_id, uuid_index)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def allocated_ns_ids(self, ns_id=0):
         cmd = IDAllocatedNS(ns_id)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def cnt_ids(self, cnt_id=0):
         cmd = IDCtrlListInSubsystem(cnt_id)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def ns_attached_cnt_ids(self, ns_id, cnt_id=0):
         cmd = IDCtrlListAttachedToNS(ns_id, cnt_id)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def set_feature(self, feature_id, **kwargs):
         cmd = SetFeature(feature_id, **kwargs)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def get_feature(self, feature_id, **kwargs):
         cmd = GetFeature(feature_id, **kwargs)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def fw_slot_info(self):
         cmd = FWSlotInfo()
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def error_log_entry(self):
@@ -115,11 +132,13 @@ class NVMe(object):
         max_number = self.__ctrl_identify_info[262] + 1
         cmd = ErrorLog(max_number)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def smart_log(self, data_buffer=None):
         cmd = SmartLog(data_buffer)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def get_persistent_event_log(self, action, data_buffer=None):
@@ -242,6 +261,7 @@ class NVMe(object):
     def self_test_log(self):
         cmd = SelfTestLog()
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def nvme_fw_download(self, fw_path, xfer=0, offset=0):
@@ -287,6 +307,7 @@ class NVMe(object):
     def nvme_fw_commit(self, fw_slot, action, bpid=0):
         cmd = FWCommit(fw_slot, action, bpid)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def nvme_format(self, lbaf, nsid=0xFFFFFFFF, **kwargs):
@@ -299,6 +320,7 @@ class NVMe(object):
         ###
         cmd = Format(lbaf, nsid=nsid, **kwargs)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def self_test(self, stc, ns_id=0xFFFFFFFF):
@@ -306,18 +328,21 @@ class NVMe(object):
         self.execute(cmd)
         return cmd
 
-    def ns_create(self, ns_size, ns_cap, flbas, dps, nmic, anagrp_id, nvmeset_id, vendor_spec_data=b''):
-        cmd = NSCreate(ns_size, ns_cap, flbas, dps, nmic, anagrp_id, nvmeset_id, vendor_spec_data=vendor_spec_data)
+    def ns_create(self, ns_size, ns_cap, flbas, dps, nmic, anagrp_id, nvmeset_id, csi=0, vendor_spec_data=b''):
+        cmd = NSCreate(ns_size, ns_cap, flbas, dps, nmic, anagrp_id, nvmeset_id, csi=csi, vendor_spec_data=vendor_spec_data)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def ns_delete(self, ns_id):
         cmd = NSDelete(ns_id)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
     def ns_attachment(self, ns_id, sel, ctrl_id_list):
         cmd = NSAttachment(ns_id, sel, ctrl_id_list)
         self.execute(cmd)
+        cmd.check_return_status()
         return cmd
 
