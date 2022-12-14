@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import time
 from pydiskcmd.pysata.sata import SATA
+from pydiskcmd.pyscsi.scsi import SCSI
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
 from pydiskcmd.pysata.sata_spec import decode_bits,SMART_KEY,decode_smart_info,decode_smart_thresh,decode_smart_flag
 from pydiskcmd.pydiskhealthd.DB import disk_trace_pool
 from pydiskcmd.pydiskhealthd.disk_health_calculation import get_ata_diskhealth
+from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 
 class SmartInfo(object):
     def __init__(self, vs_value, time_t, thresh_info):
@@ -148,13 +150,27 @@ class ATADevice(object):
     def __init__(self, dev_path, init_db=False):
         self.__device_type = 'ata'
         self.dev_path = dev_path
-        # init smart trace
+        # init smart trace,
+        # the smart_read_thresh is persistent, so init it at first
+        self.__model = None
+        self.__serial = None
         with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:
             cmd_thresh = d.smart_read_thresh()
             raw_data_thresh = cmd_thresh.datain
+            cmd_identify = d.identify()
+            identify_info = cmd_identify.result
         self.__smart_trace = SmartTrace(raw_data_thresh)
-        ## init device
-        self.__device_id = get_dev_id(self.dev_path)
+        self.__model = bytearray2string(translocate_bytearray(identify_info.get("ModelNumber")))
+        self.__serial = bytearray2string(translocate_bytearray(identify_info.get("SerialNumber")))
+        #
+        with SCSI(init_device(self.dev_path, open_t="scsi"), blocksize=512) as d:
+            cmd = d.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS)
+            i = cmd.result
+        self.__media_type = None
+        if i.get("medium_rotation_rate") == 1:
+            self.__media_type = "SSD"
+        elif i.get("medium_rotation_rate") > 1:
+            self.__media_type = "HDD"
         ##
         self.__device_info_db = None
         if init_db:
@@ -185,11 +201,23 @@ class ATADevice(object):
 
     @property
     def device_id(self):
-        return self.__device_id.strip()
+        return self.__serial.strip()
 
     @property
     def smart_trace(self):
         return self.__smart_trace
+
+    @property
+    def Model(self):
+        return self.__model
+
+    @property
+    def Serial(self):
+        return self.__serial
+
+    @property
+    def MediaType(self):
+        return self.__media_type
 
     def get_smart_once(self):
         current_t = float(time.time())

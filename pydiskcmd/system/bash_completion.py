@@ -5,6 +5,7 @@
 import os
 import shutil
 import inspect
+from pydiskcmd.system.env_var import os_type
 
 os_completion_path = "/etc/bash_completion.d/"
 os_completion_file = os.path.join(os_completion_path, "bash-pydiskcmd-completion.sh")
@@ -26,3 +27,14 @@ def update_pydiskcmd_completion():
     else:
         print ("Skip update script bash completion")
     return
+
+def enable_win_completion():
+    raise NotImplementedError("Windows Function Not Ready")
+
+def enable_cmd_completion():
+    if os_type == "Linux":
+        update_pydiskcmd_completion()
+    elif os_type == "Windows":
+        enable_win_completion()
+    else:
+        raise NotImplementedError("OS %s Not support" % os_type)

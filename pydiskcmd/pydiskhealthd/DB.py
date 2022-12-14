@@ -2,12 +2,16 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
+import json
+import time
 import base64
 import sqlite3
 from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
 
 #####
 _sqlite3_db_file = os.path.join(DiskTracePath, "sqlite3_disk_trace.db")
+_sqlite3_diskinfo_file = os.path.join(DiskTracePath, "sqlite3_disk_info.db")
+_LastActiveDiskFile = os.path.join(DiskTracePath, "LastActiveDisks.json")
 #####
 
 def encode_byte(b):
@@ -41,6 +45,10 @@ class SQLiteTable(object):
         if temp >= self.__max_entry:
             temp = 0
         return temp
+
+    @property
+    def dev_id(self):
+        return self.__table_name[1:]
 
     def run_sql(self, sql, args=(), commit=False):
         try:
@@ -162,45 +170,181 @@ class SQLiteTable(object):
         res = self.__cursor.fetchone()
         return res
 
-    def get_dev_temperature_history(self):
+    def iter_dev_smart(self):
         sql = '''SELECT timestamp,smart from %s;
               ''' % self.__table_name
         self.__cursor.execute(sql)
-        return self.__cursor.fetchone()
+        while True:
+            temp = self.__cursor.fetchone()
+            if temp is None:
+                break
+            yield temp
+
+    def get_dev_smart_history(self):
+        sql = '''SELECT timestamp,smart from %s;
+              ''' % self.__table_name
+        self.__cursor.execute(sql)
+        return self.__cursor.fetchall()
 
 
 class SQLiteDB(object):
+    _disk_trace_pool = {}
     def __init__(self, db_path=_sqlite3_db_file, max_entry_per_disk=2000):
         self.__db_path = db_path
         self.__max_entry_per_disk = max_entry_per_disk
         ##
         self._conn = sqlite3.connect(self.__db_path)
         self._cursor = self._conn.cursor()
-        ##
-        self.__disk_trace_pool = {}
 
     @property
     def disk_trace_pool(self):
-        return self.__disk_trace_pool
+        return SQLiteDB._disk_trace_pool
+
+    def get_table_name_by_dev_id(self, dev_id):
+        return "S%s" % dev_id
+
+    def _init_table_by_id(self, dev_id):
+        table_name = self.get_table_name_by_dev_id(dev_id)
+        ## first try to create a table
+        # do nothing if exist
+        sql = '''CREATE TABLE IF NOT EXISTS %s(
+                 ID  INT  PRIMARY KEY     NOT NULL,
+                 value_tag  INT  NOT NULL,
+                 timestamp  REAL  NOT NULL,
+                 smart  BLOB  NOT NULL,
+                 last_persistent  BLOB);
+              ''' % table_name
+        self._cursor.execute(sql)
+        self._conn.commit()
+        return SQLiteTable(self, table_name, max_entry=self.__max_entry_per_disk)
 
     def get_table_by_id(self, dev_id):
-        table_name = "S%s" % dev_id
-        if dev_id not in self.__disk_trace_pool:
-            ## first try to create a table
-            # do nothing if exist
-            sql = '''CREATE TABLE IF NOT EXISTS %s(
-                     ID  INT  PRIMARY KEY     NOT NULL,
-                     value_tag  INT  NOT NULL,
-                     timestamp  REAL  NOT NULL,
-                     smart  BLOB  NOT NULL,
-                     last_persistent  BLOB);
-                  ''' % table_name
+        if dev_id not in self.disk_trace_pool:
+            self.disk_trace_pool[dev_id] = self._init_table_by_id(dev_id)
+        return self.disk_trace_pool.get(dev_id)
+
+    def get_all_tables_name(self):
+        sql = "select name from sqlite_master where type='table' order by name"
+        self._cursor.execute(sql)
+        tables = self._cursor.fetchall()
+        return [i[0] for i in tables]
+
+    def get_table_by_dev_id(self, dev_id):
+        if dev_id in self.disk_trace_pool:
+            return self.disk_trace_pool.get(dev_id)
+        else:
+            return self._init_table_by_id(dev_id)
+
+    def get_smart_by_dev_id(self, dev_id):
+        table = self.get_table_by_dev_id(dev_id)
+        return table.iter_dev_smart()
+
+    def get_all_disks_smart(self):
+        target = {}
+        for dev_id in self.get_all_tables_name():
+            temp = self.get_table_by_dev_id(dev_id)
+            target[dev_id] = temp.get_dev_smart_history()
+        return target
+
+    def update_all_tables_time(self, time_changed):
+        for table_name in self.get_all_tables_name():
+            ## 
+            sql = "SELECT timestamp from %s;" % table_name
+            self._cursor.execute(sql)
+            ## it may use many memory?
+            values = self._cursor.fetchall()
+            #
+            while True:
+                temp = self._cursor.fetchone()
+                if not temp:
+                    break
+                ID,timestamp = temp
+                sql = "UPDATE %s set timestamp = ?" % table_name
+                self._cursor.executemany(sql, ((val[0]-time_changed,) for val in values))
+        # commit the change
+        self._conn.commit()
+
+
+class SQLiteDBDiskInfo(object):
+    '''
+    Table Descriptor:
+    
+    1. AllDiskDescriptor
+       DevID:     Device ID that unique in every disk, is Serial now
+       Model:     Device Model Name
+       Serial:    Deivce Serial name
+       MediaType: int, 0->HDD, 1->SSD,255->Unknown
+       Protocal:  int, 0-> SCSI(SAS), 1-> SATA, 2-> NVMe,255->Unknown
+       CreateDate:float, create date 
+    
+    2. LastActiveDisk
+    
+    '''
+    def __init__(self, db_path=_sqlite3_diskinfo_file):
+        self.__db_path = db_path
+        ##
+        self._conn = sqlite3.connect(self.__db_path)
+        self._cursor = self._conn.cursor()
+        ##
+        self._init_db()
+
+    def _init_db(self):
+        table_name = "AllDiskDescriptor"
+        sql = '''CREATE TABLE IF NOT EXISTS %s(
+                 DevID  TEXT  NOT NULL,
+                 Model  TEXT  NOT NULL,
+                 Serial  TEXT  NOT NULL,
+                 MediaType  INT  NOT NULL,
+                 Protocal  INT  NOT NULL,
+                 CreateDate  REAL  NOT NULL);
+              ''' % table_name
+        self._cursor.execute(sql)
+        self._conn.commit()
+
+    def store_all_disks_id(self, devs):
+        '''
+        devices: a list that contain device ids.
+        '''
+        with open(_LastActiveDiskFile, 'w') as f:
+            f.write(json.dumps(devs))
+
+    def get_all_disks_id(self):
+        '''
+        return a list of all disks id
+        '''
+        target = []
+        if os.path.exists(_LastActiveDiskFile):
+            with open(_LastActiveDiskFile, 'r') as f:
+                content = f.read()
+                if content:
+                    target = json.loads(content)
+        return target
+
+    def update_disk_info(self, 
+                         disk_id, 
+                         **kwargs):
+        if not self.get_disk_info(disk_id):  ## Add
+            sql = """INSERT INTO AllDiskDescriptor (DevID,Model,Serial,MediaType,Protocal,CreateDate)
+                     VALUES ('%s', '%s', '%s', %d, %d, %f)
+                  """ % (disk_id,
+                         kwargs.get("Model"),
+                         kwargs.get("Serial"),
+                         kwargs.get("MediaType"),
+                         kwargs.get("Protocal"),
+                         float(time.time()),
+                        )
             self._cursor.execute(sql)
             self._conn.commit()
-            ##
-            self.__disk_trace_pool[dev_id] = SQLiteTable(self, table_name, max_entry=self.__max_entry_per_disk)
-        return self.__disk_trace_pool.get(dev_id)
+            return 0
+        return 1
+
+    def get_disk_info(self, disk_id):
+        sql = "SELECT * from AllDiskDescriptor WHERE DevID = '%s'" % disk_id
+        self._cursor.execute(sql)
+        return self._cursor.fetchone()
+
 
 ## init sqlite3 DB
+all_disk_info = SQLiteDBDiskInfo()
 disk_trace_pool = SQLiteDB()
 ##

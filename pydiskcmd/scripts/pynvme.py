@@ -9,6 +9,7 @@ from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 ##
 from pydiskcmd.pynvme.nvme_spec import *
+from pydiskcmd.system.env_var import os_type
 
 Version = '0.1.0'
 
@@ -891,6 +892,9 @@ commands_dict = {"list": _list,
                  "help": print_help}
 
 def pynvme():
+    # Do not support windows now
+    if os_type != "Linux":
+        raise NotImplementedError("pydiskhealth cannot run in OS:%s" % os_type)
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command in commands_dict:

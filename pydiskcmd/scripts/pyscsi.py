@@ -253,7 +253,7 @@ def _inquiry_ata_information(s, options):
 def inq():
     usage="usage: %prog inq <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-p", "--page", type="int", dest="page_code", action="store", default=0,
+    parser.add_option("-p", "--page", type="int", dest="page_code", action="store", default=-1,
         help="Vital Product Data (VPD) page number or abbreviation")
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
         help="Output format: normal|binary|raw, default normal")
@@ -266,7 +266,7 @@ def inq():
             raise RuntimeError("Device not exist!")
         #
         evpd = 0
-        if options.page_code:
+        if options.page_code >= 0:
             evpd = 1
         ##
         with SCSI(init_device(dev, open_t='scsi'), 512) as d:

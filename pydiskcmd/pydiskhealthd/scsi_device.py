@@ -33,7 +33,31 @@ class SCSIDevice(object):
         self.__device_type = 'scsi'
         self.dev_path = dev_path
         ## init device
-        self.__device_id = get_dev_id(self.dev_path)
+        self.__model = "dummy value"
+        self.__serial = None
+        self.__media_type = None
+        with SCSI(init_device(dev_path, open_t="scsi"), blocksize=512) as d:
+            cmd = d.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER)
+            serial_info = cmd.result
+            cmd = d.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS)
+            blk_dev_char = cmd.result
+        if 'unit_serial_number' in serial_info:
+            id_string = bytearray2string(serial_info['unit_serial_number']).strip()
+            if id_string:
+                self.__serial = id_string
+            else:
+                for encode_t in ("UTF-8", "GBK", "GB2312"):
+                    try:
+                        self.__serial = bytes(serial_info['unit_serial_number']).decode(encoding=encode_t)
+                    except:
+                        pass
+                    else:
+                        break
+        if blk_dev_char.get("medium_rotation_rate") == 1:
+            self.__media_type = "SSD"
+        elif blk_dev_char.get("medium_rotation_rate") > 1:
+            self.__media_type = "HDD"
+        ##
         if init_db:
             self.init_db()
 
@@ -53,7 +77,19 @@ class SCSIDevice(object):
 
     @property
     def device_id(self):
-        return self.__device_id.strip()
+        return self.__serial.strip()
+
+    @property
+    def Model(self):
+        return self.__model
+
+    @property
+    def Serial(self):
+        return self.__serial
+
+    @property
+    def MediaType(self):
+        return self.__media_type
 
     def inquiry(self, page_code):
         with SCSI(init_device(self.dev_path, open_t="scsi"), blocksize=512) as d:

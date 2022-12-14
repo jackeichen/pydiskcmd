@@ -45,37 +45,37 @@ It is also available as a downloadable zip archive from:
 Support List
 ============
 
-| OS      | SCSI | ATA | NVME |
-|---------|------|-----|------|
-| Linux   | Y    | Y   | Y    |
-| Windows | Y    | Y   | N,D  |
+| OS                    | SCSI | ATA | NVME |
+|-----------------------|------|-----|------|
+| CentOS/RHEL 7.6       | Y    | Y   | Y    |
+| CentOS/RHEL 8.4       | Y    | Y   | Y    |
+| Windows 10 Pro        | Y    | Y   | N,D  |
+| Windows Server 2019   | N    | N   | N    |
 
 Y: support, N: Non-support, D: developing.
 
-Note: Only some of the commands are tested, Do Not guarantee all the other commands work.
-
-OS Under Test
--------------
-Linux: CentOS 7.6, CentOS 8.4
-
-Windwos: Windows 10 Pro
-
-Warn: Be Carefull using in other windows version.
+Note:
+ 
+    * Only some of the commands are tested, Do Not guarantee all the other commands work.
+    * Be Carefull using in other windows version.
 
 
 Building and installing
 =======================
 
-Requirements:
+Python3 Module Requirements:
 
-    * python3
-    * python3-devel
     * setuptools_scm
     * pyscsi(Need download the latest python-scsi from github)
 
-Extra Requirements by Linux:
+Extra Python3 Module Requirements by Linux:
 
     * cython-sgio(Need by pyscsi, download latest version from github)
+
+Sofware Requirements:
+
+    * python3
+    * python3-devel
 
 To build and install from the repository:
 
@@ -84,7 +84,7 @@ To build and install from the repository:
 After your installation, you can use command to enable Linux Bash Completion for 
 command pynvme&pysata(Only for Linux):
 
-    $ pydiskcmd --en_completion
+    $ pydiskutils --enable=cmd_completion
 
 You can uninstall it by run:
 
@@ -95,11 +95,11 @@ Usage
 =====
 Five executable programs should be added to environment variables after installation.
 
-pydiskcmd
----------
+pydiskutils
+-----------
 It is a program that show and manage pydiskcmd tool. Use bellow command to get help:
 
-    $ pydiskcmd --help
+    $ pydiskutils --help
 
 pynvme
 ------
@@ -164,11 +164,11 @@ For SATA Disk:
 The user(need root) can enable systemd service(pydiskhealthd.service), which make pydiskhealthd running as a 
 backend service and start-up service. Enable and start it by: 
 
-    $ pydiskcmd --en_diskhealth_daemon
+    $ pydiskutils --enable=auto_startup
 
-After that, the user can manage the pydiskhealthd with command "systemctl". Auto start service is recommended:
+After that, the linux user can manage the pydiskhealthd with command "systemctl".
 
-    $ systemctl enable pydiskhealthd.service
+    $ systemctl status pydiskhealthd.service
 
 
 Advanced Usage
@@ -195,4 +195,4 @@ model, serial number, disk health, temperature, etc...
 
 Email
 =====
-If any support or ideas, contact me by email: Eric-1128@outlook.com
+If any support or ideas, contact author by email: Eric-1128@outlook.com

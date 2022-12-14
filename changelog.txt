@@ -6,6 +6,11 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
+Version 0.2.3
+  * Add scripts->pydiskutils
+    * Can check disk smart history
+  * The tool can adapt the system time change when store data to DB
+
 Version 0.2.2
   * Initial version add in changelog
   * Features support

@@ -192,7 +192,13 @@ class NVMeDevice(object):
         self.dev_path = dev_path
         bus_address = self._get_bus_addr_by_controller(dev_path)
         ## get device ID
-        self.__device_id = get_dev_id(self.dev_path)
+        self.__model = None
+        self.__serial = None
+        with NVMe(init_device(dev_path, open_t="nvme")) as d:
+            result = nvme_id_ctrl_decode(d.ctrl_identify_info)
+        self.__serial = ba_to_ascii_string(result.get("SN"), "")
+        self.__model = ba_to_ascii_string(result.get("MN"), "")
+        self.__media_type = "SSD"
         ##
         self.pcie_context = map_pci_device(bus_address)
         self.__pcie_trace = PCIeTrace()
@@ -237,7 +243,7 @@ class NVMeDevice(object):
 
     @property
     def device_id(self):
-        return self.__device_id.strip()
+        return self.__serial.strip()
 
     @property
     def smart_trace(self):
@@ -250,6 +256,18 @@ class NVMeDevice(object):
     @property
     def persistent_event_log(self):
         return self.__persistent_event_log
+
+    @property
+    def Model(self):
+        return self.__model
+
+    @property
+    def Serial(self):
+        return self.__serial
+
+    @property
+    def MediaType(self):
+        return self.__media_type
 
     def _get_bus_addr_by_controller(self, ctrl):
         path = PCIeMappingPath % ctrl.replace("/dev/", "")

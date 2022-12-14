@@ -6,30 +6,21 @@ import time
 import optparse
 import subprocess
 import traceback
-import json
 from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs,get_nvme_dev_info,os_type
 from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
 from pydiskcmd.exceptions import DeviceTypeError
+from pydiskcmd.pydiskhealthd.default_config import DiskWarningTemp,DiskCriticalTemp,DiskCalculatedHealthWarningLevel,DiskCalculatedHealthErrorLevel
 ## 
+from pydiskcmd.pydiskhealthd.DB import all_disk_info,disk_trace_pool
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice
 from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,AERTrace,AERTraceRL
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
-from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
 ##
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 ####
-## the disk info store path
-DisksInfoPath = os.path.join(DiskTracePath, "AllDisksInfo.json")
-##
 tool_version = '0.1.1'
-##
-DiskWarningTemp = 60
-DiskCriticalTemp = 70
-#
-DiskCalculatedHealthWarningLevel = 0.3
-DiskCalculatedHealthErrorLevel = 0
 ####
 
 def get_disk_context(devices):
@@ -64,7 +55,27 @@ def get_disk_context(devices):
                 else:
                     dev_context.init_db()
                     devices[dev_context.device_id] = dev_context
-                    logger.info("Find new ATA device %s, ID: %s" % (dev_path, dev_context.device_id))
+                    logger.info("Find new %s device %s, ID: %s" % (dev_context.device_type, dev_path, dev_context.device_id))
+                    # check if device info 
+                    if dev_context.MediaType == "HDD":
+                        media_type = 0
+                    elif dev_context.MediaType == "SSD":
+                        media_type = 1
+                    else:
+                        media_type = 255
+                    if dev_context.device_type == "scsi":
+                        protocal = 0
+                    elif dev_context.device_type == "ata":
+                        protocal = 1
+                    elif dev_context.device_type == "nvme":
+                        protocal = 2
+                    else:
+                        protocal = 255
+                    all_disk_info.update_disk_info(dev_context.device_id, 
+                                                   Model=dev_context.Model,
+                                                   Serial=dev_context.Serial,
+                                                   MediaType=media_type,
+                                                   Protocal=protocal,)
     ## scan nvme device
     for ctrl_id in get_nvme_dev_info():
         dev_path = "/dev/%s" % ctrl_id
@@ -85,27 +96,54 @@ def get_disk_context(devices):
                 dev_context.init_db()
                 devices[dev_context.device_id] = dev_context
                 logger.info("Find new nvme device %s, ID: %s" % (dev_path, dev_context.device_id))
+                ##
+                if dev_context.MediaType == "HDD":
+                    media_type = 0
+                elif dev_context.MediaType == "SSD":
+                    media_type = 1
+                else:
+                    media_type = 255
+                if dev_context.device_type == "scsi":
+                    protocal = 0
+                elif dev_context.device_type == "ata":
+                    protocal = 1
+                elif dev_context.device_type == "nvme":
+                    protocal = 2
+                else:
+                    protocal = 255
+                all_disk_info.update_disk_info(dev_context.device_id, 
+                                               Model=dev_context.Model,
+                                               Serial=dev_context.Serial,
+                                               MediaType=media_type,
+                                               Protocal=protocal,)
     return devices
 
-def store_all_disks_id(devices):
-    '''
-    devices: a dict that contain device object.
-    '''
-    target = [] 
-    target = list(devices.keys())
-    with open(DisksInfoPath, 'w') as f:
-        f.write(json.dumps(target))
+class Timer(object):
+    def __init__(self, monitor_t):
+        self.monitor_t = monitor_t
+        self.reinit()
 
-def get_all_disks_id():
-    '''
-    return all disks id
-    '''
-    if os.path.exists(DisksInfoPath):
-        with open(DisksInfoPath, 'r') as f:
-            content = f.read()
-        if content:
-            return json.loads(content)
-    return []
+    @property
+    def system_time_changed_value(self):
+        return self.__system_time_changed_value
+
+    def reinit(self):
+        self._start_t = time.time()
+        self._relative_t = time.monotonic()
+        self.__system_time_changed_value = 0
+
+    def if_systime_change(self):
+        self.__system_time_changed_value = time.monotonic()-time.time()-self._relative_t+self._start_t
+        if abs(self.__system_time_changed_value) < 0.01:  # accuracy value 0.01
+            return False
+        return True
+
+    def get_left_time(self):
+        status = self.if_systime_change()
+        if status: 
+            self._start_t -= self.__system_time_changed_value
+        return (self.monitor_t - time.time() + self._start_t),status
+
 
 def pydiskhealthd():
     usage="usage: %prog [OPTION] [args...]"
@@ -157,7 +195,7 @@ def pydiskhealthd():
     dev_pool = {}
     get_disk_context(dev_pool)
     # check if lost disks
-    dev_id_list = get_all_disks_id()
+    dev_id_list = all_disk_info.get_all_disks_id()
     if dev_id_list:
         for k,v in dev_pool.items():
             if k in dev_id_list:
@@ -185,13 +223,24 @@ def pydiskhealthd():
             aer_trace = AERTraceRL()
         except:
             pass
+    timer = Timer(options.check_interval)
+    ## time change check, and if time changed,
+    #  Need update all time info in DB->SQLiteDB:
+    #  ensure the timestamp in DB is change with system time.
+    def get_left_time():
+        time_left,time_change = timer.get_left_time()
+        while time_change:
+            logger.warning("System Time changed %s" % timer.system_time_changed_value)
+            disk_trace_pool.update_all_tables_time(timer.system_time_changed_value)
+            time_left,time_change = timer.get_left_time()
+        return time_left
     ## check start
     while True:
-        start_t = time.time()
+        timer.reinit()
         ### check device, add or lost
         get_disk_context(dev_pool)
         ## store all the disk info
-        store_all_disks_id(dev_pool)
+        all_disk_info.store_all_disks_id(list(dev_pool.keys()))
         ### check process Now
         logger.info("Check all Device(s) ...")
         ## check every disk
@@ -628,8 +677,8 @@ def pydiskhealthd():
                     for k,v in i.items():
                         logger.info("%-10s : %s" % (k, str(v)))
                     logger.info("-"*30)
-        ### we will real-time to check aer
-        time_left = options.check_interval - time.time() + start_t
+        ### we will do real-time to check aer
+        time_left = get_left_time()
         if aer_trace and options.nvme_aer_type == 'real_time':
             while (time_left > 0):
                 trace_description = aer_trace.get_once(time_left)
@@ -639,7 +688,7 @@ def pydiskhealthd():
                     for k,v in trace_description.items():
                         logger.info("%-10s : %s" % (k, str(v)))
                     logger.info("-"*30)
-                time_left = options.check_interval - time.time() + start_t
+                time_left = get_left_time()
         else:  
             ## check done
             logger.info("Check done")
