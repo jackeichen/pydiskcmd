@@ -71,6 +71,7 @@ Python3 Module Requirements:
 Extra Python3 Module Requirements by Linux:
 
     * cython-sgio(Need by pyscsi, download latest version from github)
+    * pcicrawler
 
 Sofware Requirements:
 
@@ -124,8 +125,8 @@ commands inside. Use bellow command to get help:
 
 pydiskhealthd
 -------------
-This is a Disk Health Monitoring and Reporting tool. See below pydiskhealthd for more detail.
-Use bellow command to get help:
+This is a Disk Health Monitoring and Reporting tool only for Linux. See below pydiskhealthd 
+for more detail. Use bellow command to get help:
 
     $ pydiskhealthd -h
 
