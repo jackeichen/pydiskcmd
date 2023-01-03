@@ -91,6 +91,10 @@ class SCSIDevice(object):
     def MediaType(self):
         return self.__media_type
 
+    @property
+    def smart_enable(self):
+        return False
+
     def inquiry(self, page_code):
         with SCSI(init_device(self.dev_path, open_t="scsi"), blocksize=512) as d:
             cmd = d.inquiry(evpd=1, page_code=page_code)

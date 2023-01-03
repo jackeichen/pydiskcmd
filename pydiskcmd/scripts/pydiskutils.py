@@ -5,7 +5,7 @@ import optparse
 import datetime
 from pydiskcmd.system.env_var import os_type
 from pydiskcmd.pydiskhistory.disk_information import get_stored_disk_info
-from pydiskcmd.pydiskhistory.disk_smart_history import get_disk_temperature_history
+from pydiskcmd.pydiskhistory.disk_trace import get_disk_temperature_history
 from pydiskcmd.pydiskhistory.matplotlib_plot import PlotTemperature
 from pydiskcmd.system.bash_completion import enable_cmd_completion
 from pydiskcmd.system.pydiskhealth_daemon import enable_starup_programe,disable_starup_programe
@@ -25,9 +25,9 @@ def pydiskutils():
         help="Show stored disks information.")
     parser.add_option("", "--show_temperature", dest="show_temperature", action="store_true", default=False,
         help="Show the history of disk temperature")
-    parser.add_option("-f", "--ouput_format", dest="ouput_format", action="store", default="console",
+    parser.add_option("-o", "--ouput_format", dest="ouput_format", action="store", default="console",
         help="The format of output, should be console|pciture|jsonfile")
-    parser.add_option("-o", "--ouput_file", dest="ouput_file", action="store", default="",
+    parser.add_option("-f", "--ouput_file", dest="ouput_file", action="store", default="",
         help="The name of output file.")
     parser.add_option("", "--enable", dest="enable_func", action="store", default="",
         help="Enable programe functions, include cmd_completion|auto_startup")
@@ -79,8 +79,16 @@ def pydiskutils():
             for dev_id,value in info.items():
                 print ("Device ID: ", dev_id)
                 for t,temperature in value:
+                    positive_v = [" ",] * 70
+                    negative_v = [" ",] * 30
+                    if temperature > 0:
+                        for i in range(min(70, temperature)):
+                            positive_v[i] = "#"
+                    else:
+                        for i in range(min(30, temperature)):
+                            negative_v[i] = "#"
                     print ("  %s(%s C): %s" % (datetime.datetime.fromtimestamp(t).strftime("%Y-%m-%d %H:%M:%S"),
-                                               temperature, "#"*temperature)
+                                               temperature, "".join(negative_v)+"(0C)"+"".join(positive_v))
                            )
                 print ("-"*60)
         elif options.ouput_format == "pciture":

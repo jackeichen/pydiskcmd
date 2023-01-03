@@ -1,10 +1,13 @@
 # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
-from pydiskcmd.pydiskhealthd.DB import all_disk_info,disk_trace_pool
+from pydiskcmd.pydiskhealthd.DB import all_disk_info,SQLiteDB
 from pydiskcmd.pynvme.nvme_spec import nvme_smart_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int
 from pydiskcmd.pysata.sata_spec import decode_smart_info
+##
+disk_trace_pool = SQLiteDB()
+##  
 
 
 def get_disk_temperature_history(target_dev_id=None):

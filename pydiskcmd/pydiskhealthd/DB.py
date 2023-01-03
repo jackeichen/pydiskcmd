@@ -171,7 +171,7 @@ class SQLiteTable(object):
         return res
 
     def iter_dev_smart(self):
-        sql = '''SELECT timestamp,smart from %s;
+        sql = '''SELECT timestamp,smart from %s ORDER BY timestamp asc;
               ''' % self.__table_name
         self.__cursor.execute(sql)
         while True:
@@ -181,7 +181,7 @@ class SQLiteTable(object):
             yield temp
 
     def get_dev_smart_history(self):
-        sql = '''SELECT timestamp,smart from %s;
+        sql = '''SELECT timestamp,smart from %s ORDER BY timestamp asc;
               ''' % self.__table_name
         self.__cursor.execute(sql)
         return self.__cursor.fetchall()

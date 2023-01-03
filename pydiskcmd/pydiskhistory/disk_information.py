@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
-from pydiskcmd.pydiskhealthd.DB import all_disk_info,disk_trace_pool
+from pydiskcmd.pydiskhealthd.DB import all_disk_info
 
 def get_stored_disk_info(target_dev_id=None):
     disks_info = {}

@@ -40,6 +40,8 @@ class SATA(object):
         self.device = dev
         self._blocksize = blocksize
         self.__init_opcode()
+        ##
+        self.__identify = self.identify().datain
 
     def __call__(self,
                  dev):
@@ -97,6 +99,10 @@ class SATA(object):
             self._execute(cmd)
         except Exception as e:
             raise e
+
+    @property
+    def identify_raw(self):
+        return self.__identify
 
     @property
     def blocksize(self):

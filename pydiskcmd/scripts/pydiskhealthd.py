@@ -76,6 +76,13 @@ def get_disk_context(devices):
                                                    Serial=dev_context.Serial,
                                                    MediaType=media_type,
                                                    Protocal=protocal,)
+                    ## check smart enbale 
+                    if dev_context.smart_enable:
+                        message = "Device: %s(ID: %s), Smart enable and add to monitor list." % (dev_context.dev_path, dev_context.device_id)
+                        logger.info(message)
+                    else:
+                        message = "Device: %s(ID: %s), Smart is not support Or disabled." % (dev_context.dev_path, dev_context.device_id)
+                        logger.info(message)
     ## scan nvme device
     for ctrl_id in get_nvme_dev_info():
         dev_path = "/dev/%s" % ctrl_id
@@ -573,96 +580,97 @@ def pydiskhealthd():
                     logger.error(message)
                     syslog.info(message)
                     continue  # skip this device 
-                ### 
-                current_smart = smart_trace.current_value  # current_smart is a SmartInfo object
-                last_smart = smart_trace.get_cache_last_value()
-                message1 = "Device: %s(ID: %s), Calculated Disk Health is %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100))
-                logger.debug(message1)
-                ## check disk health
-                if last_smart:
-                    if current_smart.disk_health <= DiskCalculatedHealthWarningLevel and last_smart.disk_health > DiskCalculatedHealthWarningLevel:
-                        message1 = "Device: %s(ID: %s), Calculated Disk Health(%d%%) fallen below to %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100), int(DiskCalculatedHealthWarningLevel*100))
-                        logger.warning(message1)
-                        syslog.info(message1)
-                    elif current_smart.disk_health <= DiskCalculatedHealthErrorLevel and last_smart.disk_health > DiskCalculatedHealthErrorLevel:
-                        message1 = "Device: %s(ID: %s), Calculated Disk Health(%d%%) fallen below to %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100), int(DiskCalculatedHealthErrorLevel*100))
-                        logger.warning(message1)
-                        syslog.warning(message1)
-                else:
-                    message1 = "Device: %s(ID: %s), Init Calculated Disk Health is %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100))
-                    logger.info(message1)
-                    syslog.info(message1)
-                ## check smart start
-                for _id,smart_attr in current_smart.smart_info.items():
-                    ## check current_smart.value and current_smart.worst with smart thresh
-                    if _id in smart_trace.thresh_info and smart_trace.thresh_info[_id] > 0: # valid if thresh value > 0
-                        if smart_attr.value <= smart_trace.thresh_info[_id]:
-                            if last_smart and last_smart.smart_info[_id].value > smart_trace.thresh_info[_id]:
-                                message1 = "Device: %s(ID: %s), smart #ID %s value fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
-                                logger.warning(message1)
-                                if smart_attr.flag_decode["Pre-fail"]:
-                                    syslog.warning(message1)
-                                else:
-                                    syslog.info(message1)
-                            elif not last_smart: # first time to report the message
-                                message1 = "Device: %s(ID: %s), smart #ID %s check error(value <= threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
-                                if smart_attr.flag_decode["Pre-fail"]:
-                                    message2 = "#ID: %s, smart name: %s, Pre-fail, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id])
-                                    logger.warning(message1, message2)
-                                    syslog.warning(message1, message2)
-                                else:
-                                    message2 = "#ID: %s, smart name: %s, Old_age, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id])
-                                    logger.warning(message1, message2)
-                                    syslog.info(message1, message2)
-                            else:    # vs_smart_calculated_value not init Or have report this error, will not duplicate report
-                                pass
-                        ## check worst value
-                        if smart_attr.worst <= smart_trace.thresh_info[_id]:
-                            if last_smart and last_smart.smart_info[_id].worst > smart_trace.thresh_info[_id]:
-                                message1 = "Device: %s(ID: %s), smart #ID %s worst fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
-                                logger.warning(message1)
-                                if smart_attr.flag_decode["Pre-fail"]:
-                                    syslog.warning(message1)
-                                else:
-                                    syslog.info(message1)
-                            elif not last_smart: # first time to report the message
-                                message1 = "Device: %s(ID: %s), smart #ID %s check error(worst <= threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
-                                if smart_attr.flag_decode["Pre-fail"]:
-                                    message2 = "#ID: %s, smart name: %s, Pre-fail, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id])
-                                    logger.warning(message1, message2)
-                                    syslog.warning(message1, message2)
-                                else:
-                                    message2 = "#ID: %s, smart name: %s, Old_age, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id])
-                                    logger.warning(message1, message2)
-                                    syslog.info(message1, message2)
-                            else:  # vs_smart_calculated_value not init Or have report this error
-                                pass
-                    ## check fall values
-                    #  pre-fail will report every 10 falls, Old_age report every 15 falls
-                    if smart_attr.flag_decode["Pre-fail"]:  # pre-fail
-                        if smart_trace.vs_smart_calculated_value and (smart_attr.value - smart_trace.vs_smart_calculated_value[_id].value_int_min) > 10:
-                            message1 = "Device: %s(ID: %s), smart #ID(Pre-fail) %s value reduce more than 10. " % (dev_context.dev_path, dev_context.device_id, _id)
+                ###
+                if dev_context.smart_enable:              
+                    current_smart = smart_trace.current_value  # current_smart is a SmartInfo object
+                    last_smart = smart_trace.get_cache_last_value()
+                    message1 = "Device: %s(ID: %s), Calculated Disk Health is %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100))
+                    logger.debug(message1)
+                    ## check disk health
+                    if last_smart:
+                        if current_smart.disk_health <= DiskCalculatedHealthWarningLevel and last_smart.disk_health > DiskCalculatedHealthWarningLevel:
+                            message1 = "Device: %s(ID: %s), Calculated Disk Health(%d%%) fallen below to %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100), int(DiskCalculatedHealthWarningLevel*100))
+                            logger.warning(message1)
                             syslog.info(message1)
-                            logger.info(message1)
-                    else: # Old_age
-                        if smart_trace.vs_smart_calculated_value and (smart_attr.value - smart_trace.vs_smart_calculated_value[_id].value_int_min) > 15:
-                            message1 = "Device: %s(ID: %s), smart #ID(Old_age) %s value reduce more than 15. " % (dev_context.dev_path, dev_context.device_id, _id)
-                            syslog.info(message1)
-                            logger.info(message1)
-                ## Record and check Current Tempeture
-                if 194 in current_smart.smart_info:
-                    temperature = (current_smart.smart_info[194].raw_value_int & 0xFFFF)
-                    if temperature >= DiskCriticalTemp:
-                        message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskCriticalTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskCriticalTemp)
-                        logger.warning(message)
-                        syslog.info(message)
-                    elif temperature >= DiskWarningTemp:
-                        message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskWarningTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskWarningTemp)
-                        logger.warning(message)
-                        syslog.info(message)
+                        elif current_smart.disk_health <= DiskCalculatedHealthErrorLevel and last_smart.disk_health > DiskCalculatedHealthErrorLevel:
+                            message1 = "Device: %s(ID: %s), Calculated Disk Health(%d%%) fallen below to %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100), int(DiskCalculatedHealthErrorLevel*100))
+                            logger.warning(message1)
+                            syslog.warning(message1)
                     else:
-                        message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
-                        logger.info(message)
+                        message1 = "Device: %s(ID: %s), Init Calculated Disk Health is %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100))
+                        logger.info(message1)
+                        syslog.info(message1)
+                    ## check smart start
+                    for _id,smart_attr in current_smart.smart_info.items():
+                        ## check current_smart.value and current_smart.worst with smart thresh
+                        if _id in smart_trace.thresh_info and smart_trace.thresh_info[_id] > 0: # valid if thresh value > 0
+                            if smart_attr.value <= smart_trace.thresh_info[_id]:
+                                if last_smart and last_smart.smart_info[_id].value > smart_trace.thresh_info[_id]:
+                                    message1 = "Device: %s(ID: %s), smart #ID %s value fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
+                                    logger.warning(message1)
+                                    if smart_attr.flag_decode["Pre-fail"]:
+                                        syslog.warning(message1)
+                                    else:
+                                        syslog.info(message1)
+                                elif not last_smart: # first time to report the message
+                                    message1 = "Device: %s(ID: %s), smart #ID %s check error(value <= threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
+                                    if smart_attr.flag_decode["Pre-fail"]:
+                                        message2 = "#ID: %s, smart name: %s, Pre-fail, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id])
+                                        logger.warning(message1, message2)
+                                        syslog.warning(message1, message2)
+                                    else:
+                                        message2 = "#ID: %s, smart name: %s, Old_age, value: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.value, smart_trace.thresh_info[_id])
+                                        logger.warning(message1, message2)
+                                        syslog.info(message1, message2)
+                                else:    # vs_smart_calculated_value not init Or have report this error, will not duplicate report
+                                    pass
+                            ## check worst value
+                            if smart_attr.worst <= smart_trace.thresh_info[_id]:
+                                if last_smart and last_smart.smart_info[_id].worst > smart_trace.thresh_info[_id]:
+                                    message1 = "Device: %s(ID: %s), smart #ID %s worst fall below threshold. " % (dev_context.dev_path, dev_context.device_id, _id)
+                                    logger.warning(message1)
+                                    if smart_attr.flag_decode["Pre-fail"]:
+                                        syslog.warning(message1)
+                                    else:
+                                        syslog.info(message1)
+                                elif not last_smart: # first time to report the message
+                                    message1 = "Device: %s(ID: %s), smart #ID %s check error(worst <= threshold): " % (dev_context.dev_path, dev_context.device_id, _id)
+                                    if smart_attr.flag_decode["Pre-fail"]:
+                                        message2 = "#ID: %s, smart name: %s, Pre-fail, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id])
+                                        logger.warning(message1, message2)
+                                        syslog.warning(message1, message2)
+                                    else:
+                                        message2 = "#ID: %s, smart name: %s, Old_age, worst: %s, threshold: %s" % (smart_attr.id, smart_attr.attr_name, smart_attr.worst, smart_trace.thresh_info[_id])
+                                        logger.warning(message1, message2)
+                                        syslog.info(message1, message2)
+                                else:  # vs_smart_calculated_value not init Or have report this error
+                                    pass
+                        ## check fall values
+                        #  pre-fail will report every 10 falls, Old_age report every 15 falls
+                        if smart_attr.flag_decode["Pre-fail"]:  # pre-fail
+                            if smart_trace.vs_smart_calculated_value and (smart_attr.value - smart_trace.vs_smart_calculated_value[_id].value_int_min) > 10:
+                                message1 = "Device: %s(ID: %s), smart #ID(Pre-fail) %s value reduce more than 10. " % (dev_context.dev_path, dev_context.device_id, _id)
+                                syslog.info(message1)
+                                logger.info(message1)
+                        else: # Old_age
+                            if smart_trace.vs_smart_calculated_value and (smart_attr.value - smart_trace.vs_smart_calculated_value[_id].value_int_min) > 15:
+                                message1 = "Device: %s(ID: %s), smart #ID(Old_age) %s value reduce more than 15. " % (dev_context.dev_path, dev_context.device_id, _id)
+                                syslog.info(message1)
+                                logger.info(message1)
+                    ## Record and check Current Tempeture
+                    if 194 in current_smart.smart_info:
+                        temperature = (current_smart.smart_info[194].raw_value_int & 0xFFFF)
+                        if temperature >= DiskCriticalTemp:
+                            message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskCriticalTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskCriticalTemp)
+                            logger.warning(message)
+                            syslog.info(message)
+                        elif temperature >= DiskWarningTemp:
+                            message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskWarningTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskWarningTemp)
+                            logger.warning(message)
+                            syslog.info(message)
+                        else:
+                            message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
+                            logger.info(message)
             else:  # SCSI(SAS) Disk
                 pass
         ## check aer for nvme

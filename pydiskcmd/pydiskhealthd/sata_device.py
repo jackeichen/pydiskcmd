@@ -154,7 +154,13 @@ class ATADevice(object):
         # the smart_read_thresh is persistent, so init it at first
         self.__model = None
         self.__serial = None
+        self.__smart_support= False
+        self.__smart_enable = False
         with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:
+            ##
+            self.__smart_support = d.identify_raw[164] & 0x01
+            self.__smart_enable = d.identify_raw[170] & 0x01
+            ##
             cmd_thresh = d.smart_read_thresh()
             raw_data_thresh = cmd_thresh.datain
             cmd_identify = d.identify()
@@ -218,6 +224,10 @@ class ATADevice(object):
     @property
     def MediaType(self):
         return self.__media_type
+
+    @property
+    def smart_enable(self):
+        return (self.__smart_support and self.__smart_enable)
 
     def get_smart_once(self):
         current_t = float(time.time())
