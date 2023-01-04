@@ -21,20 +21,24 @@ def version():
     return 0
 
 def print_help():
-    print ("pyscsi %s" % Version)
-    print ("usage: pyscsi <command> [<device>] [<args>]")
-    print ("")
-    print ("The '<device>' is usually an sd character device (ex: /dev/sdb or physicaldrive1).")
-    print ("")
-    print ("The following are all implemented sub-commands:")
-    print ("  inq                         Check Disk Power Mode")
-    print ("  getlbastatus                Get LBA Status from target SCSI device")
-    print ("  swp                         Set device swp status")
-    print ("  mtx                         Device tool of mtx")
-    print ("  version                     Shows the program version")
-    print ("  help                        Shows the program version")
-    print ("")
-    print ("See 'pyscsi <plugin> --help' for more information on a plugin")
+    if len(sys.argv) > 2 and sys.argv[2] in commands_dict:
+        func_name,sys.argv[2] = sys.argv[2],"--help"
+        commands_dict[func_name]()
+    else:
+        print ("pyscsi %s" % Version)
+        print ("usage: pyscsi <command> [<device>] [<args>]")
+        print ("")
+        print ("The '<device>' is usually an sd character device (ex: /dev/sdb or physicaldrive1).")
+        print ("")
+        print ("The following are all implemented sub-commands:")
+        print ("  inq                         Check Disk Power Mode")
+        print ("  getlbastatus                Get LBA Status from target SCSI device")
+        print ("  swp                         Set device swp status")
+        print ("  mtx                         Device tool of mtx")
+        print ("  version                     Shows the program version")
+        print ("  help                        Display this help")
+        print ("")
+        print ("See 'pyscsi help <command>' or 'pyscsi <command> --help' for more information on a sub-command")
     return 0
 
 def _inquiry_standard(s, options):

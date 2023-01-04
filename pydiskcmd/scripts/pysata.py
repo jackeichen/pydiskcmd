@@ -23,27 +23,31 @@ def version():
     return 0
 
 def print_help():
-    print ("pysata-%s" % Version)
-    print ("usage: pysata <command> [<device>] [<args>]")
-    print ("")
-    print ("The '<device>' is usually an sd character device (ex: /dev/sdb or physicaldrive1).")
-    print ("")
-    print ("The following are all implemented sub-commands:")
-    print ("  check-PowerMode             Check Disk Power Mode")
-    print ("  accessible-MaxAddress       Send Accessible Max Address command")
-    print ("  identify                    Get identify information")
-    print ("  self-test                   Start a disk self test")
-    print ("  smart                       Get smart information")
-    print ("  standby                     Send standby command")
-    print ("  read                        Send a read command to disk")
-    print ("  write                       Send a write command to disk")
-    print ("  flush                       Send a flush command to disk")
-    print ("  trim                        Send a trim command to disk")
-    print ("  download_fw                 Download firmware to target disk")
-    print ("  version                     Shows the program version")
-    print ("  help                        Shows the program version")
-    print ("")
-    print ("See 'pysata <plugin> --help' for more information on a plugin")
+    if len(sys.argv) > 2 and sys.argv[2] in commands_dict:
+        func_name,sys.argv[2] = sys.argv[2],"--help"
+        commands_dict[func_name]()
+    else:
+        print ("pysata-%s" % Version)
+        print ("usage: pysata <command> [<device>] [<args>]")
+        print ("")
+        print ("The '<device>' is usually an sd character device (ex: /dev/sdb or physicaldrive1).")
+        print ("")
+        print ("The following are all implemented sub-commands:")
+        print ("  check-PowerMode             Check Disk Power Mode")
+        print ("  accessible-MaxAddress       Send Accessible Max Address command")
+        print ("  identify                    Get identify information")
+        print ("  self-test                   Start a disk self test")
+        print ("  smart                       Get smart information")
+        print ("  standby                     Send standby command")
+        print ("  read                        Send a read command to disk")
+        print ("  write                       Send a write command to disk")
+        print ("  flush                       Send a flush command to disk")
+        print ("  trim                        Send a trim command to disk")
+        print ("  download_fw                 Download firmware to target disk")
+        print ("  version                     Shows the program version")
+        print ("  help                        Display this help")
+        print ("")
+        print ("See 'pysata help <command>' or 'pysata <command> --help' for more information on a sub-command")
     return 0
 
 def _print_return_status(ata_status_return_descriptor):
