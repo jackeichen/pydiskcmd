@@ -301,16 +301,18 @@ class SQLiteDBDiskInfo(object):
         self._cursor.execute(sql)
         self._conn.commit()
 
-    def store_all_disks_id(self, devs):
+    def store_last_disks_id(self, devs):
         '''
+        Store the target devs id to json file
+        
         devices: a list that contain device ids.
         '''
         with open(_LastActiveDiskFile, 'w') as f:
             f.write(json.dumps(devs))
 
-    def get_all_disks_id(self):
+    def get_last_store_disks_id(self):
         '''
-        return a list of all disks id
+        return a list of all disks id that stored by func: store_last_disks_id
         '''
         target = []
         if os.path.exists(_LastActiveDiskFile):
@@ -319,6 +321,17 @@ class SQLiteDBDiskInfo(object):
                 if content:
                     target = json.loads(content)
         return target
+
+    def get_all_disks_id(self):
+        '''
+        get all the disks in table AllDiskDescriptor
+        
+        return: a list of all disks id
+        '''
+        sql = "SELECT DevID from AllDiskDescriptor"
+        self._cursor.execute(sql)
+        temp = self._cursor.fetchall()
+        return [i[0] for i in temp]
 
     def update_disk_info(self, 
                          disk_id, 

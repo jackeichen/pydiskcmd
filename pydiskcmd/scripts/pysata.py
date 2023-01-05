@@ -67,7 +67,7 @@ def check_power_mode():
         ## check device
         dev = sys.argv[2]
         if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
+            raise ("Device %s not exist!" % dev)
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing check power mode command')
@@ -120,7 +120,7 @@ def read_dma_ext():
         ## check device
         dev = sys.argv[2]
         if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
+            raise RuntimeError("Device %s not exist!" % dev)
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing read DMA EXT command.')

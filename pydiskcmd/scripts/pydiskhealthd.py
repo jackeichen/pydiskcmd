@@ -202,7 +202,7 @@ def pydiskhealthd():
     dev_pool = {}
     get_disk_context(dev_pool)
     # check if lost disks
-    dev_id_list = all_disk_info.get_all_disks_id()
+    dev_id_list = all_disk_info.get_last_store_disks_id()
     if dev_id_list:
         for k,v in dev_pool.items():
             if k in dev_id_list:
@@ -247,7 +247,7 @@ def pydiskhealthd():
         ### check device, add or lost
         get_disk_context(dev_pool)
         ## store all the disk info
-        all_disk_info.store_all_disks_id(list(dev_pool.keys()))
+        all_disk_info.store_last_disks_id(list(dev_pool.keys()))
         ### check process Now
         logger.info("Check all Device(s) ...")
         ## check every disk
