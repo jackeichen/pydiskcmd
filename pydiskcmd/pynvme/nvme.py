@@ -16,6 +16,8 @@ from pydiskcmd.pynvme.cdb_format import Format
 from pydiskcmd.pynvme.cdb_self_test import SelfTest
 from pydiskcmd.pynvme.cdb_ns_management import NSCreate,NSDelete
 from pydiskcmd.pynvme.cdb_ns_attachment import NSAttachment
+from pydiskcmd.pynvme.cdb_nvme_read import Read
+from pydiskcmd.pynvme.cdb_nvme_write import Write
 from pydiskcmd.exceptions import *
 
 code_version = "0.1.1"
@@ -346,3 +348,35 @@ class NVMe(object):
         cmd.check_return_status()
         return cmd
 
+    def read(self, ns_id, slba, nlba):
+        ## first get the lbaf
+        cmd = self.id_ns(ns_id=ns_id)
+        # 
+        flbaf = cmd.data[26] & 0x0F
+        start_labf_des = 128 + flbaf * 4
+        lbaf_ms = cmd.data[start_labf_des] + (cmd.data[start_labf_des+1] << 8)
+        lbaf_lbads = 2 ** (cmd.data[start_labf_des+2])
+        # get the data length
+        data_len = (nlba + 1) * lbaf_lbads
+        metadata_len = (nlba + 1) * lbaf_ms
+        if lbaf_ms > 0:
+            if (cmd.data[27] & 0x01): # extended data LBA
+                data_len += metadata_len
+                metadata_len = 0
+            elif (cmd.data[27] & 0x02):
+                pass
+            else:
+                metadata_len = 0
+        else:
+            metadata_len = 0
+        ##
+        cmd = Read(ns_id, slba, nlba, data_len=data_len, metadata_len=metadata_len)
+        self.execute(cmd)
+        cmd.check_return_status()
+        return cmd
+
+    def write(self, ns_id, slba, nlba, data, metadata_buffer=None):
+        cmd = Write(ns_id, slba, nlba, data, metadata_buffer=metadata_buffer)
+        self.execute(cmd)
+        cmd.check_return_status()
+        return cmd

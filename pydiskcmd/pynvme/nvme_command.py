@@ -112,6 +112,13 @@ class DataBuffer(LittleEndianStructure):
     def data_length(self):
         return self.__len
 
+    @data_buffer.setter
+    def data_buffer(self, value):
+        if isinstance(value, bytes):
+            self._data_buf.value = value
+        else:
+            raise RuntimeError("Need bytes object")
+
 
 def encode_data_buffer(data_dict,
                        check_dict,

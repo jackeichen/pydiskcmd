@@ -5,4 +5,4 @@
 version = "0.2.3"
 
 ## version format
-vresion_format = [int(i) for i in version.split(".")]
+version_format = [int(i) for i in version.split(".")]

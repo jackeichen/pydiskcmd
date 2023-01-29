@@ -51,6 +51,7 @@ def PlotTemperature(temperature_info, file_name):
     plt.plot([0, int(latest_time-early_time)], [DiskWarningTemp,DiskWarningTemp], linestyle='dashed', color='y', label='Warning')   # Warning
     plt.plot([0, int(latest_time-early_time)], [DiskCriticalTemp,DiskCriticalTemp], linestyle='dashed', color='r', label='Critical')# Critical
     #
+    plt.text(0, 0, start_t, ha='left', color='gray') 
     plt.title('Disk Temperature History')
     plt.xlabel("Time (seconds)")
     plt.ylabel("Temperature (C)")

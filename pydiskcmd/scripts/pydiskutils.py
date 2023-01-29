@@ -60,7 +60,7 @@ def pydiskutils():
     parser.add_option("", "--show_temperature", dest="show_temperature", action="store_true", default=False,
         help="Show the history of disk temperature")
     parser.add_option("-o", "--ouput_format", dest="ouput_format", action="store", default="console",
-        help="The format of output, should be console|pciture|jsonfile")
+        help="The format of output, should be console|picture|jsonfile")
     parser.add_option("-f", "--ouput_file", dest="ouput_file", action="store", default="",
         help="The name of output file.")
     parser.add_option("", "--enable", dest="enable_func", action="store", default="",
@@ -76,8 +76,8 @@ def pydiskutils():
     if os_type != "Linux":
         raise NotImplementedError("pydiskhealth cannot run in OS:%s" % os_type)
     #
-    if options.ouput_format not in ("console", "pciture", "jsonfile"):
-        parser.error("-o/--ouput_format should be one of console|pciture|jsonfile.")
+    if options.ouput_format not in ("console", "picture", "jsonfile"):
+        parser.error("-o/--ouput_format should be one of console|picture|jsonfile.")
     ##
     if options.show_stored_disk:
         info = get_stored_disk_info(target_dev_id=options.device_id)
@@ -135,7 +135,7 @@ def pydiskutils():
                                                temperature, "".join(negative_v)+"(0C)"+"".join(positive_v))
                            )
                 print ("-"*60)
-        elif options.ouput_format == "pciture":
+        elif options.ouput_format == "picture":
             if options.ouput_file:
                 file_name = options.ouput_file
             else:
@@ -144,6 +144,8 @@ def pydiskutils():
                 PlotTemperature(info, file_name)
             except ModuleNotFoundError:
                 print ("Please install matplotlib first.")
+            else:
+                print ("Saved to DiskTemperatureHistory.png")
         elif options.ouput_format == "jsonfile":
             pass
     elif options.enable_func:

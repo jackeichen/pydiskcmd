@@ -16,8 +16,10 @@ def format_dump_bytes(data, offset=0, end=None, byteorder='reversed', ascii_str=
         t = ''
         if byteorder == 'reversed':
             data = (d1, d0)
-        else:
+        elif byteorder == 'obverse':
             data = (d0, d1)
+        else:
+            raise RuntimeError("byteorder should be one of reversed|obverse")
         for d in data:
             if isinstance(d, int):
                 t += int_to_hex_map[(d >> 4) & 0x0F]

@@ -7,9 +7,11 @@ from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme import NVMe
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
+from pydiskcmd.pynvme.nvme_command import DataBuffer
 ##
 from pydiskcmd.pynvme.nvme_spec import *
 from pydiskcmd.system.env_var import os_type
+from pydiskcmd.system.os_tool import check_device_exist
 
 Version = '0.1.0'
 
@@ -49,6 +51,8 @@ def print_help():
         print ("  persistent_event_log  Get persistent event log from device")
         print ("  device-self-test      Perform the necessary tests to observe the performance")
         print ("  self-test-log         Retrieve the SELF-TEST Log, show it")
+        print ("  read                  Submit a read command, return results")
+        print ("  write                 Submit a write command, return results")
         print ("  version               Shows the program version")
         print ("  help                  Display this help")
         print ("")
@@ -106,7 +110,7 @@ def smart_log():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
         with NVMe(init_device(dev)) as d:
@@ -139,7 +143,7 @@ def id_ctrl():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
         with NVMe(init_device(dev)) as d:
@@ -182,7 +186,7 @@ def id_ns():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ## check namespace
         if not isinstance(options.namespace_id, int) or options.namespace_id < 1:
@@ -226,7 +230,7 @@ def error_log():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
         with NVMe(init_device(dev)) as d:
@@ -270,7 +274,7 @@ def fw_log():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
         with NVMe(init_device(dev)) as d:
@@ -305,7 +309,7 @@ def fw_download():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ## check namespace
         if not os.path.exists(options.fw_path):
@@ -329,7 +333,7 @@ def fw_commit():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
         smud = False
@@ -369,7 +373,7 @@ def nvme_format():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         if options.lbaf < 0:
             parser.error("You need give the lbaf.")
@@ -394,7 +398,7 @@ def persistent_event_log():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         # check options.filter
         _filter = []
@@ -483,7 +487,7 @@ self-test command:                                     \
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         # 
         if options.test_code not in (1, 2, 0xe, 0xf):
@@ -506,7 +510,7 @@ def self_test_log():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
         with NVMe(init_device(dev)) as d:
@@ -564,7 +568,7 @@ def get_feature():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         #
         if options.feature_id < 1:
@@ -633,7 +637,7 @@ def set_feature():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         #
         if options.feature_id < 1:
@@ -687,7 +691,7 @@ def nvme_create_ns():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         #
         if options.nsze < 1:
@@ -722,7 +726,7 @@ def nvme_delete_ns():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         #
         ##
@@ -745,7 +749,7 @@ def nvme_attach_ns():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         #
         ctrl_list = []
@@ -774,7 +778,7 @@ def nvme_detach_ns():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         #
         ctrl_list = []
@@ -805,7 +809,7 @@ def list_ns():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         #
         if options.all:
@@ -843,7 +847,7 @@ def list_ctrl():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not os.path.exists(dev):
+        if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         #
         if (options.namespace_id is not None) and (options.namespace_id < 1):
@@ -870,6 +874,99 @@ def list_ctrl():
     else:
         parser.print_help()
 
+def read():
+    usage="usage: %prog read <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=1,
+        help="namespace to read(default 1)")
+    parser.add_option("-s", "--start-block", type="int", dest="start_block", action="store", default=0,
+        help="64-bit addr of first block to access")
+    parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
+        help="number of blocks (zeroes based) on device to access")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["binary", "raw"],default="binary",
+        help="Output format: binary|raw, default binary")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.read(options.namespace_id, options.start_block, options.block_count)
+        cmd.check_return_status(success_hint=False, fail_hint=True)
+        ##
+        if options.output_format == "binary":
+            if cmd.meta_data:
+                print ("Metadata read:")
+                format_dump_bytes(cmd.meta_data, byteorder="obverse")
+            else:
+                print ("No metadata.")
+            print ("")
+            print ("Data read:")
+            format_dump_bytes(cmd.data, byteorder="obverse")
+        else:
+            if cmd.meta_data:
+                print ("Metadata read:")
+                print (cmd.meta_data)
+            else:
+                print ("No metadata.")
+            print ("")
+            print ("Data read:")
+            print (cmd.data)
+        ##
+    else:
+        parser.print_help()
+
+def write():
+    usage="usage: %prog write <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=1,
+        help="namespace to read(default 1)")
+    parser.add_option("-s", "--start-block", type="int", dest="start_block", action="store", default=0,
+        help="64-bit addr of first block to access")
+    parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
+        help="number of blocks (zeroes based) on device to access")
+    parser.add_option("-d", "--data", type="str", dest="data", action="store", default='',
+        help="String containing the block to write")
+    parser.add_option("-f", "--data-file", type="str", dest="dfile", action="store", default='',
+        help="File(Read first) containing the block to write")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        ## check data
+        temp_data = b''
+        if options.data:
+            temp_data = bytes(options.data, 'utf-8')
+        elif options.dfile:
+            if os.path.isfile(options.dfile):
+                with open(options.dfile, 'rb') as f:
+                    temp_data = f.read()
+        if temp_data:
+            data_l = len(temp_data)
+            # now data is 512b aligned
+            remainder = data_l % 512
+            if remainder:
+                data_l += (512-remainder) 
+            data_buffer = DataBuffer(data_l)
+            data_buffer.data_buffer = temp_data
+        else:
+            parser.error("Lack of input data")
+            return
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            print ('issuing write command')
+            print ("%s:" % d.device._file_name)
+            print ('')
+            cmd = d.write(options.namespace_id, options.start_block, options.block_count, data_buffer)
+    else:
+        parser.print_help()
+
 ###########################
 ###########################
 commands_dict = {"list": _list,
@@ -892,6 +989,8 @@ commands_dict = {"list": _list,
                  "persistent_event_log": persistent_event_log,
                  "device-self-test": device_self_test,
                  "self-test-log": self_test_log,
+                 "read": read,
+                 "write": write,
                  "version": version,
                  "help": print_help}
 
