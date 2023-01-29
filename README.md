@@ -19,8 +19,8 @@ of NVMe(which offer a better monitoring mechanism).
 While in Windows, rarely find out an open source user level disk tool. I hope it 
 is convenient to handle a disk in windows as if it is in Linux.
 
-This project is more of a code collection, it was born and grow in the open 
-source codes from github. Thanks to these contributors. 
+This project is more of a code collection, it was born and grow in the open source 
+codes from github.
 
 
 License
@@ -45,18 +45,19 @@ It is also available as a downloadable zip archive from:
 Support List
 ============
 
-| OS                    | SCSI | ATA | NVME |
-|-----------------------|------|-----|------|
-| CentOS/RHEL 7.6       | Y    | Y   | Y    |
-| CentOS/RHEL 8.4       | Y    | Y   | Y    |
-| Windows 10 Pro        | Y    | Y   | N,D  |
-| Windows Server 2019   | N    | N   | N    |
+| OS                    | arc | SCSI | ATA | NVME |
+|-----------------------|-----|------|-----|------|
+| CentOS/RHEL 7.6       | x64 | Y    | Y   | Y    |
+| CentOS/RHEL 8.4       | x64 | Y    | Y   | Y    |
+| Windows 10 Pro        | x64 | Y    | Y   | N,D  |
+| Windows Server 2019   | x64 | N    | N   | N    |
 
 Y: support, N: Non-support, D: developing.
 
 Note:
- 
+
     * Only some of the commands are tested, Do Not guarantee all the other commands work.
+    * This tool should work in CentOS/RHEL 7.x and 8.x
     * Be Carefull using in other windows version.
 
 
@@ -82,8 +83,8 @@ To build and install from the repository:
 
     $ pip install .
 
-After your installation, you can use command to enable Linux Bash Completion for 
-command pynvme&pysata(Only for Linux):
+After your installation, you can use command to enable or update Linux Bash 
+Completion for command pynvme&pysata&pyscsi(Only for Linux):
 
     $ pydiskutils --enable=cmd_completion
 
@@ -148,8 +149,8 @@ For NVMe Disk:
   * Persistent Event Logs;
   * AER Event Check;
 
-The tool provide a real-time NVMe Asynchronous Event Request check by reading Linux trace file.
-You can set the event you want to trigger it by sending nvme set-feature command. 
+The tool provide a real-time NVMe Asynchronous Event Request check by reading Linux trace file(Need Enable 
+Linux Trace function). You can set the event you want to trigger it by sending nvme set-feature command. 
 Examples(set temperature warning):
 
     $ pynvme get-feature /dev/nvme0 -f 0x0B 
@@ -194,6 +195,6 @@ model, serial number, disk health, temperature, etc...
 * smartie: https://github.com/TkTech/smartie
 
 
-Email
-=====
-If any support or ideas, contact author by email: Eric-1128@outlook.com
+Support
+=======
+If any support or ideas, open an issue, or contact author by email: Eric-1128@outlook.com
