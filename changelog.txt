@@ -10,6 +10,7 @@ Version 0.2.3
   * Add scripts->pydiskutils
     * Can check disk smart history
   * The tool can adapt the system time change when store data to DB
+  * Add more commands to project
 
 Version 0.2.2
   * Initial version add in changelog
