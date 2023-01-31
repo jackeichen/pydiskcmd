@@ -12,6 +12,8 @@ from pydiskcmd.pynvme.nvme_command import DataBuffer
 from pydiskcmd.pynvme.nvme_spec import *
 from pydiskcmd.system.env_var import os_type
 from pydiskcmd.system.os_tool import check_device_exist
+from pydiskcmd.system.lin_os_tool import map_pcie_addr_by_nvme_ctrl_path
+from pydiskcmd.pypci.pci_lib import map_pci_device
 
 Version = '0.1.0'
 
@@ -51,6 +53,7 @@ def print_help():
         print ("  persistent_event_log  Get persistent event log from device")
         print ("  device-self-test      Perform the necessary tests to observe the performance")
         print ("  self-test-log         Retrieve the SELF-TEST Log, show it")
+        print ("  pcie                  Get device PCIe status, show it")
         print ("  read                  Submit a read command, return results")
         print ("  write                 Submit a write command, return results")
         print ("  version               Shows the program version")
@@ -967,6 +970,85 @@ def write():
     else:
         parser.print_help()
 
+def pcie():
+    usage="usage: %prog pcie <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-p", "--power", type="str", dest="power", action="store",default="",
+        help="Check or set Pcie power(status|on|off), combine with --slot_num if set power on.")
+    parser.add_option("", "--slot_num", type="int", dest="slot_num", action="store", default=-1,
+        help="combine with -p on|status")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ##
+        PCIePowerPath = "/sys/bus/pci/slots/%s/power"
+        ##
+        if options.power and options.power not in ("status", "on", "off"):
+            parser.error("Check or set Pcie power should be in (status|on|off)")
+        ## check device
+        dev = sys.argv[2] 
+        if not check_device_exist(dev):
+            if options.power == "on":
+                if options.slot_num >= 0:
+                    print ("Device is offline, and you set the device slot number is %s." % options.slot_num)
+                    print ("")
+                    power_file = PCIePowerPath % options.slot_num
+                    if os.path.isfile(power_file):
+                        print ("Powering on device")
+                        with open(power_file, 'w') as f:
+                            f.write("1")
+                        return
+                    else:
+                        parser.error("Cannot find power file in %s" % power_file)
+                else:
+                    parser.error("You may need combine with --slot_num")
+            elif options.power == "status":
+                print ("Device is offline, and you set the device slot number is %s." % options.slot_num)
+                print ("")
+                if options.slot_num >= 0:
+                    power_file = PCIePowerPath % options.slot_num
+                    if os.path.isfile(power_file):
+                        with open(power_file, 'r') as f:
+                            status = f.read().strip()
+                        print ("Current PCIe power status: %s" % ("on" if status == '1' else "off"))
+                        return
+                    else:
+                        parser.error("Cannot find power file in %s" % power_file)
+                else:
+                    parser.error("You may need combine with --slot_num")
+            else:
+                raise RuntimeError("Device not support!")
+        ##
+        bus_address = map_pcie_addr_by_nvme_ctrl_path(dev)
+        if bus_address:
+            pcie_context = map_pci_device(bus_address)
+            if pcie_context:
+                print ("Device %s mapped to pcie address %s" % (dev, pcie_context.device_name))
+                print ('')
+                if options.power:
+                    pcie_parent = pcie_context.parent
+                    print ("Device Slot number is %s" % pcie_parent.express_slot.slot)
+                    power_file = PCIePowerPath % pcie_parent.express_slot.slot
+                    if os.path.isfile(power_file):
+                        if options.power == "status":
+                            with open(power_file, 'r') as f:
+                                status = f.read().strip()
+                            print ("Current PCIe power status: %s" % ("on" if status == '1' else "off"))
+                        elif options.power == "off":
+                            print ("Powering off device")
+                            with open(power_file, 'w') as f:
+                                f.write("0")
+                        else:
+                            print ("No need power on, device is online")
+                    else:
+                        parser.error("Cannot find power file, device %s: %s" % (dev, bus_address))
+            else:
+                parser.error("Cannot init pcie context, device %s: %s" % (dev, power_file))
+        else:
+            parser.error("You may need a device controller path, like /dev/nvme1")
+    else:
+        parser.print_help()
+
 ###########################
 ###########################
 commands_dict = {"list": _list,
@@ -989,6 +1071,7 @@ commands_dict = {"list": _list,
                  "persistent_event_log": persistent_event_log,
                  "device-self-test": device_self_test,
                  "self-test-log": self_test_log,
+                 "pcie": pcie,
                  "read": read,
                  "write": write,
                  "version": version,
