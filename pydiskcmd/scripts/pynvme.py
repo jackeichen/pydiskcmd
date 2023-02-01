@@ -977,6 +977,8 @@ def pcie():
         help="Check or set Pcie power(status|on|off), combine with --slot_num if set power on.")
     parser.add_option("", "--slot_num", type="int", dest="slot_num", action="store", default=-1,
         help="combine with -p on|status")
+    parser.add_option("-d", "--detail", dest="detail_info", action="store_true", default=False,
+        help="Get the detail information.")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -1027,21 +1029,40 @@ def pcie():
                 print ('')
                 if options.power:
                     pcie_parent = pcie_context.parent
-                    print ("Device Slot number is %s" % pcie_parent.express_slot.slot)
-                    power_file = PCIePowerPath % pcie_parent.express_slot.slot
-                    if os.path.isfile(power_file):
-                        if options.power == "status":
-                            with open(power_file, 'r') as f:
-                                status = f.read().strip()
-                            print ("Current PCIe power status: %s" % ("on" if status == '1' else "off"))
-                        elif options.power == "off":
-                            print ("Powering off device")
-                            with open(power_file, 'w') as f:
-                                f.write("0")
+                    if pcie_parent and pcie_parent.express_slot:
+                        print ("Device Slot number is %s" % pcie_parent.express_slot.slot)
+                        power_file = PCIePowerPath % pcie_parent.express_slot.slot
+                        if os.path.isfile(power_file):
+                            if options.power == "status":
+                                with open(power_file, 'r') as f:
+                                    status = f.read().strip()
+                                print ("Current PCIe power status: %s" % ("on" if status == '1' else "off"))
+                            elif options.power == "off":
+                                print ("Powering off device")
+                                with open(power_file, 'w') as f:
+                                    f.write("0")
+                            else:
+                                print ("No need power on, device is online")
                         else:
-                            print ("No need power on, device is online")
+                            parser.error("Cannot find power file, device %s: %s" % (dev, bus_address))
                     else:
-                        parser.error("Cannot find power file, device %s: %s" % (dev, bus_address))
+                        print ("Cannot find upstream device slot information.")
+                elif options.detail_info:
+                    print ("Bus address: %s" % pcie_context.device_name)
+                    print ("Location:    %s" % pcie_context.location)
+                    print ("Device Type: %s" % pcie_context.express_type)
+                    print ("Class ID:    %#x" % pcie_context.class_id)
+                    print ("Device Name: %s" % pcie_context.name)
+                    print ("")
+                    print ("VID=%#x, DID=%#x, SSVID=%#x, SSDID=%#x" % (pcie_context.vendor_id, pcie_context.device_id,pcie_context.subsystem_vendor,pcie_context.subsystem_device))
+                    if pcie_context.express_link:
+                        print ("Speed is %s(capable %s), width is %s(capable %s)" % (pcie_context.express_link.cur_speed,
+                                                                                     pcie_context.express_link.capable_speed,
+                                                                                     pcie_context.express_link.cur_width,
+                                                                                     pcie_context.express_link.capable_width)
+                              )
+                else:
+                    pass
             else:
                 parser.error("Cannot init pcie context, device %s: %s" % (dev, power_file))
         else:
