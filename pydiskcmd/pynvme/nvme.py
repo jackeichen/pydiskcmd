@@ -231,7 +231,7 @@ class NVMe(object):
                         lpou = (offset_by_byte >> 32) & 0xFFFF
                         cmd = PersistentEventLog(0, numd_mod-1, lpol=lpol, lpou=lpou, data_addr=data_addr)
                         self.execute(cmd)
-                        SC,SCT = cmd.check_status()
+                        SC,SCT = cmd.check_return_status()
                         if SCT == 0 and SC == 0:
                             if data_buffer:
                                 ret_data += bytes(data_buffer._data_buf)[0:numd_mod*4]

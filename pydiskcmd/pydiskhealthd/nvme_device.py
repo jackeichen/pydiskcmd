@@ -183,22 +183,65 @@ def get_dev_id(dev_path):
     return device_id.strip()
 
 
-class NVMeDevice(object):
+class NVMeDeviceBase(object):
+    """
+    dev_path: the nvme controller device path(ex. /dev/nvme0)
+    """
+    def __init__(self, dev_path):
+        self.__device_type = 'nvme'
+        self.dev_path = dev_path
+        ## get device ID
+        self.__model = None
+        self.__serial = None
+        self._id_ctrl = b''
+        with NVMe(init_device(dev_path, open_t="nvme")) as d:
+            self._id_ctrl = d.ctrl_identify_info
+            result = nvme_id_ctrl_decode(self._id_ctrl)
+        self.__serial = ba_to_ascii_string(result.get("SN"), "")
+        self.__model = ba_to_ascii_string(result.get("MN"), "")
+
+    @property
+    def device_id(self):
+        return self.__serial.strip()
+
+    @property
+    def device_type(self):
+        return self.__device_type
+
+    @property
+    def Model(self):
+        return self.__model
+
+    @property
+    def Serial(self):
+        return self.__serial
+
+    @property
+    def id_ctrl_info(self):
+        return self._id_ctrl
+
+
+class NVMeFeatureStatus(object):
+    def __init__(self):
+        self.pcie = True     # TODO, always pcie for now
+        self.smart = True    # TODO, always true for now
+        self.persistent_event_log = False
+        self.nvme_aer = True  # This is a Mandatory command
+
+
+class NVMeDevice(NVMeDeviceBase):
     """
     dev_path: the nvme controller device path(ex. /dev/nvme0)
     """
     def __init__(self, dev_path, init_db=False):
-        self.__device_type = 'nvme'
-        self.dev_path = dev_path
-        bus_address = self._get_bus_addr_by_controller(dev_path)
-        ## get device ID
-        self.__model = None
-        self.__serial = None
-        with NVMe(init_device(dev_path, open_t="nvme")) as d:
-            result = nvme_id_ctrl_decode(d.ctrl_identify_info)
-        self.__serial = ba_to_ascii_string(result.get("SN"), "")
-        self.__model = ba_to_ascii_string(result.get("MN"), "")
+        super(NVMeDevice, self).__init__(dev_path)
         self.__media_type = "SSD"
+        ##
+        self.nvme_feature_support = NVMeFeatureStatus()
+        if self.id_ctrl_info[261] & 0x10:
+            self.nvme_feature_support.persistent_event_log = True
+        ##
+        bus_address = self._get_bus_addr_by_controller(dev_path)
         ##
         self.pcie_context = map_pci_device(bus_address)
         self.__pcie_trace = PCIeTrace()
@@ -238,12 +281,8 @@ class NVMeDevice(object):
                     #print (self.__persistent_event_log.last_trace_event_begin)
 
     @property
-    def device_type(self):
-        return self.__device_type
-
-    @property
-    def device_id(self):
-        return self.__serial.strip()
+    def MediaType(self):
+        return self.__media_type
 
     @property
     def smart_trace(self):
@@ -256,18 +295,6 @@ class NVMeDevice(object):
     @property
     def persistent_event_log(self):
         return self.__persistent_event_log
-
-    @property
-    def Model(self):
-        return self.__model
-
-    @property
-    def Serial(self):
-        return self.__serial
-
-    @property
-    def MediaType(self):
-        return self.__media_type
 
     def _get_bus_addr_by_controller(self, ctrl):
         path = PCIeMappingPath % ctrl.replace("/dev/", "")
@@ -283,24 +310,26 @@ class NVMeDevice(object):
         persistent_event_log_data = None
         ##
         with NVMe(init_device(self.dev_path, open_t="nvme")) as d:
-            cmd = d.smart_log()
-            smart_data = cmd.data
+            if self.nvme_feature_support.smart:
+                cmd = d.smart_log()
+                smart_data = cmd.data
             ##
-            persistent_event_log_status = 0  # the state of persistent_event_log_status
-            persistent_event_log_ret = d.get_persistent_event_log(3, data_buffer=self.__persistent_event_log.data_buffer)
-            if persistent_event_log_ret == 6:
-                ## not support persistent_event_log
-                pass
-            else:
-                if persistent_event_log_ret == 1:
-                    ## the persistent_event_log is opened 
-                    persistent_event_log_status = 1
-                    ## need close it to refresh the log
-                    d.get_persistent_event_log(2, data_buffer=self.__persistent_event_log.data_buffer)
-                d.get_persistent_event_log(0, data_buffer=self.__persistent_event_log.data_buffer)
-                persistent_event_log_data = d.get_persistent_event_log(1, data_buffer=self.__persistent_event_log.data_buffer)
-                if persistent_event_log_status == 0: # if not open, then close it.
-                    d.get_persistent_event_log(2, data_buffer=self.__persistent_event_log.data_buffer)
+            if self.nvme_feature_support.persistent_event_log:
+                persistent_event_log_status = 0  # the state of persistent_event_log_status
+                persistent_event_log_ret = d.get_persistent_event_log(3, data_buffer=self.__persistent_event_log.data_buffer)
+                if persistent_event_log_ret == 6:
+                    ## not support persistent_event_log
+                    pass
+                else:
+                    if persistent_event_log_ret == 1:
+                        ## the persistent_event_log is opened 
+                        persistent_event_log_status = 1
+                        ## need close it to refresh the log
+                        d.get_persistent_event_log(2, data_buffer=self.__persistent_event_log.data_buffer)
+                    d.get_persistent_event_log(0, data_buffer=self.__persistent_event_log.data_buffer)
+                    persistent_event_log_data = d.get_persistent_event_log(1, data_buffer=self.__persistent_event_log.data_buffer)
+                    if persistent_event_log_status == 0: # if not open, then close it.
+                        d.get_persistent_event_log(2, data_buffer=self.__persistent_event_log.data_buffer)
         current_t = float(time.time())
         if smart_data:
             self.__smart_trace.set_smart(smart_data, current_t)
@@ -314,7 +343,8 @@ class NVMeDevice(object):
             if offset is not None:
                 current_trace_event_begin = persistent_event_log_data[512:512+offset]
             ##
-            self.__device_info_db.update_dev_info(current_t, smart_data, current_trace_event_begin)
+            if smart_data or current_trace_event_begin:
+                self.__device_info_db.update_dev_info(current_t, smart_data, current_trace_event_begin)
         return self.__smart_trace,self.__persistent_event_log
 
     def update_pcie_trace(self):

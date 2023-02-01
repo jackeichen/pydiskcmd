@@ -141,33 +141,70 @@ def get_dev_id(dev_path):
     return device_id.strip()
 
 
-class ATADevice(object):
+class ATADeviceBase(object):
+    """
+    dev_path: the nvme controller device path(ex. /dev/nvme0)
+    
+    
+    """
+    def __init__(self, dev_path):
+        self.__device_type = 'ata'
+        self.dev_path = dev_path
+        ##
+        self.__model = None
+        self.__serial = None
+        self._id_info = b''
+        with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:
+            self._id_info = d.identify_raw
+            cmd_identify = d.identify()
+            identify_info = cmd_identify.result
+        self.__model = bytearray2string(translocate_bytearray(identify_info.get("ModelNumber")))
+        self.__serial = bytearray2string(translocate_bytearray(identify_info.get("SerialNumber")))
+
+    @property
+    def device_id(self):
+        return self.__serial.strip()
+
+    @property
+    def device_type(self):
+        return self.__device_type
+
+    @property
+    def Model(self):
+        return self.__model
+
+    @property
+    def Serial(self):
+        return self.__serial
+
+    @property
+    def id_info(self):
+        return self._id_info
+
+
+class ATAFeatureStatus(object):
+    def __init__(self):
+        self.smart = False
+
+
+class ATADevice(ATADeviceBase):
     """
     dev_path: the nvme controller device path(ex. /dev/nvme0)
     
     
     """
     def __init__(self, dev_path, init_db=False):
-        self.__device_type = 'ata'
-        self.dev_path = dev_path
+        super(ATADevice, self).__init__(dev_path)
         # init smart trace,
         # the smart_read_thresh is persistent, so init it at first
-        self.__model = None
-        self.__serial = None
-        self.__smart_support= False
-        self.__smart_enable = False
+        self.ata_feature_status = ATAFeatureStatus()
+        if (self.id_info[164] & 0x01) and (self.id_info[170] & 0x01):
+            self.ata_feature_status.smart = True
         with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:
-            ##
-            self.__smart_support = d.identify_raw[164] & 0x01
-            self.__smart_enable = d.identify_raw[170] & 0x01
             ##
             cmd_thresh = d.smart_read_thresh()
             raw_data_thresh = cmd_thresh.datain
-            cmd_identify = d.identify()
-            identify_info = cmd_identify.result
         self.__smart_trace = SmartTrace(raw_data_thresh)
-        self.__model = bytearray2string(translocate_bytearray(identify_info.get("ModelNumber")))
-        self.__serial = bytearray2string(translocate_bytearray(identify_info.get("SerialNumber")))
         #
         with SCSI(init_device(self.dev_path, open_t="scsi"), blocksize=512) as d:
             cmd = d.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS)
@@ -202,24 +239,8 @@ class ATADevice(object):
                     #print (smart)
 
     @property
-    def device_type(self):
-        return self.__device_type
-
-    @property
-    def device_id(self):
-        return self.__serial.strip()
-
-    @property
     def smart_trace(self):
         return self.__smart_trace
-
-    @property
-    def Model(self):
-        return self.__model
-
-    @property
-    def Serial(self):
-        return self.__serial
 
     @property
     def MediaType(self):
@@ -227,7 +248,7 @@ class ATADevice(object):
 
     @property
     def smart_enable(self):
-        return (self.__smart_support and self.__smart_enable)
+        return self.ata_feature_status.smart
 
     def get_smart_once(self):
         current_t = float(time.time())
