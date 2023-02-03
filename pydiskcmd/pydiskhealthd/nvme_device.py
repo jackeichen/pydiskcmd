@@ -11,7 +11,7 @@ from pydiskcmd.pynvme.nvme_spec import persistent_event_log_header_decode,persis
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmd.pynvme.nvme_command import DataBuffer
 from pydiskcmd.pydiskhealthd.DB import disk_trace_pool
-from pydiskcmd.pydiskhealthd.linux_nvme_aer import AERTrace,AERTraceRL
+from pydiskcmd.pydiskhealthd.linux_nvme_aer import AERTrace,AERTraceRL,check_aer_support
 from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
 ###
 PCIeMappingPath = "/sys/class/nvme/%s/address"
@@ -240,6 +240,7 @@ class NVMeDevice(NVMeDeviceBase):
         self.nvme_feature_support = NVMeFeatureStatus()
         if self.id_ctrl_info[261] & 0x10:
             self.nvme_feature_support.persistent_event_log = True
+        ##
         ##
         bus_address = self._get_bus_addr_by_controller(dev_path)
         ##

@@ -8,6 +8,9 @@ KernelNVMeAERTraceFile = "/sys/kernel/debug/tracing/trace"
 KernelNVMeAERTracePIPEFile = "/sys/kernel/debug/tracing/trace_pipe"
 ###
 
+def check_aer_support():
+    return os.path.isfile(KernelNVMeAEREnable)
+
 class NVMeAER(object):
     '''
     NVMe Asynchronous Event Check

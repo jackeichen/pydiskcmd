@@ -14,7 +14,7 @@ from pydiskcmd.pydiskhealthd.default_config import DiskWarningTemp,DiskCriticalT
 ## 
 from pydiskcmd.pydiskhealthd.DB import all_disk_info,disk_trace_pool
 from pydiskcmd.pydiskhealthd.sata_device import ATADevice,ATADeviceBase
-from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,NVMeDeviceBase,AERTrace,AERTraceRL
+from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,NVMeDeviceBase,AERTrace,AERTraceRL,check_aer_support
 from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice,SCSIDeviceBase
 from pydiskcmd.utils.converter import scsi_ba_to_int
 ##
@@ -22,71 +22,97 @@ from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 ####
 tool_version = '0.1.1'
 ####
-def init_scsi_device(dev_context):
-    dev_context.init_db()
-    logger.info("Find new %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
-    # check if device info 
-    if dev_context.MediaType == "HDD":
-        media_type = 0
-    elif dev_context.MediaType == "SSD":
-        media_type = 1
-    else:
-        media_type = 255
-    if dev_context.device_type == "scsi":
-        protocal = 0
-    elif dev_context.device_type == "ata":
-        protocal = 1
-    elif dev_context.device_type == "nvme":
-        protocal = 2
-    else:
-        protocal = 255
-    all_disk_info.update_disk_info(dev_context.device_id, 
-                                   Model=dev_context.Model,
-                                   Serial=dev_context.Serial,
-                                   MediaType=media_type,
-                                   Protocal=protocal,)
-    ## check smart enbale 
-    if dev_context.smart_enable:
-        message = "Device: %s(ID: %s), Smart enable and add to monitor list." % (dev_context.dev_path, dev_context.device_id)
-        logger.info(message)
-    else:
-        message = "Device: %s(ID: %s), Smart is not support Or disabled." % (dev_context.dev_path, dev_context.device_id)
-        logger.info(message)
-
-def init_nvme_device(dev_context):
-    dev_context.init_db()
-    logger.info("Find new nvme device %s, ID: %s" % (dev_context.dev_path, dev_context.device_id))
+def init_scsi_device(dev_path):
+    dev_context = None
+    ### first act as a scsi device
+    try:
+        dev_context = SCSIDevice(dev_path)
+        ## judge the disk if is SATA device, by send an inquiry page=0x89(ATA Infomation)
+        i = dev_context.inquiry(INQUIRY.VPD.ATA_INFORMATION)
     ##
-    if dev_context.MediaType == "HDD":
-        media_type = 0
-    elif dev_context.MediaType == "SSD":
-        media_type = 1
+    except FileNotFoundError:
+        logger.warning("Skip device %s, device is removed." % dev_path)
+    except:
+        logger.error(traceback.format_exc())
     else:
-        media_type = 255
-    if dev_context.device_type == "scsi":
-        protocal = 0
-    elif dev_context.device_type == "ata":
-        protocal = 1
-    elif dev_context.device_type == "nvme":
-        protocal = 2
+        if ("identify" in i) and ("general_config" in i['identify']) and ("ata_device" in i['identify']['general_config']) and (i['identify']['general_config']['ata_device'] == 0):
+            ## change device to SATA Device interface
+            dev_context = ATADevice(dev_path)
+            logger.info("Device %s, change from scsi to sata" % dev_path)
+        logger.info("Find new %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
+        dev_context.init_db()
+        # check if device info 
+        if dev_context.MediaType == "HDD":
+            media_type = 0
+        elif dev_context.MediaType == "SSD":
+            media_type = 1
+        else:
+            media_type = 255
+        if dev_context.device_type == "scsi":
+            protocal = 0
+        elif dev_context.device_type == "ata":
+            protocal = 1
+        elif dev_context.device_type == "nvme":
+            protocal = 2
+        else:
+            protocal = 255
+        all_disk_info.update_disk_info(dev_context.device_id, 
+                                       Model=dev_context.Model,
+                                       Serial=dev_context.Serial,
+                                       MediaType=media_type,
+                                       Protocal=protocal,)
+        ## check smart enbale 
+        if dev_context.smart_enable:
+            message = "Device: %s(ID: %s), Smart enable and add to monitor list." % (dev_context.dev_path, dev_context.device_id)
+            logger.info(message)
+        else:
+            message = "Device: %s(ID: %s), Smart is not support Or disabled." % (dev_context.dev_path, dev_context.device_id)
+            logger.info(message)
+    return dev_context
+
+def init_nvme_device(dev_path):
+    dev_context = None
+    try:
+        dev_context = NVMeDevice(dev_path)
+    except FileNotFoundError:
+        logger.warning("Skip device %s, device is removed." % dev_path)
+    except:
+        logger.error(traceback.format_exc())
     else:
-        protocal = 255
-    all_disk_info.update_disk_info(dev_context.device_id, 
-                                   Model=dev_context.Model,
-                                   Serial=dev_context.Serial,
-                                   MediaType=media_type,
-                                   Protocal=protocal,)
-    ## check feature enbale
-    message = "Device %s(ID: %s) feature status: " % (dev_context.dev_path, dev_context.device_id)
-    logger.info(message)
-    message = "  pcie ........................... %s" % dev_context.nvme_feature_support.pcie
-    logger.info(message)
-    message = "  smart .......................... %s" % dev_context.nvme_feature_support.smart
-    logger.info(message)
-    message = "  persistent event log ........... %s" % dev_context.nvme_feature_support.persistent_event_log
-    logger.info(message)
-    message = "  nvme aer ....................... %s" % dev_context.nvme_feature_support.nvme_aer
-    logger.info(message)
+        logger.info("Find new nvme device %s, ID: %s" % (dev_context.dev_path, dev_context.device_id))
+        dev_context.init_db()
+        ##
+        if dev_context.MediaType == "HDD":
+            media_type = 0
+        elif dev_context.MediaType == "SSD":
+            media_type = 1
+        else:
+            media_type = 255
+        if dev_context.device_type == "scsi":
+            protocal = 0
+        elif dev_context.device_type == "ata":
+            protocal = 1
+        elif dev_context.device_type == "nvme":
+            protocal = 2
+        else:
+            protocal = 255
+        all_disk_info.update_disk_info(dev_context.device_id, 
+                                       Model=dev_context.Model,
+                                       Serial=dev_context.Serial,
+                                       MediaType=media_type,
+                                       Protocal=protocal,)
+        ## check feature enbale
+        message = "Device %s(ID: %s) feature status: " % (dev_context.dev_path, dev_context.device_id)
+        logger.info(message)
+        message = "  pcie ........................... %s" % dev_context.nvme_feature_support.pcie
+        logger.info(message)
+        message = "  smart .......................... %s" % dev_context.nvme_feature_support.smart
+        logger.info(message)
+        message = "  persistent event log ........... %s" % dev_context.nvme_feature_support.persistent_event_log
+        logger.info(message)
+        message = "  nvme aer ....................... %s" % dev_context.nvme_feature_support.nvme_aer
+        logger.info(message)
+    return dev_context
 
 def init_disk_context(devices):
     '''
@@ -96,38 +122,20 @@ def init_disk_context(devices):
         ## Skip nvme device, and scan SATA Or SAS Disk here
         if "nvme" not in dev:
             dev_path = "/dev/%s" % dev
-            ### first act as a scsi device
-            try:
-                dev_context = SCSIDevice(dev_path)
-                ## judge the disk if is SATA device, by send an inquiry page=0x89(ATA Infomation)
-                i = dev_context.inquiry(INQUIRY.VPD.ATA_INFORMATION)
-            ##
-            except FileNotFoundError:
-                logger.warning("Skip device %s, device is removed." % dev_path)
-            except:
-                logger.error(traceback.format_exc())
-            else:
-                if ("identify" in i) and ("general_config" in i['identify']) and ("ata_device" in i['identify']['general_config']) and (i['identify']['general_config']['ata_device'] == 0):
-                    ## change device to SATA Device interface
-                    dev_context = ATADevice(dev_path)
-                    logger.info("Device %s, change from scsi to sata" % dev_path)
-                init_scsi_device(dev_context)
+            dev_context = init_scsi_device(dev_path)
+            if dev_context:
                 devices[dev_context.device_id] = dev_context
     ## scan nvme device
     for ctrl_id in get_nvme_dev_info():
         dev_path = "/dev/%s" % ctrl_id
-        try:
-            dev_context = NVMeDevice(dev_path)
-        except FileNotFoundError:
-            logger.warning("Skip device %s, device is removed." % dev_path)
-        except:
-            logger.error(traceback.format_exc())
-        else:
-            init_nvme_device(dev_context)
+        dev_context = init_nvme_device(dev_path)
+        if dev_context:
             devices[dev_context.device_id] = dev_context
     return devices
 
 def check_dev_pool(devices):
+    temp_devices = {}
+    # scan scsi device
     for dev in get_block_devs(print_detail=False):
         ## Skip nvme device, and scan SATA Or SAS Disk here
         if "nvme" not in dev:
@@ -143,20 +151,13 @@ def check_dev_pool(devices):
             except:
                 logger.error(traceback.format_exc())
             else:
+                ## change from scsi to sata
                 if ("identify" in i) and ("general_config" in i['identify']) and ("ata_device" in i['identify']['general_config']) and (i['identify']['general_config']['ata_device'] == 0):
                     ## change device to SATA Device interface
                     dev_context = ATADeviceBase(dev_path)
                     logger.debug("Device %s, change from scsi to sata" % dev_path)
-                if dev_context.device_id in devices:
-                    # check if dev path changed, update it
-                    if dev_context.dev_path != devices[dev_context.device_id].dev_path:
-                        ## dev path changed, update it to the target
-                        logger.warning("Device(ID: %s) path changed from %s to %s" % (dev_context.device_id, devices[dev_context.device_id].dev_path, dev_context.dev_path))
-                        devices[dev_context.device_id].dev_path = dev_context.dev_path
-                else:
-                    init_scsi_device(dev_context)
-                    devices[dev_context.device_id] = dev_context
-    ## scan nvme device
+                temp_devices[dev_context.device_id] = dev_context
+    # scan nvme device
     for ctrl_id in get_nvme_dev_info():
         dev_path = "/dev/%s" % ctrl_id
         try:
@@ -166,15 +167,31 @@ def check_dev_pool(devices):
         except:
             logger.error(traceback.format_exc())
         else:
-            if dev_context.device_id in devices:
-                # check if dev path changed, update it
-                if dev_context.dev_path != devices[dev_context.device_id].dev_path:
-                    ## dev path changed, update it to the target
-                    logger.warning("Device(ID: %s) path changed from %s to %s" % (dev_context.device_id, devices[dev_context.device_id].dev_path, dev_context.dev_path))
-                    devices[dev_context.device_id].dev_path = dev_context.dev_path
+            temp_devices[dev_context.device_id] = dev_context
+    ## check with old devices
+    for dev_id in list(devices.keys()):
+        if dev_id in temp_devices:
+            temp_dev_context = temp_devices.pop(dev_id)
+            ## check if dev path changed, update it
+            if temp_dev_context.dev_path != devices[dev_id].dev_path:
+                ## dev path changed, update it to the target
+                logger.warning("Device(ID: %s) path changed from %s to %s" % (dev_id, devices[dev_id].dev_path, temp_dev_context.dev_path))
+                devices[dev_id].dev_path = temp_dev_context.dev_path
+        else:
+            message = "Device: %s(ID: %s), lost this device now!" % (devices[dev_id].dev_path, devices[dev_id].device_id)
+            logger.error(message)
+            syslog.info(message)
+            devices.pop(dev_id)
+    if temp_devices:
+        for dev_id in temp_devices.keys():
+            if temp_devices[dev_id].device_type == 'nvme':
+                dev_context = init_nvme_device(temp_devices[dev_id].dev_path)
+                if dev_context:
+                    devices[dev_context.device_id] = dev_context
             else:
-                init_nvme_device(dev_context)
-                devices[dev_context.device_id] = dev_context
+                dev_context = init_scsi_device(temp_devices[dev_id].dev_path)
+                if dev_context:
+                    devices[dev_context.device_id] = dev_context
 ###########
 ###########
 class Timer(object):
@@ -270,13 +287,13 @@ def pydiskhealthd():
                 logger.warning(message)
     ## init aer
     aer_trace = None
-    if options.nvme_aer_type == 'loop':
+    if check_aer_support() and options.nvme_aer_type == 'loop':
         try:
             # init aer
             aer_trace = AERTrace()
         except:
             pass
-    elif options.nvme_aer_type == 'real_time':
+    elif check_aer_support() and options.nvme_aer_type == 'real_time':
         try:
             # init aer
             aer_trace = AERTraceRL()
@@ -298,12 +315,11 @@ def pydiskhealthd():
         timer.reinit()
         ### check device, add or lost
         check_dev_pool(dev_pool)
-        ## store all the disk info
-        all_disk_info.store_last_disks_id(list(dev_pool.keys()))
         ### check process Now
         logger.info("Check all Device(s) ...")
         ## check every disk
-        for dev_id,dev_context in dev_pool.items():
+        for dev_id in list(dev_pool.keys()):
+            dev_context = dev_pool[dev_id]
             if dev_context.device_type == 'nvme':
                 try:
                 ### update log
@@ -312,6 +328,7 @@ def pydiskhealthd():
                     message = "Device: %s(ID: %s), we lost this device now!" % (dev_context.dev_path, dev_context.device_id)
                     logger.error(message)
                     syslog.info(message)
+                    dev_pool.pop(dev_id)
                     continue  # skip this device 
                 ### check smart Now
                 if dev_context.nvme_feature_support.smart:
@@ -640,6 +657,7 @@ def pydiskhealthd():
                     message = "Device: %s(ID: %s), we lost this device now!" % (dev_context.dev_path, dev_context.device_id)
                     logger.error(message)
                     syslog.info(message)
+                    dev_pool.pop(dev_id)
                     continue  # skip this device 
                 ###
                 if dev_context.smart_enable:              
@@ -734,6 +752,8 @@ def pydiskhealthd():
                             logger.info(message)
             else:  # SCSI(SAS) Disk
                 pass
+        ### store all the disk info
+        all_disk_info.store_last_disks_id(list(dev_pool.keys()))
         ### check aer for nvme
         if aer_trace and options.nvme_aer_type == 'loop':
             ## check nvme aer now

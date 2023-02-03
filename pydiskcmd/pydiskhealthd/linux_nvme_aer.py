@@ -4,7 +4,7 @@
 import os
 import queue
 import threading
-from pydiskcmd.pynvme.linux_nvme_aer import NVMeAER,KernelNVMeAERTracePIPEFile
+from pydiskcmd.pynvme.linux_nvme_aer import NVMeAER,KernelNVMeAERTracePIPEFile,check_aer_support
 
 
 class AERTrace(object):
