@@ -18,6 +18,7 @@ from pydiskcmd.pynvme.cdb_ns_management import NSCreate,NSDelete
 from pydiskcmd.pynvme.cdb_ns_attachment import NSAttachment
 from pydiskcmd.pynvme.cdb_nvme_read import Read
 from pydiskcmd.pynvme.cdb_nvme_write import Write
+from pydiskcmd.pynvme.cdb_nvme_flush import Flush
 from pydiskcmd.exceptions import *
 
 code_version = "0.1.1"
@@ -150,7 +151,7 @@ class NVMe(object):
         '''
         ## by nvme spec 1.4a
         if not (self.__ctrl_identify_info[261] & 0x10):
-            print ("Device Not support Persistent Event log.")
+            # print ("Device Not support Persistent Event log.")
             return 6
         extend_cap = (self.__ctrl_identify_info[261] & 0x04)
         ##
@@ -159,7 +160,7 @@ class NVMe(object):
             data_addr = data_buffer.addr
             ## need check data_buffer is multiple of 4 kib
             if data_buffer.data_length < 16384:
-                print ("data buffer for persistent_event_log need >= 16KiB")
+                # print ("data buffer for persistent_event_log need >= 16KiB")
                 return 7
         event_log_size_max = scsi_ba_to_int(self.__ctrl_identify_info[352:356], 'little')  # 64Kib unit
         if action == 0:
@@ -175,10 +176,10 @@ class NVMe(object):
             # if command abort, then Context is already established
             SC,SCT = cmd.check_return_status(False, False)
             if SCT == 0 and SC == 0:
-                print ("Context is established.")
+                # print ("Context is established.")
                 return 0
             elif SCT == 0 and SC == 0x0C:
-                print ("Context is already established by others.")
+                # print ("Context is already established by others.")
                 return 0
             else:
                 return 2
@@ -224,7 +225,7 @@ class NVMe(object):
                                 ret_data += cmd.data
                             offset_by_byte += 16384
                         else:
-                            print ("Failed in cycle %s" % i)
+                            # print ("Failed in cycle %s" % i)
                             return 3
                     if numd_mod:
                         lpol = offset_by_byte & 0xFFFF
@@ -257,8 +258,8 @@ class NVMe(object):
             else:
                 return 5
         else:
-            print ("Action should be 0|1|2|3.")
-            return 6
+            # print ("Action should be 0|1|2|3.")
+            return 8
 
     def self_test_log(self):
         cmd = SelfTestLog()
@@ -344,6 +345,12 @@ class NVMe(object):
 
     def ns_attachment(self, ns_id, sel, ctrl_id_list):
         cmd = NSAttachment(ns_id, sel, ctrl_id_list)
+        self.execute(cmd)
+        cmd.check_return_status()
+        return cmd
+
+    def flush(self, ns_id):
+        cmd = Flush(ns_id)
         self.execute(cmd)
         cmd.check_return_status()
         return cmd

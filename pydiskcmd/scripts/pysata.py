@@ -313,7 +313,7 @@ def self_test():
     usage="usage: %prog self-test <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-t", "--test", type="choice", dest="self_test", action="store", choices=["short", "long"], default='short',
-        help="Start a self test")
+        help="Start a self test, short|long")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
 

@@ -54,6 +54,7 @@ def print_help():
         print ("  device-self-test      Perform the necessary tests to observe the performance")
         print ("  self-test-log         Retrieve the SELF-TEST Log, show it")
         print ("  pcie                  Get device PCIe status, show it")
+        print ("  read                  Submit a flush command, return results")
         print ("  read                  Submit a read command, return results")
         print ("  write                 Submit a write command, return results")
         print ("  version               Shows the program version")
@@ -413,7 +414,13 @@ def persistent_event_log():
         ##
         with NVMe(init_device(dev)) as d:
             ret = d.get_persistent_event_log(options.action)
-        if True:
+        if ret == 6:
+            print ("Device Not support Persistent Event log.")
+        elif ret == 7:
+            print ("data buffer for persistent event log need >= 16KiB")
+        elif ret == 8:
+            print ("Action should be 0|1|2|3.")
+        else:
             if options.action == 3:
                 if ret == 0:
                     print ("Context Not Established!")
@@ -421,7 +428,15 @@ def persistent_event_log():
                     print ("Context Established!")
                 else:
                     print ("Command failed.")
+            elif options.action == 0:
+                if ret == 0:
+                    print ("Context is established.")
+                else:
+                    print ("Other errors, error code: %s." % ret)
             elif options.action == 1:
+                if ret == 3:
+                    print ("Command failed in get persistent event log")
+                    return
                 if not ret:
                     print ("No avaliable data, please check if support persistent event log Or if open the context")
                     return
@@ -502,6 +517,8 @@ self-test command:                                     \
             print ("The controller or NVM subsystem already has a device self-test operation in process.")
         else:
             print ("Command Specific Status ValuesL: %#x" % cmd.cq_status)
+    else:
+        parser.print_help()
 
 def self_test_log():
     usage="usage: %prog self-test-log <device> [OPTIONS]"
@@ -970,6 +987,25 @@ def write():
     else:
         parser.print_help()
 
+def flush():
+    usage="usage: %prog flush <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0xFFFFFFFF,
+        help="Indicate the namespace in which the device flush has to be carried out")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.flush(options.namespace_id)
+        cmd.check_return_status(True)
+    else:
+        parser.print_help()
+
 def pcie():
     usage="usage: %prog pcie <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -1093,6 +1129,7 @@ commands_dict = {"list": _list,
                  "device-self-test": device_self_test,
                  "self-test-log": self_test_log,
                  "pcie": pcie,
+                 "flush": flush,
                  "read": read,
                  "write": write,
                  "version": version,
