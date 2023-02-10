@@ -29,14 +29,18 @@ class SmartReadData(ATACommand12):
 
     def __init__(self,
                  smart_key=None):
+        ##
+        # count is not used by samrt read data in ATA command set,
+        # so use it in ATAPassthrouh12, for setting transfer length
+        ##
         ATACommand12.__init__(self,
                               0xD0,        # fetures
-                              0,           # count
+                              1,           # count
                               0xC24F << 8, # lba
                               0,           # device
                               0xB0,        # command
                               0x04,        # protocal
-                              3,           # t_length
+                              2,           # t_length
                               1,           # t_dir
                               extra_tl=1)             
 
@@ -63,14 +67,18 @@ class SmartReadThresh(ATACommand12):
     A class to send smart command to a ATA device
     """
     def __init__(self):
+        ##
+        # count is not used by samrt read thresh in ATA command set,
+        # so use it in ATAPassthrouh12, for setting transfer length
+        ##
         ATACommand12.__init__(self,
                               0xD1,        # fetures
-                              0,           # count
+                              1,           # count
                               0xC24F << 8, # lba
                               0,           # device
                               0xB0,        # command
                               0x04,        # protocal
-                              3,           # t_length
+                              2,           # t_length
                               1,           # t_dir
                               extra_tl=1)
 

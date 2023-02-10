@@ -33,7 +33,7 @@ class DownloadMicrocode(ATACommand12):
                               0,         # device
                               0x92,      # command
                               0x05,      # protocal
-                              3,         # t_length
+                              2,         # t_length
                               0,         # t_dir
                               data=data)
 
