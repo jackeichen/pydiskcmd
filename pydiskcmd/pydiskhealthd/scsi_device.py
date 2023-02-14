@@ -5,6 +5,7 @@ import time
 from pydiskcmd.pyscsi.scsi import SCSI
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
+from pydiskcmd.exceptions import DeviceTypeError
 ##
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 
@@ -84,6 +85,8 @@ class SCSIDevice(SCSIDeviceBase):
         ##
         self.__media_type = None
         blk_dev_char = self.inquiry(INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS)
+        if blk_dev_char.get("medium_rotation_rate") is None:
+            raise DeviceTypeError("Unkonwn Device Type.")
         if blk_dev_char.get("medium_rotation_rate") == 1:
             self.__media_type = "SSD"
         elif blk_dev_char.get("medium_rotation_rate") > 1:

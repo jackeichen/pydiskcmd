@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 from pydiskcmd.pysata.ata_command import ATACommand12
+from pydiskcmd.pysata.ata_command import ATACommand16
 
 
 class DownloadMicrocode(ATACommand12):
@@ -27,6 +28,27 @@ class DownloadMicrocode(ATACommand12):
                  data,
                  feature=0x03):
         ATACommand12.__init__(self,
+                              feature,   # fetures
+                              count,     # count
+                              lba,       # lba
+                              0,         # device
+                              0x92,      # command
+                              0x05,      # protocal
+                              2,         # t_length
+                              0,         # t_dir
+                              data=data)
+
+
+class DownloadMicrocode16(ATACommand16):
+    """
+    A class to send download microcode command to a ATA device
+    """
+    def __init__(self,
+                 lba,
+                 count,
+                 data,
+                 feature=0x03):
+        ATACommand16.__init__(self,
                               feature,   # fetures
                               count,     # count
                               lba,       # lba
@@ -52,3 +74,19 @@ class ActivateMicrocode(ATACommand12):
                               0x03,      # protocal
                               0,         # t_length
                               0)         # t_dir
+
+
+class ActivateMicrocode16(ATACommand16):
+    """
+    A class to send activate download microcode command to a ATA device
+    """
+    def __init__(self):
+        ATACommand16.__init__(self,
+                              0x0F,      # fetures
+                              0,         # count
+                              0,         # lba
+                              0,         # device
+                              0x92,      # command
+                              0x03,      # protocal
+                              0,         # t_length
+                              0)  

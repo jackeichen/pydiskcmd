@@ -32,6 +32,8 @@ def init_scsi_device(dev_path):
     ##
     except FileNotFoundError:
         logger.warning("Skip device %s, device is removed." % dev_path)
+    except DeviceTypeError:
+        logger.warning("Unknown device %s, device is removed." % dev_path)
     except:
         logger.error(traceback.format_exc())
     else:
@@ -76,6 +78,8 @@ def init_nvme_device(dev_path):
         dev_context = NVMeDevice(dev_path)
     except FileNotFoundError:
         logger.warning("Skip device %s, device is removed." % dev_path)
+    except DeviceTypeError:
+        logger.warning("Unknown device %s, device is removed." % dev_path)
     except:
         logger.error(traceback.format_exc())
     else:

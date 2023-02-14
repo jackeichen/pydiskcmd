@@ -4,20 +4,40 @@
 # SPDX-FileCopyrightText: 2014 The python-scsi Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
-from pydiskcmd.pysata.ata_cdb_AccessibleMaxAddress import AccessibleMaxAddressCfg
-from pydiskcmd.pysata.ata_cdb_smart import SmartReadData,SmartReadThresh,SmartExeOffLineImm
-from pydiskcmd.pysata.ata_cdb_readDMAEXT16 import ReadDMAEXT16
-from pydiskcmd.pysata.ata_cdb_writeDMAEXT16 import WriteDMAEXT16
-from pydiskcmd.pysata.ata_cdb_dsm import DSM
-from pydiskcmd.pysata.ata_cdb_identify import Identify
-from pydiskcmd.pysata.ata_cdb_flush import Flush
-from pydiskcmd.pysata.ata_cdb_checkpowermode import CheckPowerMode
-from pydiskcmd.pysata.ata_cdb_standbyImm import StandbyImm
-from pydiskcmd.pysata.ata_cdb_hardreset import Hardreset
-from pydiskcmd.pysata.ata_cdb_softreset import SoftReset
-from pydiskcmd.pysata.ata_cdb_DeviceReset import DeviceReset
-from pydiskcmd.pysata.ata_cdb_executeDeviceDiagnostic import ExecuteDeviceDiagnostic
-from pydiskcmd.pysata.ata_cdb_downloadmicrocode import DownloadMicrocode,ActivateMicrocode
+from pydiskcmd.system.env_var import os_type
+if os_type == "Windows":
+    from pydiskcmd.pysata.ata_cdb_AccessibleMaxAddress import AccessibleMaxAddressCfg
+    from pydiskcmd.pysata.ata_cdb_smart import SmartReadData16 as SmartReadData
+    from pydiskcmd.pysata.ata_cdb_smart import SmartReadThresh16 as SmartReadThresh
+    from pydiskcmd.pysata.ata_cdb_smart import SmartExeOffLineImm16 as SmartExeOffLineImm
+    from pydiskcmd.pysata.ata_cdb_readDMAEXT16 import ReadDMAEXT16
+    from pydiskcmd.pysata.ata_cdb_writeDMAEXT16 import WriteDMAEXT16
+    from pydiskcmd.pysata.ata_cdb_dsm import DSM
+    from pydiskcmd.pysata.ata_cdb_identify import Identify16 as Identify
+    from pydiskcmd.pysata.ata_cdb_flush import Flush
+    from pydiskcmd.pysata.ata_cdb_checkpowermode import CheckPowerMode16 as CheckPowerMode
+    from pydiskcmd.pysata.ata_cdb_standbyImm import StandbyImm16 as StandbyImm
+    from pydiskcmd.pysata.ata_cdb_hardreset import Hardreset
+    from pydiskcmd.pysata.ata_cdb_softreset import SoftReset
+    from pydiskcmd.pysata.ata_cdb_DeviceReset import DeviceReset16 as DeviceReset
+    from pydiskcmd.pysata.ata_cdb_executeDeviceDiagnostic import ExecuteDeviceDiagnostic16 as ExecuteDeviceDiagnostic
+    from pydiskcmd.pysata.ata_cdb_downloadmicrocode import DownloadMicrocode16 as DownloadMicrocode
+    from pydiskcmd.pysata.ata_cdb_downloadmicrocode import ActivateMicrocode16 as ActivateMicrocode
+else:
+    from pydiskcmd.pysata.ata_cdb_AccessibleMaxAddress import AccessibleMaxAddressCfg
+    from pydiskcmd.pysata.ata_cdb_smart import SmartReadData,SmartReadThresh,SmartExeOffLineImm
+    from pydiskcmd.pysata.ata_cdb_readDMAEXT16 import ReadDMAEXT16
+    from pydiskcmd.pysata.ata_cdb_writeDMAEXT16 import WriteDMAEXT16
+    from pydiskcmd.pysata.ata_cdb_dsm import DSM
+    from pydiskcmd.pysata.ata_cdb_identify import Identify
+    from pydiskcmd.pysata.ata_cdb_flush import Flush
+    from pydiskcmd.pysata.ata_cdb_checkpowermode import CheckPowerMode
+    from pydiskcmd.pysata.ata_cdb_standbyImm import StandbyImm
+    from pydiskcmd.pysata.ata_cdb_hardreset import Hardreset
+    from pydiskcmd.pysata.ata_cdb_softreset import SoftReset
+    from pydiskcmd.pysata.ata_cdb_DeviceReset import DeviceReset
+    from pydiskcmd.pysata.ata_cdb_executeDeviceDiagnostic import ExecuteDeviceDiagnostic
+    from pydiskcmd.pysata.ata_cdb_downloadmicrocode import DownloadMicrocode,ActivateMicrocode
 ###
 from pyscsi.pyscsi.scsi_enum_command import spc, sbc, smc, ssc, mmc
 from pyscsi.pyscsi.scsi_cdb_inquiry import Inquiry
