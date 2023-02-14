@@ -50,7 +50,7 @@ Support List
 | CentOS/RHEL 7.6       | x64 | Y    | Y   | Y    |
 | CentOS/RHEL 8.4       | x64 | Y    | Y   | Y    |
 | Windows 10 Pro        | x64 | Y    | Y   | N,D  |
-| Windows Server 2019   | x64 | N    | N   | N    |
+| Windows Server 2019   | x64 | Y    | Y   | N    |
 
 Y: support, N: Non-support, D: developing.
 
@@ -77,7 +77,7 @@ Extra Python3 Module Requirements by Linux:
 Sofware Requirements:
 
     * python3
-    * python3-devel
+    * python3-devel(only for linux)
 
 To build and install from the repository:
 
