@@ -9,7 +9,7 @@ _pysata_cmds="check-PowerMode accessible-MaxAddress identify self-test \
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
           format persistent_event_log device-self-test self-test-log get-feature \
           set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns nvme-attach-ns \
-          nvme-detach-ns pcie flush read write version help"
+          nvme-detach-ns commands-se-log pcie flush read write version help"
 
 _pyscsi_cmds="inq getlbastatus read write version help"
 
@@ -162,6 +162,9 @@ pynvme_list_opts () {
 		opts+=" -n --namespace-id= -o --output-format= -h --help"
 		;;
         "error-log")
+		opts+=" -o --output-format= -h --help"
+        ;;
+        "commands-se-log")
 		opts+=" -o --output-format= -h --help"
 		;;
         "fw-log")

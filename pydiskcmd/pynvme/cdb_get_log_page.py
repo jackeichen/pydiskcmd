@@ -97,5 +97,17 @@ if os_type == "Linux":
                                                      cdw12=cdw12,
                                                      cdw13=cdw13,)
 
+
+    class CommandsSupportedAndEffectsLog(Command):
+        def __init__(self):
+            numdl = int(4096 / 4) - 1
+            cdw10 = build_command({"lid": (0xFF, 0, 0x05),      # log id
+                                   "numdl": (0x0FFF, 2, numdl),})
+            ##     
+            super(CommandsSupportedAndEffectsLog, self).__init__(IOCTL_REQ,
+                                                                 opcode=CmdOPCode,
+                                                                 data_len=4096,
+                                                                 cdw10=cdw10)
+
 else:
     raise NotImplementedError("%s not support" % os_type)

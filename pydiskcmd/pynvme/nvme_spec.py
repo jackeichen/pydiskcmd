@@ -230,6 +230,15 @@ self_test_return_data_struc_bit_mask = {"test_result": [0x0F, 0],          ##  t
                                         "status_code": ('b', 25, 1),       ##  Status Code
                                         }
 
+commands_supported_and_effects_bit_mask = {"CSUPP": [0x01, 0],
+                                           "LBCC": [0x02, 0],
+                                           "NCC": [0x04, 0],
+                                           "NIC": [0x08, 0],
+                                           "CCC": [0x10, 0],
+                                           "CSE": [0x07, 2],
+                                           "UUIDSS": [0x08, 2],
+                                           }
+
 
 
 class ErrorInfomationLogEntryUnit(object):
@@ -368,3 +377,19 @@ def decode_ns_list_format(raw_data):
             break
         target.append(v)
     return target
+
+def decode_commands_supported_and_effects(data):
+    result = [[], []]
+    # admin command
+    for i in range(256):
+        temp = {"opcode": i}
+        decode_bits(data[i*4:(i+1)*4], commands_supported_and_effects_bit_mask, temp)
+        if temp["CSUPP"]:
+            result[0].append(temp)
+    # IO command
+    for i in range(256, 512):
+        temp = {"opcode": i-256}
+        decode_bits(data[i*4:(i+1)*4], commands_supported_and_effects_bit_mask, temp)
+        if temp["CSUPP"]:
+            result[1].append(temp)
+    return result

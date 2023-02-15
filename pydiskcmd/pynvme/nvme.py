@@ -10,6 +10,7 @@ from pydiskcmd.pynvme.cdb_set_feature import SetFeature
 from pydiskcmd.pynvme.cdb_get_feature import GetFeature
 from pydiskcmd.pynvme.cdb_get_feature import GetFeature
 from pydiskcmd.pynvme.cdb_get_log_page import FWSlotInfo,ErrorLog,SmartLog,SelfTestLog,PersistentEventLog
+from pydiskcmd.pynvme.cdb_get_log_page import CommandsSupportedAndEffectsLog
 from pydiskcmd.pynvme.cdb_fw_download import FWImageDownload
 from pydiskcmd.pynvme.cdb_fw_commit import FWCommit
 from pydiskcmd.pynvme.cdb_format import Format
@@ -263,6 +264,12 @@ class NVMe(object):
 
     def self_test_log(self):
         cmd = SelfTestLog()
+        self.execute(cmd)
+        cmd.check_return_status()
+        return cmd
+
+    def commands_supported_and_effects_log(self):
+        cmd = CommandsSupportedAndEffectsLog()
         self.execute(cmd)
         cmd.check_return_status()
         return cmd

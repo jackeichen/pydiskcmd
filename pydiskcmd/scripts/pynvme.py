@@ -44,6 +44,7 @@ def print_help():
         print ("  nvme-attach-ns        Attaches a namespace to requested controller(s)")
         print ("  nvme-detach-ns        Detaches a namespace from requested controller(s)")
         print ("  error-log             Retrieve Error Log, show it")
+        print ("  commands-se-log       Retrieve Commands Supported and Effects Log, and show it")
         print ("  fw-log                Retrieve FW Log, show it")
         print ("  fw-download           Download new firmware")
         print ("  fw-commit             Verify and commit firmware to a specific slot")
@@ -554,6 +555,58 @@ def self_test_log():
                             v = scsi_ba_to_int(v, 'little')
                         print (print_format % (_k, v))
                     print ('-'*45)
+        else:
+            print (cmd.data)
+    else:
+        parser.print_help()
+
+def commands_supported_and_effects():
+    usage="usage: %prog commands-se-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev)) as d:
+            cmd = d.commands_supported_and_effects_log()
+        ##
+        if options.output_format == "binary":
+            format_dump_bytes(cmd.data)
+        elif options.output_format == "normal":
+            result = decode_commands_supported_and_effects(cmd.data)
+            admin_cmd = result[0]
+            io_cmd = result[1]
+            if admin_cmd:
+                print ("Admin Command support:")
+                for i in admin_cmd:
+                    print ("."*10)
+                    print ("%-8s: %d" % ("opcode", i.get("opcode")))
+                    for k,v in i.items():
+                        if k != "opcode":
+                            print ("%-8s: %d" % (k, v))
+            else:
+                print ("No support admin command")
+                print ("")
+            print ("")
+            print ("")
+            if io_cmd:
+                print ("IO Command support:")
+                for i in io_cmd:
+                    print ("."*10)
+                    print ("%-8s: %d" % ("opcode", i.get("opcode")))
+                    for k,v in i.items():
+                        if k != "opcode":
+                            print ("%-8s: %d" % (k, v))
+            else:
+                print ("No support admin command")
+                print ("")
+            print ("")
         else:
             print (cmd.data)
     else:
@@ -1128,6 +1181,7 @@ commands_dict = {"list": _list,
                  "persistent_event_log": persistent_event_log,
                  "device-self-test": device_self_test,
                  "self-test-log": self_test_log,
+                 "commands-se-log": commands_supported_and_effects,
                  "pcie": pcie,
                  "flush": flush,
                  "read": read,
