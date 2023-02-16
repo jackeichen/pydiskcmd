@@ -84,8 +84,9 @@ elif os_type == "Windows":
 
         def _is_replugged(self):
             #  type: (WinDevice) -> bool
-            ino = get_inode(self._file_name)
-            return ino != self._ino
+            # TODO
+            # always return False,
+            return False
 
         def open(self):
             """

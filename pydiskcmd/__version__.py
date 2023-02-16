@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-version = "0.2.3"
+version = "0.2.4"
 
 ## version format
 version_format = [int(i) for i in version.split(".")]

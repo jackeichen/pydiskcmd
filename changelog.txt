@@ -9,9 +9,10 @@ versions of pydiskcmd and detailed changes.
 Version 0.2.3
   * Add scripts->pydiskutils
     * Can check disk smart history
-  * The tool can adapt the system time change when store data to DB
+  * The tool can adapt the system time change when store data to DB(pydiskhealthd)
   * Add more commands to project
   * split pcicrawler as a dependency 
+  * Windows should spport ATA&SCSI command set
 
 Version 0.2.2
   * Initial version add in changelog

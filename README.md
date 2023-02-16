@@ -59,6 +59,7 @@ Note:
     * Only some of the commands are tested, Do Not guarantee all the other commands work.
     * This tool should work in CentOS/RHEL 7.x and 8.x
     * Be Carefull using in other windows version.
+    * Support Direct-Connection, RAID card is not support.
 
 
 Building and installing
