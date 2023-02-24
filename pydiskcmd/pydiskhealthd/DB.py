@@ -155,6 +155,15 @@ class SQLiteTable(object):
                 self.__current_id = next_id
                 self.__current_tag = current_tag
                 self.__roll_over = roll_over
+            elif not roll_over: ## timestamp may not right
+                sql = '''UPDATE %s
+                         set value_tag = %d,timestamp = %f,smart = %s
+                         WHERE ID = %d
+                      ''' % (self.__table_name, current_tag, timestamp, '?', next_id)
+                if self.run_sql(sql, args=(sqlite3.Binary(smart),), commit=False) == 0:
+                    self.__current_id = next_id
+                    self.__current_tag = current_tag
+                    self.__roll_over = roll_over
         if last_persistent_log:
             sql = '''UPDATE %s
                      set last_persistent = %s

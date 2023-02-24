@@ -5,12 +5,9 @@
 import os
 import time
 import socket
-from typing import List
 from pydiskcmd.system.env_var import os_type
-
+from pydiskcmd.system.lin_os_tool import get_block_devs,get_nvme_dev_info
 ###
-excluded_block_devices = ('sr', 'zram', 'dm-', 'md', 'loop')
-
 
 def timeit(func):
     def wrap(*args, **kwargs):
@@ -21,23 +18,6 @@ def timeit(func):
         print (f'{func.__name__} complete. Runtime {elapsed:.10f} secs')
         return result
     return wrap
-
-def get_block_devs(print_detail=True) -> List[str]:
-    """Determine the list of block devices by looking at /sys/block"""
-    devs = [dev for dev in os.listdir('/sys/block')
-            if not dev.startswith(excluded_block_devices)]
-    if print_detail:
-        print (f'{len(devs)} devices detected')
-    return devs 
-
-
-def get_nvme_dev_info():
-    """
-    Return: a list that contain ctrl_id, like ["nvme0", "nvme1"]
-    """
-    if os.path.exists('/sys/class/nvme'):
-        return [dev for dev in os.listdir('/sys/class/nvme') if dev.startswith("nvme")]
-    return []
 
 def get_nvme_block_dev_by_ctrl_id(ctrl_id):
     """

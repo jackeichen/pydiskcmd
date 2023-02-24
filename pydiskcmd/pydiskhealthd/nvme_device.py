@@ -13,9 +13,8 @@ from pydiskcmd.pynvme.nvme_command import DataBuffer
 from pydiskcmd.pydiskhealthd.DB import disk_trace_pool
 from pydiskcmd.pydiskhealthd.linux_nvme_aer import AERTrace,AERTraceRL,check_aer_support
 from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
-###
-PCIeMappingPath = "/sys/class/nvme/%s/address"
-###
+#
+from pydiskcmd.system.env_var import os_type 
 
 
 class SmartInfo(object):
@@ -233,13 +232,17 @@ class NVMeDevice(NVMeDeviceBase):
     """
     dev_path: the nvme controller device path(ex. /dev/nvme0)
     """
+    PCIeMappingPath = "/sys/class/nvme/%s/address"
     def __init__(self, dev_path, init_db=False):
         super(NVMeDevice, self).__init__(dev_path)
         self.__media_type = "SSD"
-        ##
+        ## init NVMe Feature Status
         self.nvme_feature_support = NVMeFeatureStatus()
         if self.id_ctrl_info[261] & 0x10:
             self.nvme_feature_support.persistent_event_log = True
+        if os_type == 'Windows':
+            self.nvme_feature_support.pcie = False
+            self.nvme_feature_support.nvme_aer = False
         ##
         ##
         bus_address = self._get_bus_addr_by_controller(dev_path)
@@ -298,7 +301,7 @@ class NVMeDevice(NVMeDeviceBase):
         return self.__persistent_event_log
 
     def _get_bus_addr_by_controller(self, ctrl):
-        path = PCIeMappingPath % ctrl.replace("/dev/", "")
+        path = NVMeDevice.PCIeMappingPath % ctrl.replace("/dev/", "")
         addr = None
         if os.path.exists(path):
             with open(path, 'r') as f:

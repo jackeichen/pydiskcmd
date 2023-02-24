@@ -64,7 +64,7 @@ class NVMe(object):
         '''
         return self.__ctrl_identify_info[82],self.__ctrl_identify_info[81],self.__ctrl_identify_info[80]
 
-    def execute(self, cmd):
+    def execute(self, cmd, check_return_status=True):
         """
         wrapper method to call the NVMeDevice.execute method
 
@@ -73,6 +73,8 @@ class NVMe(object):
         """
         try:
             self.device.execute(cmd)
+            if check_return_status:
+                cmd.check_return_status()
         except Exception as e:
             raise e
         return cmd
@@ -80,55 +82,46 @@ class NVMe(object):
     def id_ctrl(self):
         cmd = IDCtrl()
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def id_ns(self, ns_id=1):
         cmd = IDNS(ns_id)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def active_ns_ids(self, ns_id=0, uuid_index=0):
         cmd = IDActiveNS(ns_id, uuid_index)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def allocated_ns_ids(self, ns_id=0):
         cmd = IDAllocatedNS(ns_id)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def cnt_ids(self, cnt_id=0):
         cmd = IDCtrlListInSubsystem(cnt_id)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def ns_attached_cnt_ids(self, ns_id, cnt_id=0):
         cmd = IDCtrlListAttachedToNS(ns_id, cnt_id)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def set_feature(self, feature_id, **kwargs):
         cmd = SetFeature(feature_id, **kwargs)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def get_feature(self, feature_id, **kwargs):
         cmd = GetFeature(feature_id, **kwargs)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def fw_slot_info(self):
         cmd = FWSlotInfo()
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def error_log_entry(self):
@@ -136,13 +129,11 @@ class NVMe(object):
         max_number = self.__ctrl_identify_info[262] + 1
         cmd = ErrorLog(max_number)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def smart_log(self, data_buffer=None):
         cmd = SmartLog(data_buffer)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def get_persistent_event_log(self, action, data_buffer=None):
@@ -173,7 +164,7 @@ class NVMe(object):
             # specify the Number of Dwords to transfer.
             # 0x0FFF is enough for 512 Bytes. we Do Not Need check the Log Page Attributes field
             cmd = PersistentEventLog(1, 127, data_addr=data_addr)
-            self.execute(cmd)
+            self.execute(cmd, check_return_status=False)
             # if command abort, then Context is already established
             SC,SCT = cmd.check_return_status(False, False)
             if SCT == 0 and SC == 0:
@@ -192,7 +183,7 @@ class NVMe(object):
             # specify the Number of Dwords to transfer.
             # 0x0FFF is enough for 512 Bytes. We Do Not Need check the Log Page Attributes field
             cmd = PersistentEventLog(0, 127, data_addr=data_addr)
-            self.execute(cmd)
+            self.execute(cmd, check_return_status=False)
             SC,SCT = cmd.check_return_status(False, False)
             if SCT == 0 and SC == 0:
                 if data_buffer:
@@ -217,7 +208,7 @@ class NVMe(object):
                         lpol = offset_by_byte & 0xFFFF
                         lpou = (offset_by_byte >> 32) & 0xFFFF
                         cmd = PersistentEventLog(0, 4095, lpol=lpol, lpou=lpou, data_addr=data_addr)
-                        self.execute(cmd)
+                        self.execute(cmd, check_return_status=False)
                         SC,SCT = cmd.check_return_status(False, False)
                         if SCT == 0 and SC == 0:
                             if data_buffer:
@@ -232,7 +223,7 @@ class NVMe(object):
                         lpol = offset_by_byte & 0xFFFF
                         lpou = (offset_by_byte >> 32) & 0xFFFF
                         cmd = PersistentEventLog(0, numd_mod-1, lpol=lpol, lpou=lpou, data_addr=data_addr)
-                        self.execute(cmd)
+                        self.execute(cmd, check_return_status=False)
                         SC,SCT = cmd.check_return_status()
                         if SCT == 0 and SC == 0:
                             if data_buffer:
@@ -245,12 +236,12 @@ class NVMe(object):
                     return ret_data
         elif action == 2:  ## Release Context
             cmd = PersistentEventLog(2, 0)
-            self.execute(cmd)
+            self.execute(cmd, check_return_status=False)
             cmd.check_return_status(False, False)
             return 0
         elif action == 3:  ## Check if Context exist
             cmd = PersistentEventLog(0, 127, data_addr=data_addr)
-            self.execute(cmd)
+            self.execute(cmd, check_return_status=False)
             SC,SCT = cmd.check_return_status(False, False)
             if SCT == 0 and SC == 0:  # can read, Context established
                 return 1
@@ -265,13 +256,11 @@ class NVMe(object):
     def self_test_log(self):
         cmd = SelfTestLog()
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def commands_supported_and_effects_log(self):
         cmd = CommandsSupportedAndEffectsLog()
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def nvme_fw_download(self, fw_path, xfer=0, offset=0):
@@ -300,7 +289,7 @@ class NVMe(object):
                 fw_data = f.read(xfer)
                 if fw_data:
                     cmd = FWImageDownload(fw_data, offset)
-                    self.execute(cmd)
+                    self.execute(cmd, check_return_status=False)
                     sc,sct = cmd.check_return_status()
                     if sc:
                         print ("Firmware Download failed(SC=%s,SCT=%s)" % (sc,sct))
@@ -317,7 +306,6 @@ class NVMe(object):
     def nvme_fw_commit(self, fw_slot, action, bpid=0):
         cmd = FWCommit(fw_slot, action, bpid)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def nvme_format(self, lbaf, nsid=0xFFFFFFFF, **kwargs):
@@ -330,7 +318,6 @@ class NVMe(object):
         ###
         cmd = Format(lbaf, nsid=nsid, **kwargs)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def self_test(self, stc, ns_id=0xFFFFFFFF):
@@ -341,25 +328,21 @@ class NVMe(object):
     def ns_create(self, ns_size, ns_cap, flbas, dps, nmic, anagrp_id, nvmeset_id, csi=0, vendor_spec_data=b''):
         cmd = NSCreate(ns_size, ns_cap, flbas, dps, nmic, anagrp_id, nvmeset_id, csi=csi, vendor_spec_data=vendor_spec_data)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def ns_delete(self, ns_id):
         cmd = NSDelete(ns_id)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def ns_attachment(self, ns_id, sel, ctrl_id_list):
         cmd = NSAttachment(ns_id, sel, ctrl_id_list)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def flush(self, ns_id):
         cmd = Flush(ns_id)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def read(self, ns_id, slba, nlba):
@@ -386,11 +369,9 @@ class NVMe(object):
         ##
         cmd = Read(ns_id, slba, nlba, data_len=data_len, metadata_len=metadata_len)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd
 
     def write(self, ns_id, slba, nlba, data, metadata_buffer=None):
         cmd = Write(ns_id, slba, nlba, data, metadata_buffer=metadata_buffer)
         self.execute(cmd)
-        cmd.check_return_status()
         return cmd

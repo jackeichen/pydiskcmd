@@ -13,9 +13,8 @@ from pydiskcmd.exceptions import DeviceTypeError
 from pydiskcmd.pydiskhealthd.default_config import DiskWarningTemp,DiskCriticalTemp,DiskCalculatedHealthWarningLevel,DiskCalculatedHealthErrorLevel
 ## 
 from pydiskcmd.pydiskhealthd.DB import all_disk_info,disk_trace_pool
-from pydiskcmd.pydiskhealthd.sata_device import ATADevice,ATADeviceBase
-from pydiskcmd.pydiskhealthd.nvme_device import NVMeDevice,NVMeDeviceBase,AERTrace,AERTraceRL,check_aer_support
-from pydiskcmd.pydiskhealthd.scsi_device import SCSIDevice,SCSIDeviceBase
+from pydiskcmd.pydiskhealthd.nvme_device import AERTrace,AERTraceRL,check_aer_support
+from pydiskcmd.pydiskhealthd.all_device import scan_device,SCSIDevice,ATADevice,NVMeDevice
 from pydiskcmd.utils.converter import scsi_ba_to_int
 ##
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
@@ -27,8 +26,6 @@ def init_scsi_device(dev_path):
     ### first act as a scsi device
     try:
         dev_context = SCSIDevice(dev_path)
-        ## judge the disk if is SATA device, by send an inquiry page=0x89(ATA Infomation)
-        i = dev_context.inquiry(INQUIRY.VPD.ATA_INFORMATION)
     ##
     except FileNotFoundError:
         logger.warning("Skip device %s, device is removed." % dev_path)
@@ -37,10 +34,17 @@ def init_scsi_device(dev_path):
     except:
         logger.error(traceback.format_exc())
     else:
-        if ("identify" in i) and ("general_config" in i['identify']) and ("ata_device" in i['identify']['general_config']) and (i['identify']['general_config']['ata_device'] == 0):
-            ## change device to SATA Device interface
-            dev_context = ATADevice(dev_path)
-            logger.info("Device %s, change from scsi to sata" % dev_path)
+        ## judge the disk if is SATA device, by send an inquiry page=0x89(ATA Infomation)
+        try:
+            i = dev_context.inquiry(INQUIRY.VPD.ATA_INFORMATION)
+        except:
+            pass
+        else:
+            if ("identify" in i) and ("general_config" in i['identify']) and ("ata_device" in i['identify']['general_config']) and (i['identify']['general_config']['ata_device'] == 0):
+                ## change device to SATA Device interface
+                dev_context = ATADevice(dev_path)
+                logger.info("Device %s, change from scsi to sata" % dev_path)
+        ##
         logger.info("Find new %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
         dev_context.init_db()
         # check if device info 
@@ -118,60 +122,10 @@ def init_nvme_device(dev_path):
         logger.info(message)
     return dev_context
 
-def init_disk_context(devices):
-    '''
-    devices: a dict , that will contain device object.
-    '''
-    for dev in get_block_devs(print_detail=False):
-        ## Skip nvme device, and scan SATA Or SAS Disk here
-        if "nvme" not in dev:
-            dev_path = "/dev/%s" % dev
-            dev_context = init_scsi_device(dev_path)
-            if dev_context:
-                devices[dev_context.device_id] = dev_context
-    ## scan nvme device
-    for ctrl_id in get_nvme_dev_info():
-        dev_path = "/dev/%s" % ctrl_id
-        dev_context = init_nvme_device(dev_path)
-        if dev_context:
-            devices[dev_context.device_id] = dev_context
-    return devices
-
 def check_dev_pool(devices):
     temp_devices = {}
-    # scan scsi device
-    for dev in get_block_devs(print_detail=False):
-        ## Skip nvme device, and scan SATA Or SAS Disk here
-        if "nvme" not in dev:
-            dev_path = "/dev/%s" % dev
-            ### first act as a scsi device
-            try:
-                dev_context = SCSIDeviceBase(dev_path)
-                ## judge the disk if is SATA device, by send an inquiry page=0x89(ATA Infomation)
-                i = dev_context.inquiry(INQUIRY.VPD.ATA_INFORMATION)
-            ##
-            except FileNotFoundError:
-                logger.warning("Skip device %s, device is removed." % dev_path)
-            except:
-                logger.error(traceback.format_exc())
-            else:
-                ## change from scsi to sata
-                if ("identify" in i) and ("general_config" in i['identify']) and ("ata_device" in i['identify']['general_config']) and (i['identify']['general_config']['ata_device'] == 0):
-                    ## change device to SATA Device interface
-                    dev_context = ATADeviceBase(dev_path)
-                    logger.debug("Device %s, change from scsi to sata" % dev_path)
-                temp_devices[dev_context.device_id] = dev_context
-    # scan nvme device
-    for ctrl_id in get_nvme_dev_info():
-        dev_path = "/dev/%s" % ctrl_id
-        try:
-            dev_context = NVMeDeviceBase(dev_path)
-        except FileNotFoundError:
-            logger.warning("Skip device %s, device is removed." % dev_path)
-        except:
-            logger.error(traceback.format_exc())
-        else:
-            temp_devices[dev_context.device_id] = dev_context
+    for dev_context in scan_device(logger=logger):
+        temp_devices[dev_context.device_id] = dev_context
     ## check with old devices
     for dev_id in list(devices.keys()):
         if dev_id in temp_devices:
@@ -273,7 +227,7 @@ def pydiskhealthd():
         syslog.warning(str(e))
     ## init device here
     dev_pool = {}
-    init_disk_context(dev_pool)
+    check_dev_pool(dev_pool)
     # check if lost disks
     dev_id_list = all_disk_info.get_last_store_disks_id()
     if dev_id_list:

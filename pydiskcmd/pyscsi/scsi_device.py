@@ -75,7 +75,7 @@ if os_type == "Windows":
                     self.close()
                 finally:
                     self.open()
-            try:
+            if self._file:
                 ## create SCSIPassThroughDirect Or SCSIPassThroughDirectWithBuffer
                 # will transfer SCSICommand to windows mode
                 cdb = (ctypes.c_ubyte * 16).from_buffer_copy(
@@ -131,8 +131,6 @@ if os_type == "Windows":
                 # SCSICheckCondition(bytearray(header_with_buffer.sense))
                 if en_raw_sense:
                     cmd.raw_sense_data = bytearray(header_with_buffer.sense)
-            except:
-                traceback.print_exc()
             return cmd
 
         @property

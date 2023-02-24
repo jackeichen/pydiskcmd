@@ -178,6 +178,59 @@ Advanced Usage
 ==============
 You can find some examples about how to use this tool in the dir of pydiskcmd/examples/.
 
+NVMe Command 
+------------
+Example to build and run your own NVMe command in Linux.
+
+```
+### nvme format command
+## <Command> is the wrapper of raw command data structure, you can find it in pydiskcmd/pynvme/nvme_command,
+#  <build_command> is the methmod to build cdw data structure
+##
+from pydiskcmd.pynvme.nvme_command import Command,build_command
+## for running your own command in device, and get the result.
+from pydiskcmd.utils import init_device
+from pydiskcmd.pynvme.nvme import NVMe
+
+CmdOPCode = 0x80 # nvme format command OP code, see nvme spec
+IOCTL_REQ = Command.linux_req.get("NVME_IOCTL_ADMIN_CMD") # NVME_IOCTL_ADMIN_CMD Code type
+
+class Format(Command): 
+    def __init__(self, 
+                 lbaf,            # the lbaf to format, see nvme spec
+                 mset=0,          # the mset to format, see nvme spec
+                 pi=0,            # the pi to format, see nvme spec
+                 pil=1,           # the pil to format, see nvme spec
+                 ses=0,           # the ses to format, see nvme spec
+                 nsid=0xFFFFFFFF, # the nsid to format, see nvme spec
+                 timeout=600000): # timeout(millisecond) in IOCTL request
+        ## build command cdw10
+        #  this is a key-value dict input:
+        #    key: the name of value
+        #    value: (the bit-map of value, Byte offset in DWord, value to set)
+        ##
+        cdw10 = build_command({"lbaf": (0x0F, 0, lbaf), # the location of lbaf in cdw10, see nvme spec
+                               "mset": (0x10, 0 ,mset), # the location of mset in cdw10, see nvme spec
+                               "pi": (0xE0, 0, pi),     # the location of pi in cdw10, see nvme spec
+                               "pil": (0x01, 1, pil),   # the location of pil in cdw10, see nvme spec
+                               "ses": (0x0E, 1, ses)})  # the location of ses in cdw10, see nvme spec
+        ## build command
+        super(Format, self).__init__(IOCTL_REQ,
+                                     opcode=CmdOPCode,
+                                     nsid=nsid,
+                                     cdw10=cdw10,
+                                     timeout_ms=timeout)
+
+cmd = Format(0, nsid=1) ## format namespace 1 to lbaf 0
+device = init_device("/dev/nvme1") ## open a nvme device
+with NVMe(device) as nvme:
+    nvme.execute(cmd)
+## Get the command result-> 
+print (cmd.cq_cmd_spec) # Command Specific Status Values, see nvme spec
+SC,SCT = cmd.check_return_status() # Get Command Status Code and Status Code Type
+print ("Command Status Code=%d, Status Code Type=%d" % (SC,SCT))
+```
+
 
 Acknowledgements
 ================

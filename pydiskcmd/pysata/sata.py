@@ -109,7 +109,7 @@ class SATA(object):
         """
         self.device.execute(cmd, en_raw_sense=True)
 
-    def execute(self, cmd):
+    def execute(self, cmd, check_return_status=True):
         """
         wrapper method to call the SCSIDevice.execute method
 
@@ -117,6 +117,8 @@ class SATA(object):
         """
         try:
             self._execute(cmd)
+            if check_return_status:
+                cmd.ata_status_return_descriptor
         except Exception as e:
             raise e
 
