@@ -47,6 +47,10 @@ class DeviceBase(object):
         return self.__class__.__name__
 
     @abstractmethod
+    def _is_replugged(self):
+        """ Methmod to detect a devcie plugged. """
+
+    @abstractmethod
     def open(self):
         """ Methmod to open a devcie. """
 
@@ -57,6 +61,14 @@ class DeviceBase(object):
     @abstractmethod
     def execute(self, cmd):
         """ Methmod to execute a command to devcie. """
+
+    @property
+    def opcodes(self):
+        return self._opcodes
+
+    @opcodes.setter
+    def opcodes(self, value):
+        self._opcodes = value
 
     @property
     def devicetype(self):
