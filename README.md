@@ -190,7 +190,6 @@ Example to build and run your own NVMe command in Linux.
 from pydiskcmd.pynvme.nvme_command import Command,build_command
 ## for running your own command in device, and get the result.
 from pydiskcmd.utils import init_device
-from pydiskcmd.pynvme.nvme import NVMe
 
 CmdOPCode = 0x80 # nvme format command OP code, see nvme spec
 IOCTL_REQ = Command.linux_req.get("NVME_IOCTL_ADMIN_CMD") # NVME_IOCTL_ADMIN_CMD Code type
@@ -222,13 +221,57 @@ class Format(Command):
                                      timeout_ms=timeout)
 
 cmd = Format(0, nsid=1) ## format namespace 1 to lbaf 0
-device = init_device("/dev/nvme1") ## open a nvme device
-with NVMe(device) as nvme:
-    nvme.execute(cmd)
+with init_device("/dev/nvme1") as d: ## open a nvme device: /dev/nvme1
+    d.execute(cmd)
 ## Get the command result-> 
 print (cmd.cq_cmd_spec) # Command Specific Status Values, see nvme spec
 SC,SCT = cmd.check_return_status() # Get Command Status Code and Status Code Type
 print ("Command Status Code=%d, Status Code Type=%d" % (SC,SCT))
+```
+
+SATA Command
+------------
+Example to build and run your own SATA command in Linux Or Windows.
+
+```
+### Send an Identify command to SATA Disk
+## pydiskcmd send SATA command by scsi passthrough12 or passthrough16 command
+## This will import a suitable SCSIDevice depends on youy OS,
+#  The SCSIDevice help to send the command to device and get the resuly from the device
+from pydiskcmd.utils import init_device
+## ATACommand16 is the wrapper of ATA command, it help to build your own command
+#  You can read ACS-3 about the ATA command set, and
+#  read SAT-5 to make out how to translate from ATA command to SCSI passthrough command
+from pydiskcmd.pysata.ata_command import ATACommand16
+
+
+class Identify16(ATACommand16): 
+    def __init__(self):
+        ##
+        # count is not used by idedntify in ATA command set,
+        # so use it in ATAPassthrouh16, for setting transfer length
+        ##
+        ATACommand16.__init__(self,
+                              0,         # fetures field
+                              1,         # count field
+                              0,         # lba field
+                              0,         # device field
+                              0xec,      # command field
+                              0x04,      # protocal field
+                              2,         # t_length field
+                              1)         # t_dir field 
+
+identify_cmd = Identify16()
+with init_device("/dev/sdb", open_t='scsi') as d:
+    d.execute(identify_cmd, en_raw_sense=True)
+## Get the Result
+# Handle the Command execute sense data
+#  SAT-5 to make out ata_return_descriptor
+ata_return_descriptor = cmd.ata_status_return_descriptor
+print ("Command return Status:", ata_return_descriptor.get("status"))
+# Get the datain, that read from device 
+print ("Identify data read from device is:")
+print (cmd.datain)
 ```
 
 

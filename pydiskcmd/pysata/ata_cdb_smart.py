@@ -72,7 +72,7 @@ class SmartReadData16(ATACommand16):
                  smart_key=None):
         ##
         # count is not used by samrt read data in ATA command set,
-        # so use it in ATAPassthrouh12, for setting transfer length
+        # so use it in ATAPassthrouh16, for setting transfer length
         ##
         ATACommand16.__init__(self,
                               0xD0,        # fetures

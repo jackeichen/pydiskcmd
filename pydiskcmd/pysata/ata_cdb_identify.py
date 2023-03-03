@@ -28,7 +28,7 @@ class Identify(ATACommand12):
 
     def __init__(self):
         ##
-        # count is not used by samrt read thresh in ATA command set,
+        # count is not used by identify in ATA command set,
         # so use it in ATAPassthrouh12, for setting transfer length
         ##
         ATACommand12.__init__(self,
@@ -39,8 +39,7 @@ class Identify(ATACommand12):
                               0xec,      # command
                               0x04,      # protocal
                               2,         # t_length
-                              1,         # t_dir
-                              extra_tl=1) 
+                              1)         # t_dir
 
     @classmethod
     def unmarshall_datain(cls, data):
@@ -65,8 +64,8 @@ class Identify16(ATACommand16):
 
     def __init__(self):
         ##
-        # count is not used by samrt read thresh in ATA command set,
-        # so use it in ATAPassthrouh12, for setting transfer length
+        # count is not used by identify in ATA command set,
+        # so use it in ATAPassthrouh16, for setting transfer length
         ##
         ATACommand16.__init__(self,
                               0,         # fetures
@@ -76,8 +75,7 @@ class Identify16(ATACommand16):
                               0xec,      # command
                               0x04,      # protocal
                               2,         # t_length
-                              1,         # t_dir
-                              extra_tl=1) 
+                              1)         # t_dir 
 
     @classmethod
     def unmarshall_datain(cls, data):
