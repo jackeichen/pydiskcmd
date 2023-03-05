@@ -59,5 +59,10 @@ if os_type == "Linux":
                                         cdw15=cdw15,
                                         )
 
+elif os_type == "Windows":
+    class Write(object):
+        ## TODO.
+        pass
+
 else:
     raise NotImplementedError("%s not support" % os_type)

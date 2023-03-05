@@ -40,5 +40,11 @@ if os_type == "Linux":
                                              cdw14=cdw14,
                                              cdw15=cdw15,)
 
+elif os_type == "Windows":
+    class SetFeature(object):
+        ## TODO.
+        pass
+
+
 else:
     raise NotImplementedError("%s not support" % os_type)

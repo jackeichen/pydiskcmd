@@ -13,7 +13,6 @@ from pydiskcmd.pynvme.nvme_spec import *
 from pydiskcmd.system.env_var import os_type
 from pydiskcmd.system.os_tool import check_device_exist
 from pydiskcmd.system.lin_os_tool import map_pcie_addr_by_nvme_ctrl_path
-from pydiskcmd.pypci.pci_lib import map_pci_device
 
 Version = '0.1.0'
 
@@ -1068,9 +1067,11 @@ def pcie():
         help="combine with -p on|status")
     parser.add_option("-d", "--detail", dest="detail_info", action="store_true", default=False,
         help="Get the detail information.")
-
+    
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
+        ##
+        from pydiskcmd.pypci.pci_lib import map_pci_device
         ##
         PCIePowerPath = "/sys/bus/pci/slots/%s/power"
         ##

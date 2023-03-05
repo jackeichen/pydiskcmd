@@ -19,5 +19,10 @@ if os_type == "Linux":
                                        nsid=ns_id
                                        )
 
+elif os_type == "Windows":
+    class Flush(object):
+        ## TODO.
+        pass
+
 else:
     raise NotImplementedError("%s not support" % os_type)

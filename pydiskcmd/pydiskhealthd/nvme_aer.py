@@ -4,7 +4,15 @@
 import os
 import queue
 import threading
-from pydiskcmd.pynvme.linux_nvme_aer import NVMeAER,KernelNVMeAERTracePIPEFile,check_aer_support
+from pydiskcmd.pynvme.linux_nvme_aer import NVMeAER,KernelNVMeAERTracePIPEFile
+from pydiskcmd.pynvme.linux_nvme_aer import check_aer_support as linux_check_aer_support
+from pydiskcmd.system.env_var import os_type
+
+def check_aer_support():
+    if os_type == "Linux":
+        return linux_check_aer_support()
+    else:
+        return False
 
 
 class AERTrace(object):

@@ -56,5 +56,10 @@ if os_type == "Linux":
                                        cdw15=cdw15,
                                        )
 
+elif os_type == "Windows":
+    class Read(object):
+        ## TODO.
+        pass
+
 else:
     raise NotImplementedError("%s not support" % os_type)

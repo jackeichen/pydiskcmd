@@ -25,5 +25,8 @@ if os_type == "Linux":
                                            opcode=CmdOPCode,
                                            cdw10=cdw10)
 
+elif os_type == "Windows":
+    class FWCommit(object):
+        pass
 else:
     raise NotImplementedError("%s not support" % os_type)

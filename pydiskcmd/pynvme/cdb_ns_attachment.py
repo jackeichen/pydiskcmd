@@ -35,5 +35,10 @@ if os_type == "Linux":
                                                addr=d.addr,
                                                cdw10=cdw10,)
 
+elif os_type == "Windows":
+    class NSAttachment(object):
+        ## TODO.
+        pass
+
 else:
     raise NotImplementedError("%s not support" % os_type)

@@ -15,13 +15,7 @@ from pydiskcmd.pynvme.nvme import code_version as nvme_version
 from pydiskcmd.pysata.sata import code_version as ata_version
 from pydiskcmd.pyscsi.scsi import code_version as scsi_version
 ##
-from pydiskcmd.system.os_tool import get_block_devs,get_nvme_dev_info
-from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
-from pydiskcmd.pyscsi.scsi import SCSI
-from pydiskcmd.pynvme.nvme import NVMe
-from pydiskcmd.utils import init_device
-from pydiskcmd.utils.converter import bytearray2string,ba_to_ascii_string
-from pydiskcmd.pynvme.nvme_spec import nvme_id_ctrl_decode
+from pydiskcmd.pydiskhealthd.all_device import scan_device
 
 
 def GetOnlineDev():
@@ -29,25 +23,8 @@ def GetOnlineDev():
     devices: a dict , that will contain device object.
     '''
     dev_dict = {}
-    for dev in get_block_devs(print_detail=False):
-        ## Skip nvme device, and scan SATA Or SAS Disk here
-        if "nvme" not in dev:
-            dev_path = "/dev/%s" % dev
-            ### first act as a scsi device
-            with SCSI(init_device(dev_path, open_t="scsi"), blocksize=512) as d:
-                cmd = d.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER)
-                serial_info = cmd.result
-            if 'unit_serial_number' in serial_info:
-                id_string = bytearray2string(serial_info['unit_serial_number']).strip()
-                dev_dict[id_string] = dev_path
-    ## scan nvme device
-    for ctrl_id in get_nvme_dev_info():
-        dev_path = "/dev/%s" % ctrl_id
-        with NVMe(init_device(dev_path, open_t="nvme")) as d:
-            result = nvme_id_ctrl_decode(d.ctrl_identify_info)
-        serial = ba_to_ascii_string(result.get("SN"), "").strip()
-        if serial:
-            dev_dict[serial] = dev_path
+    for dev_context in scan_device(debug=False):
+        dev_dict[dev_context.device_id] = dev_context.dev_path
     return dev_dict
 
 def pydiskutils():
@@ -73,7 +50,7 @@ def pydiskutils():
     (options, args) = parser.parse_args()
     ##
     # Do not support windows now
-    if os_type != "Linux":
+    if os_type not in ("Linux", "Windows"):
         raise NotImplementedError("pydiskhealth cannot run in OS:%s" % os_type)
     #
     if options.ouput_format not in ("console", "picture", "jsonfile"):

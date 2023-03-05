@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmd.system.env_var import os_type
+
 if os_type == "Windows":
     import ctypes
     ##

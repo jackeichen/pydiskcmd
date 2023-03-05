@@ -23,5 +23,10 @@ if os_type == "Linux":
                                            nsid=ns_id,
                                            cdw10=cdw10,)
 
+elif os_type == "Windows":
+    class SelfTest(object):
+        ## TODO.
+        pass
+
 else:
     raise NotImplementedError("%s not support" % os_type)

@@ -4,14 +4,13 @@
 import os
 import time
 from pydiskcmd.pynvme.nvme import NVMe
-from pydiskcmd.pypci.pci_lib import map_pci_device
 from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme_spec import nvme_smart_decode,nvme_id_ctrl_decode
 from pydiskcmd.pynvme.nvme_spec import persistent_event_log_header_decode,persistent_event_log_events_decode
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmd.pynvme.nvme_command import DataBuffer
 from pydiskcmd.pydiskhealthd.DB import disk_trace_pool
-from pydiskcmd.pydiskhealthd.linux_nvme_aer import AERTrace,AERTraceRL,check_aer_support
+from pydiskcmd.pydiskhealthd.nvme_aer import AERTrace,AERTraceRL,check_aer_support
 from pydiskcmd.pydiskhealthd.some_path import DiskTracePath
 #
 from pydiskcmd.system.env_var import os_type 
@@ -201,7 +200,7 @@ class NVMeDeviceBase(object):
 
     @property
     def device_id(self):
-        return self.__serial.strip()
+        return self.__serial.strip().replace("-", "_")
 
     @property
     def device_type(self):
@@ -222,10 +221,16 @@ class NVMeDeviceBase(object):
 
 class NVMeFeatureStatus(object):
     def __init__(self):
-        self.pcie = True     # TODO, always pcie for now
+        self.pcie = True     # TODO, always true for now
         self.smart = True    # TODO, always true for now
-        self.persistent_event_log = False
+        self.persistent_event_log = False # need set here
         self.nvme_aer = True  # This is a Mandatory command
+
+
+class OSFeatureStatus(object):
+    def __init__(self):
+        self.pcie_check = True if os_type in ("Linux",) else False
+        self.nvme_aer_check = check_aer_support()
 
 
 class NVMeDevice(NVMeDeviceBase):
@@ -243,12 +248,19 @@ class NVMeDevice(NVMeDeviceBase):
         if os_type == 'Windows':
             self.nvme_feature_support.pcie = False
             self.nvme_feature_support.nvme_aer = False
+        #
+        self.os_feature_status = OSFeatureStatus()
+        #
+        self.check_feature_support = {"pcie": self.nvme_feature_support.pcie and self.os_feature_status.pcie_check,
+                                      "smart": self.nvme_feature_support.smart,
+                                      "persistent_event_log": self.nvme_feature_support.persistent_event_log,
+                                      "nvme_aer": self.nvme_feature_support.nvme_aer and self.os_feature_status.nvme_aer_check}
         ##
-        ##
-        bus_address = self._get_bus_addr_by_controller(dev_path)
-        ##
-        self.pcie_context = map_pci_device(bus_address)
-        self.__pcie_trace = PCIeTrace()
+        if self.check_feature_support.get("pcie"):
+            from pydiskcmd.pypci.pci_lib import map_pci_device
+            bus_address = self._get_bus_addr_by_controller(dev_path)
+            self.pcie_context = map_pci_device(bus_address)
+            self.__pcie_trace = PCIeTrace()
         # init smart attr
         self.__smart_trace = SmartTrace()
         # init 
@@ -352,5 +364,6 @@ class NVMeDevice(NVMeDeviceBase):
         return self.__smart_trace,self.__persistent_event_log
 
     def update_pcie_trace(self):
-        self.__pcie_trace.pcie_link_status = self.pcie_context.express_link
-        self.__pcie_trace.pcie_aer_status = self.pcie_context.express_aer
+        if self.check_feature_support.get("pcie"):
+            self.__pcie_trace.pcie_link_status = self.pcie_context.express_link
+            self.__pcie_trace.pcie_aer_status = self.pcie_context.express_aer

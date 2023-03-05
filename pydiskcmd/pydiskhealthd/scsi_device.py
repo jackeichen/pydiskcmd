@@ -25,6 +25,11 @@ def get_dev_id(dev_path):
     return device_id
 
 
+class SCSIFeatureStatus(object):
+    def __init__(self):
+        self.smart = False
+
+
 class SCSIDeviceBase(object):
     """
     dev_path: the nvme controller device path(ex. /dev/nvme0)
@@ -33,6 +38,9 @@ class SCSIDeviceBase(object):
     def __init__(self, dev_path):
         self.__device_type = 'scsi'
         self.dev_path = dev_path
+        ##
+        self.scsi_feature_status = SCSIFeatureStatus()
+        self.check_feature_support = {}
         ## init device
         self.__model = "dummy value"
         self.__serial = None
@@ -58,7 +66,7 @@ class SCSIDeviceBase(object):
 
     @property
     def device_id(self):
-        return self.__serial.strip()
+        return self.__serial.strip().replace("-", "_")
 
     @property
     def Model(self):

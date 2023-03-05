@@ -33,5 +33,8 @@ if os_type == "Linux":
                                          cdw10=cdw10,
                                          timeout_ms=timeout)
 
+elif os_type == "Windows":
+    class Format(object):
+        pass
 else:
     raise NotImplementedError("%s not support" % os_type)

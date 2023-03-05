@@ -27,5 +27,9 @@ if os_type == "Linux":
                                                   cdw10=cdw10,
                                                   cdw11=cdw11)
 
+elif os_type == "Windows":
+    class FWImageDownload(object):
+        ## TODO.
+        pass
 else:
     raise NotImplementedError("%s not support" % os_type)

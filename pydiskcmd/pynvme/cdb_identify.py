@@ -79,5 +79,23 @@ if os_type == "Linux":
                                                          nsid=ns_id,
                                                          data_len=4096,
                                                          cdw10=cdw10)
+elif os_type == "Windows":
+    class IDCtrl(object):
+        pass
+
+    class IDNS(object):
+        pass
+
+    class IDActiveNS(object):
+        pass
+
+    class IDAllocatedNS(object):
+        pass
+
+    class IDCtrlListInSubsystem(object):
+        pass
+
+    class IDCtrlListAttachedToNS(object):
+        pass
 else:
     raise NotImplementedError("%s not support" % os_type)

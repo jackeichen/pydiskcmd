@@ -163,7 +163,7 @@ class ATADeviceBase(object):
 
     @property
     def device_id(self):
-        return self.__serial.strip()
+        return self.__serial.strip().replace("-", "_")
 
     @property
     def device_type(self):
@@ -195,11 +195,12 @@ class ATADevice(ATADeviceBase):
     """
     def __init__(self, dev_path, init_db=False):
         super(ATADevice, self).__init__(dev_path)
-        # init smart trace,
-        # the smart_read_thresh is persistent, so init it at first
         self.ata_feature_status = ATAFeatureStatus()
         if (self.id_info[164] & 0x01) and (self.id_info[170] & 0x01):
             self.ata_feature_status.smart = True
+        self.check_feature_support ={"smart": self.ata_feature_status.smart,}
+        # init smart trace,
+        # the smart_read_thresh is persistent, so init it at first
         with SATA(init_device(self.dev_path, open_t="ata"), blocksize=512) as d:
             ##
             cmd_thresh = d.smart_read_thresh()
@@ -248,7 +249,7 @@ class ATADevice(ATADeviceBase):
 
     @property
     def smart_enable(self):
-        return self.ata_feature_status.smart
+        return self.check_feature_support.get("smart")
 
     def get_smart_once(self):
         current_t = float(time.time())

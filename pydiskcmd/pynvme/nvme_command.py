@@ -4,6 +4,8 @@
 from ctypes import *
 from pydiskcmd.exceptions import *
 from pydiskcmd.utils.converter import scsi_int_to_ba
+##
+from pydiskcmd.system.env_var import os_type
 
 
 class CmdStructure(LittleEndianStructure):

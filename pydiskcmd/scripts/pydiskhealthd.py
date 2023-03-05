@@ -2,11 +2,12 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
+import sys
 import time
 import optparse
-import subprocess
 import traceback
 from pydiskcmd.system.os_tool import SystemdNotify,get_block_devs,get_nvme_dev_info,os_type
+from pydiskcmd.system.os_tool import check_backaround_running,read_kv_file
 from pydiskcmd.system.log import logger_pydiskhealthd as logger
 from pydiskcmd.system.log import syslog_pydiskhealthd as syslog
 from pydiskcmd.exceptions import DeviceTypeError
@@ -68,7 +69,7 @@ def init_scsi_device(dev_path):
                                        MediaType=media_type,
                                        Protocal=protocal,)
         ## check smart enbale 
-        if dev_context.smart_enable:
+        if dev_context.check_feature_support.get("smart"):
             message = "Device: %s(ID: %s), Smart enable and add to monitor list." % (dev_context.dev_path, dev_context.device_id)
             logger.info(message)
         else:
@@ -112,13 +113,13 @@ def init_nvme_device(dev_path):
         ## check feature enbale
         message = "Device %s(ID: %s) feature status: " % (dev_context.dev_path, dev_context.device_id)
         logger.info(message)
-        message = "  pcie ........................... %s" % dev_context.nvme_feature_support.pcie
+        message = "  pcie ........................... %s" % dev_context.check_feature_support.get("pcie")
         logger.info(message)
-        message = "  smart .......................... %s" % dev_context.nvme_feature_support.smart
+        message = "  smart .......................... %s" % dev_context.check_feature_support.get("smart")
         logger.info(message)
-        message = "  persistent event log ........... %s" % dev_context.nvme_feature_support.persistent_event_log
+        message = "  persistent event log ........... %s" % dev_context.check_feature_support.get("persistent_event_log")
         logger.info(message)
-        message = "  nvme aer ....................... %s" % dev_context.nvme_feature_support.nvme_aer
+        message = "  nvme aer ....................... %s" % dev_context.check_feature_support.get("nvme_aer")
         logger.info(message)
     return dev_context
 
@@ -188,43 +189,36 @@ def pydiskhealthd():
         help="How to check nvme aer with linux trace methmod: loop|real_time|off")
     parser.add_option("", "--check_daemon_running", dest="check_daemon_running", action="store_true", default=True,
         help="If check the pydiskheald daemon runnning, default true.")
+    parser.add_option("-c", "--config_file", dest="config_file", action="store", default="",
+        help="Give a config file.")
 
     (options, args) = parser.parse_args()
     ## Do not support windows now
-    if os_type != "Linux":
+    if os_type not in ("Linux", "Windows"):
         raise NotImplementedError("pydiskhealth cannot run in OS:%s" % os_type)
+    ## check config file
+    if options.config_file:
+        # Get config
+        temp = read_kv_file(options.config_file, target_value_strip=("'", '"'))
+        if temp:
+            temp = ' '.join(temp.values())
+            temp = temp.split(' ')
+            (options, args) = parser.parse_args(args=temp)
+    #
+    print ("check_interval:", options.check_interval)
     ## check parameter
     if options.check_daemon_running:
         ##
-        proc = subprocess.Popen(["pgrep", "-l", "-f", "pydiskhealthd"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        proc.wait()
-        stdout = proc.stdout.read()
-        stderr = proc.stderr.read()
-        if proc.returncode == 0:
-            content_all = stdout.split("\n")
-            running_number = 0
-            for c in content_all:
-                if c:
-                    temp = c.split(' ')
-                    progress_id = temp[0]
-                    progress_name = ' '.join(temp[1:])
-                    if progress_name == "pydiskhealthd":
-                        running_number += 1
-            ## because you are running the pydiskheal, so count should be >= 2 if another is running
-            if running_number > 1:
-                print ("pydiskhealthd is running(PID %s)" % progress_id)
-                return 1
-        else:
-            print ("Run pgrep command error, return code: %s" % proc.returncode)
-            print (proc.stderr.read())
-            return 2
-    ## notify systemd here
-    try:
-        notifier = SystemdNotify()
-        notifier.notify(READY=1)
-    except Exception as e:
-        logger.error(str(e))
-        syslog.warning(str(e))
+        if check_backaround_running(pydiskhealthd):
+            return
+    ## notify systemd here, only for linux
+    if os_type == "Linux":
+        try:
+            notifier = SystemdNotify()
+            notifier.notify(READY=1)
+        except Exception as e:
+            logger.error(str(e))
+            syslog.warning(str(e))
     ## init device here
     dev_pool = {}
     check_dev_pool(dev_pool)
@@ -289,7 +283,7 @@ def pydiskhealthd():
                     dev_pool.pop(dev_id)
                     continue  # skip this device 
                 ### check smart Now
-                if dev_context.nvme_feature_support.smart:
+                if dev_context.check_feature_support.get("smart"):
                     current_smart = smart_trace.current_value
                     last_smart = smart_trace.get_cache_last_value()
                     ## check critical_warning
@@ -461,7 +455,7 @@ def pydiskhealthd():
                             message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
                             logger.info(message)
                 ### check persistent_event_log
-                if dev_context.nvme_feature_support.persistent_event_log:
+                if dev_context.check_feature_support.get("persistent_event_log"):
                     values = persistent_event_log.diff_trace()
                     if values:
                         for event in values:
@@ -531,7 +525,7 @@ def pydiskhealthd():
                                 logger.info(message, message1, message2)
                                 syslog.info(message, message1, message2)
                 ### PCIe Check
-                if dev_context.nvme_feature_support.pcie:
+                if dev_context.check_feature_support.get("pcie"):
                     ## check link status
                     link_status = dev_context.pcie_context.express_link
                     last_link_status  = dev_context.pcie_trace.pcie_link_status
@@ -618,7 +612,7 @@ def pydiskhealthd():
                     dev_pool.pop(dev_id)
                     continue  # skip this device 
                 ###
-                if dev_context.smart_enable:              
+                if dev_context.check_feature_support.get("smart"):              
                     current_smart = smart_trace.current_value  # current_smart is a SmartInfo object
                     last_smart = smart_trace.get_cache_last_value()
                     message1 = "Device: %s(ID: %s), Calculated Disk Health is %d%%." % (dev_context.dev_path, dev_context.device_id, int(current_smart.disk_health*100))

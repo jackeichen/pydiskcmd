@@ -108,6 +108,23 @@ if os_type == "Linux":
                                                                  opcode=CmdOPCode,
                                                                  data_len=4096,
                                                                  cdw10=cdw10)
+elif os_type == "Windows":
+    class FWSlotInfo(object):
+        pass
 
+    class ErrorLog(object):
+        pass
+
+    class SmartLog(object):
+        pass
+
+    class SelfTestLog(object):
+        pass
+
+    class PersistentEventLog(object):
+        pass
+
+    class CommandsSupportedAndEffectsLog(object):
+        pass
 else:
     raise NotImplementedError("%s not support" % os_type)

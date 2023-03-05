@@ -72,6 +72,15 @@ if os_type == "Linux":
                                            opcode=CmdOPCode,
                                            nsid=ns_id,
                                            cdw10=cdw10,)
-    
+
+elif os_type == "Windows":
+    class NSCreate(object):
+        ## TODO.
+        pass
+
+    class NSDelete(object):
+        ## TODO.
+        pass
+
 else:
     raise NotImplementedError("%s not support" % os_type)
