@@ -73,6 +73,10 @@ class SATA(object):
         self.device = dev
         self.__init_opcode()
 
+    def __del__(self):
+        if self.device:
+            self.device.close()
+
     def __enter__(self):
         return self
 

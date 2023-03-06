@@ -11,6 +11,7 @@ from pydiskcmd.pydiskhealthd.DB import disk_trace_pool
 from pydiskcmd.pydiskhealthd.disk_health_calculation import get_ata_diskhealth
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 
+
 class SmartInfo(object):
     def __init__(self, vs_value, time_t, thresh_info):
         self.raw_vs_value = vs_value
@@ -158,6 +159,7 @@ class ATADeviceBase(object):
             self._id_info = d.identify_raw
             cmd_identify = d.identify()
             identify_info = cmd_identify.result
+        ##
         self.__model = bytearray2string(translocate_bytearray(identify_info.get("ModelNumber")))
         self.__serial = bytearray2string(translocate_bytearray(identify_info.get("SerialNumber")))
 

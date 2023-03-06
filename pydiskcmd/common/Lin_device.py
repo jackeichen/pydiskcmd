@@ -35,6 +35,8 @@ class LinDevice(DeviceBase):
         :param read_write:
         :return:
         """
+        if self._file:
+            self.close()
         self._file = open(self._file_name,
                           'w+b' if self._read_write else 'rb')
         self._ino = get_inode(self._file_name)

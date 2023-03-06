@@ -12,3 +12,7 @@ class SCSI(_SCSI):
                  dev,
                  blocksize=0):
         super(SCSI, self).__init__(dev, blocksize=blocksize)
+
+    def __del__(self):
+        if self.device:
+            self.device.close()

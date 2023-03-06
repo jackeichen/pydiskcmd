@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 import os
+import sys
 import inspect
 from pydiskcmd.system.env_var import os_type
 from pydiskcmd.system.os_tool import check_dir_path
@@ -74,10 +75,15 @@ def enable_schtasks():
             f.write(content)
         print ("Write pydiskhealthd service config file(%s) Done!" % win_etc_file_absolute_path)
     ##
-    cmd = '''schtasks /create /TN "pydiskhealthd" /RU SYSTEM /SC ONSTART /DELAY 0000:10 /TR "pydiskhealthd.exe --config_file='%s'"''' % win_etc_file_absolute_path
-    os.system(cmd)
-    print ("")
-    print ("Windows schtasks name: pydiskhealthd")
+    pydiskhealthd_path = os.path.join(os.path.dirname(sys.executable), "Scripts", "pydiskhealthd.exe")
+    ##
+    if os.path.isfile(pydiskhealthd_path):
+        cmd = '''schtasks /create /TN "pydiskhealthd" /RU SYSTEM /SC ONSTART /DELAY 0000:10 /TR "'%s' --config_file='%s'"''' % (pydiskhealthd_path, win_etc_file_absolute_path)
+        os.system(cmd)
+        print ("")
+        print ("Windows schtasks name: pydiskhealthd")
+    else:
+        pritn ("Failed: cannot find executable pydiskhealthd command!")
     return
 
 def diable_schtasks():

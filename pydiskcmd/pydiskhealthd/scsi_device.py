@@ -44,9 +44,11 @@ class SCSIDeviceBase(object):
         ## init device
         self.__model = "dummy value"
         self.__serial = None
+        #
         with SCSI(init_device(dev_path, open_t="scsi"), blocksize=512) as d:
             cmd = d.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER)
             serial_info = cmd.result
+        #
         if 'unit_serial_number' in serial_info:
             id_string = bytearray2string(serial_info['unit_serial_number']).strip()
             if id_string:

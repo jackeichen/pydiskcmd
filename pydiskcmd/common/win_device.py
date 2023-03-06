@@ -36,6 +36,8 @@ class WinDevice(DeviceBase):
         :param read_write:
         :return:
         """
+        if self._file:
+            self.close()
         self._file = self._kernel32().CreateFileW(self._file_name,
                                                   0x80000000 | 0x40000000,  # GENERIC_READ | GENERIC_WRITE
                                                   0x00000001,  # FILE_SHARE_READ

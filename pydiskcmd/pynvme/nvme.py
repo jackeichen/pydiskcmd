@@ -43,6 +43,10 @@ class NVMe(object):
         """
         self.device = dev
 
+    def __del__(self):
+        if self.device:
+            self.device.close()
+
     def __enter__(self):
         return self
 

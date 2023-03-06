@@ -192,6 +192,7 @@ class NVMeDeviceBase(object):
         self.__model = None
         self.__serial = None
         self._id_ctrl = b''
+        ##
         with NVMe(init_device(dev_path, open_t="nvme")) as d:
             self._id_ctrl = d.ctrl_identify_info
             result = nvme_id_ctrl_decode(self._id_ctrl)

@@ -35,16 +35,50 @@ def init_scsi_device(dev_path):
     except:
         logger.error(traceback.format_exc())
     else:
-        ## judge the disk if is SATA device, by send an inquiry page=0x89(ATA Infomation)
-        try:
-            i = dev_context.inquiry(INQUIRY.VPD.ATA_INFORMATION)
-        except:
-            pass
+        logger.info("Find new %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
+        dev_context.init_db()
+        # check if device info 
+        if dev_context.MediaType == "HDD":
+            media_type = 0
+        elif dev_context.MediaType == "SSD":
+            media_type = 1
         else:
-            if ("identify" in i) and ("general_config" in i['identify']) and ("ata_device" in i['identify']['general_config']) and (i['identify']['general_config']['ata_device'] == 0):
-                ## change device to SATA Device interface
-                dev_context = ATADevice(dev_path)
-                logger.info("Device %s, change from scsi to sata" % dev_path)
+            media_type = 255
+        if dev_context.device_type == "scsi":
+            protocal = 0
+        elif dev_context.device_type == "ata":
+            protocal = 1
+        elif dev_context.device_type == "nvme":
+            protocal = 2
+        else:
+            protocal = 255
+        all_disk_info.update_disk_info(dev_context.device_id, 
+                                       Model=dev_context.Model,
+                                       Serial=dev_context.Serial,
+                                       MediaType=media_type,
+                                       Protocal=protocal,)
+        ## check smart enbale 
+        if dev_context.check_feature_support.get("smart"):
+            message = "Device: %s(ID: %s), Smart enable and add to monitor list." % (dev_context.dev_path, dev_context.device_id)
+            logger.info(message)
+        else:
+            message = "Device: %s(ID: %s), Smart is not support Or disabled." % (dev_context.dev_path, dev_context.device_id)
+            logger.info(message)
+    return dev_context
+
+def init_ata_device(dev_path):
+    dev_context = None
+    ### first act as a scsi device
+    try:
+        dev_context = ATADevice(dev_path)
+    ##
+    except FileNotFoundError:
+        logger.warning("Skip device %s, device is removed." % dev_path)
+    except DeviceTypeError:
+        logger.warning("Unknown device %s, device is removed." % dev_path)
+    except:
+        logger.error(traceback.format_exc())
+    else:
         ##
         logger.info("Find new %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
         dev_context.init_db()
@@ -143,14 +177,16 @@ def check_dev_pool(devices):
             devices.pop(dev_id)
     if temp_devices:
         for dev_id in temp_devices.keys():
+            dev_context = None
             if temp_devices[dev_id].device_type == 'nvme':
                 dev_context = init_nvme_device(temp_devices[dev_id].dev_path)
-                if dev_context:
-                    devices[dev_context.device_id] = dev_context
-            else:
+            elif temp_devices[dev_id].device_type == 'scsi':
                 dev_context = init_scsi_device(temp_devices[dev_id].dev_path)
-                if dev_context:
-                    devices[dev_context.device_id] = dev_context
+            elif temp_devices[dev_id].device_type == 'ata':
+                dev_context = init_ata_device(temp_devices[dev_id].dev_path)
+            if dev_context:
+                devices[dev_context.device_id] = dev_context
+
 ###########
 ###########
 class Timer(object):
@@ -204,8 +240,6 @@ def pydiskhealthd():
             temp = ' '.join(temp.values())
             temp = temp.split(' ')
             (options, args) = parser.parse_args(args=temp)
-    #
-    print ("check_interval:", options.check_interval)
     ## check parameter
     if options.check_daemon_running:
         ##
