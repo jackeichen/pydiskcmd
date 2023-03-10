@@ -83,16 +83,16 @@ Sofware Requirements:
 
 To build and install from the repository:
 
-    `$ pip install .`
+    $ pip install .
 
 After your installation, you can use command to enable or update Linux Bash 
 Completion for command pynvme&pysata&pyscsi(Only for Linux):
 
-    `$ pydiskutils --enable=cmd_completion`
+    $ pydiskutils --enable=cmd_completion
 
 You can uninstall it by run:
 
-    `$ pip uninstall pydiskcmd`
+    $ pip uninstall pydiskcmd
 
 
 Usage
@@ -103,35 +103,35 @@ pydiskutils
 -----------
 It is a program that show and manage pydiskcmd tool. Use bellow command to get help:
 
-    `$ pydiskutils --help`
+    $ pydiskutils --help
 
 pynvme
 ------
 It is a program similar to nvme-cli, with some limitted commands inside. Use bellow
 command to get help:
 
-    `$ pynvme help`
+    $ pynvme help
 
 pysata
 ------
 It is a sata command tool, to send ATA command to SATA Disk, with some limitted 
 commands inside. Use bellow command to get help:
 
-    `$ pysata help`
+    $ pysata help
 
 pyscsi
 ------
 It is a scsi command tool, to send scsi command to SAS Disk, with some limitted 
 commands inside. Use bellow command to get help:
 
-    `$ pyscsi help`
+    $ pyscsi help
 
 pydiskhealthd
 -------------
 This is a Disk Health Monitoring and Reporting tool only for Linux. See below pydiskhealthd 
 for more detail. Use bellow command to get help:
 
-    `$ pydiskhealthd -h`
+    $ pydiskhealthd -h
 
 
 pydiskhealthd
@@ -157,11 +157,11 @@ The tool provide a real-time NVMe Asynchronous Event Request check by reading Li
 Linux Trace function). You can set the event you want to trigger it by sending nvme set-feature command. 
 Examples(set temperature warning):
 
-    `$ pynvme get-feature /dev/nvme0 -f 0x0B `
+    $ pynvme get-feature /dev/nvme0 -f 0x0B 
 
 and the value is 0x100 now, set the Critical Warning temperature check:
 
-    `$ pynvme set-feature /dev/nvme0 -f 0x0B -v 0x102`
+    $ pynvme set-feature /dev/nvme0 -f 0x0B -v 0x102
 
 For SATA Disk:
 
@@ -170,17 +170,18 @@ For SATA Disk:
 The user(need root) can enable systemd service(pydiskhealthd.service), which make pydiskhealthd running as a 
 backend service and start-up service. Enable and start it by: 
 
-    `$ pydiskutils --enable=auto_startup `
+    $ pydiskutils --enable=auto_startup 
 
 After that, the linux user can manage the pydiskhealthd with task name "pydiskhealthd".
 
 Linux:
 
-    `$ systemctl status pydiskhealthd.service`
+    $ systemctl status pydiskhealthd.service
 
 Or Windows:
-    
-    `> schtasks /Query /TN pydiskhealthd `
+
+`> schtasks /Query /TN pydiskhealthd`
+
 
 
 Advanced Usage
