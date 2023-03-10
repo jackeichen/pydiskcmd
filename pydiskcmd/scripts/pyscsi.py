@@ -30,7 +30,7 @@ def print_help():
         print ("pyscsi %s" % Version)
         print ("usage: pyscsi <command> [<device>] [<args>]")
         print ("")
-        print ("The '<device>' is usually an sd character device (ex: /dev/sdb or physicaldrive1).")
+        print ("The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).")
         print ("")
         print ("The following are all implemented sub-commands:")
         print ("  inq                         Send scsi inquiry command")

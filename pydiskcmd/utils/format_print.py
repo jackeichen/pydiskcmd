@@ -80,7 +80,7 @@ def format_dump_bytes(data, offset=0, end=None, byteorder='reversed', ascii_str=
         else:
             break
 
-def human_read_capacity(size_b, kb_base=1000):
+def human_read_capacity(size_b, kb_base=1000, float_print="%.2f"):
     """
     size_b: the total size in byte
     kb_base: 1000 or 1024
@@ -93,5 +93,5 @@ def human_read_capacity(size_b, kb_base=1000):
         size_b = size_b / kb_base
         if int(size_b) < 1:
             break
-    size_b = "%.2f" % (size_b*kb_base)
+    size_b = float_print % (size_b*kb_base)
     return "%s %s" % (size_b, u)

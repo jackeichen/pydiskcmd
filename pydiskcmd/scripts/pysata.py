@@ -8,7 +8,7 @@ from pydiskcmd.pysata.sata import SATA
 from pydiskcmd.pysata.sata_spec import decode_smart_thresh
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scsi_ba_to_int
-from pydiskcmd.utils.format_print import format_dump_bytes
+from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.system.os_tool import check_device_exist
 
 Version = '0.2.0'
@@ -30,9 +30,10 @@ def print_help():
         print ("pysata-%s" % Version)
         print ("usage: pysata <command> [<device>] [<args>]")
         print ("")
-        print ("The '<device>' is usually an sd character device (ex: /dev/sdb or physicaldrive1).")
+        print ("The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).")
         print ("")
         print ("The following are all implemented sub-commands:")
+        print ("  list                        List all ATA devices on machine")
         print ("  check-PowerMode             Check Disk Power Mode")
         print ("  accessible-MaxAddress       Send Accessible Max Address command")
         print ("  identify                    Get identify information")
@@ -55,6 +56,45 @@ def _print_return_status(ata_status_return_descriptor):
     for k,v in ata_status_return_descriptor.items():
         print ("%-30s: %s" % (k,v))
     print ('')
+
+def _list():
+    usage="usage: %prog smart-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal",],default="normal",
+        help="Output format: normal, default normal")
+
+    (options, args) = parser.parse_args()
+    ##
+    print_format = "%-20s %-20s %-40s %-26s %-16s %-8s"
+    print (print_format % ("Node", "SN", "Model", "Capacity", "Format(L/P)", "FW Rev"))
+    print (print_format % ("-"*20, "-"*20, "-"*40, "-"*26, "-"*16, "-"*8))
+    from pydiskcmd.pydiskhealthd.all_device import scan_device
+    for dev_context in scan_device(debug=False):
+        ## check ATA device
+        if dev_context.device_type == "ata":
+            sn = bytearray2string(translocate_bytearray(dev_context.id_info[20:40]))
+            fw = bytearray2string(translocate_bytearray(dev_context.id_info[46:54]))
+            mn = bytearray2string(translocate_bytearray(dev_context.id_info[54:94]))
+            logical_sector_num = int(binascii.hexlify(translocate_bytearray(dev_context.id_info[200:204], 2)),16)
+            if dev_context.id_info[213] & 0xC0 == 0x40: # word 106 valid
+                if dev_context.id_info[213] & 0x10:
+                    logical_sector_size = int(binascii.hexlify(translocate_bytearray(dev_context.id_info[234:238], 2)),16) * 2
+                else:
+                    logical_sector_size = 512
+                if dev_context.id_info[213] & 0x20:
+                    relationship = 2 ** (dev_context.id_info[212] & 0x0F)
+                else:
+                    relationship = 1
+                physical_sector_size = logical_sector_size * relationship
+                ##
+                disk_format = "%s / %s" % (logical_sector_size, physical_sector_size)
+                cap = human_read_capacity(logical_sector_num*logical_sector_size)
+            else:
+                disk_format = "Unknown"
+                cap = "Unknown"
+            #
+            if options.output_format == "normal":
+                print (print_format % (dev_context.dev_path, sn, mn, cap, disk_format, fw))
 
 def check_power_mode():
     usage="usage: %prog check-PowerMode <device> [OPTIONS]"
@@ -522,7 +562,8 @@ def download_fw():
         parser.print_help()
 
 
-commands_dict = {"check-PowerMode": check_power_mode,
+commands_dict = {"list": _list, 
+                 "check-PowerMode": check_power_mode,
                  "accessible-MaxAddress": accessible_max_address,
                  "identify": identify, 
                  "self-test": self_test, 

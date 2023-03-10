@@ -68,12 +68,12 @@ def _list():
     parser = optparse.OptionParser(usage)
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal",],default="normal",
         help="Output format: normal, default normal")
-    
+
     (options, args) = parser.parse_args()
     ##
-    print_format = "%-16s %-20s %-40s %-9s %-26s %-16s %-8s"
+    print_format = "%-20s %-20s %-40s %-9s %-26s %-16s %-8s"
     print (print_format % ("Node", "SN", "Model", "Namespace", "Usage", "Format", "FW Rev"))
-    print (print_format % ("-"*16, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
+    print (print_format % ("-"*20, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
     from pydiskcmd.system.os_tool import scan_nvme_system
     for ctrl_name,ctrl_info in scan_nvme_system().items():
         ## Get Identify info

@@ -6,6 +6,9 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
+Version 0.2.4
+  * windows support pydiskhealthd and pydiskutils
+
 Version 0.2.3
   * Add scripts->pydiskutils
     * Can check disk smart history

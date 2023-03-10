@@ -51,15 +51,16 @@ Support List
 | CentOS/RHEL 8.4       | x64 | Y    | Y   | Y    |
 | Windows 10 Pro        | x64 | Y    | Y   | N,D  |
 | Windows Server 2019   | x64 | Y    | Y   | N    |
+| Windows Server 2022   | x64 | Y    | Y   | N    |
 
 Y: support, N: Non-support, D: developing.
 
 Note:
 
     * Only some of the commands are tested, Do Not guarantee all the other commands work.
-    * This tool should work in CentOS/RHEL 7.x and 8.x
+    * This tool should work in Linux, but only CentOS/RHEL 7.6 and 8.4 in test
     * Be Carefull using in other windows version.
-    * Support Direct-Connection, RAID card is not support.
+    * Support Direct-Connection/HBA Mode/JBOD Mode, RAID Mode is not support.
 
 
 Building and installing
@@ -82,16 +83,16 @@ Sofware Requirements:
 
 To build and install from the repository:
 
-    $ pip install .
+    `$ pip install .`
 
 After your installation, you can use command to enable or update Linux Bash 
 Completion for command pynvme&pysata&pyscsi(Only for Linux):
 
-    $ pydiskutils --enable=cmd_completion
+    `$ pydiskutils --enable=cmd_completion`
 
 You can uninstall it by run:
 
-    $ pip uninstall pydiskcmd
+    `$ pip uninstall pydiskcmd`
 
 
 Usage
@@ -102,35 +103,35 @@ pydiskutils
 -----------
 It is a program that show and manage pydiskcmd tool. Use bellow command to get help:
 
-    $ pydiskutils --help
+    `$ pydiskutils --help`
 
 pynvme
 ------
 It is a program similar to nvme-cli, with some limitted commands inside. Use bellow
 command to get help:
 
-    $ pynvme help
+    `$ pynvme help`
 
 pysata
 ------
 It is a sata command tool, to send ATA command to SATA Disk, with some limitted 
 commands inside. Use bellow command to get help:
 
-    $ pysata help
+    `$ pysata help`
 
 pyscsi
 ------
 It is a scsi command tool, to send scsi command to SAS Disk, with some limitted 
 commands inside. Use bellow command to get help:
 
-    $ pyscsi help
+    `$ pyscsi help`
 
 pydiskhealthd
 -------------
 This is a Disk Health Monitoring and Reporting tool only for Linux. See below pydiskhealthd 
 for more detail. Use bellow command to get help:
 
-    $ pydiskhealthd -h
+    `$ pydiskhealthd -h`
 
 
 pydiskhealthd
@@ -140,25 +141,27 @@ and smart for nvme disk, smart attributes for sata disk, in a specific time inte
 The pydiskhealthd usually runs in only-one-per-environment mode(default mode). 
 
 Logs maybe Generated when below values changed/set/fall below threshold. These logs may record to 
-either syslog or pydiskhealthd running log(in /var/log/pydiskcmd/pydiskhealthd.log), or both of them.
+either syslog(Linux in/var/log/message, Windows Not Implement) or pydiskhealthd running log(Linux 
+in /var/log/pydiskcmd/pydiskhealthd.log or windows in C:\Windows\Temp\pydiskcmd\pydiskhealthd.log), 
+or both of them.
 
 For NVMe Disk:
   
-  * PCIe Link Status;
-  * PCIe AER Registers;
+  * PCIe Link Status(Only in Linux);
+  * PCIe AER Registers(Only in Linux);
   * smart values;
   * Persistent Event Logs;
-  * AER Event Check;
+  * AER Event Check(Only in Linux);
 
 The tool provide a real-time NVMe Asynchronous Event Request check by reading Linux trace file(Need Enable 
 Linux Trace function). You can set the event you want to trigger it by sending nvme set-feature command. 
 Examples(set temperature warning):
 
-    $ pynvme get-feature /dev/nvme0 -f 0x0B 
+    `$ pynvme get-feature /dev/nvme0 -f 0x0B `
 
 and the value is 0x100 now, set the Critical Warning temperature check:
 
-    $ pynvme set-feature /dev/nvme0 -f 0x0B -v 0x102
+    `$ pynvme set-feature /dev/nvme0 -f 0x0B -v 0x102`
 
 For SATA Disk:
 
@@ -167,11 +170,17 @@ For SATA Disk:
 The user(need root) can enable systemd service(pydiskhealthd.service), which make pydiskhealthd running as a 
 backend service and start-up service. Enable and start it by: 
 
-    $ pydiskutils --enable=auto_startup
+    `$ pydiskutils --enable=auto_startup `
 
-After that, the linux user can manage the pydiskhealthd with command "systemctl".
+After that, the linux user can manage the pydiskhealthd with task name "pydiskhealthd".
 
-    $ systemctl status pydiskhealthd.service
+Linux:
+
+    `$ systemctl status pydiskhealthd.service`
+
+Or Windows:
+    
+    `> schtasks /Query /TN pydiskhealthd `
 
 
 Advanced Usage
