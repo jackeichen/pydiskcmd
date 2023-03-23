@@ -41,6 +41,10 @@ else:
 ###
 from pyscsi.pyscsi.scsi_enum_command import spc, sbc, smc, ssc, mmc
 from pyscsi.pyscsi.scsi_cdb_inquiry import Inquiry
+#
+from pydiskcmd.pysata.ata_cdb_smart import SmartReadLog16
+from pydiskcmd.pysata.ata_cdb_readlog import ReadLogExt
+##
 
 code_version = "0.1.0"
 
@@ -191,6 +195,16 @@ class SATA(object):
 
     def smart_exe_offline_imm(self, subcommand):
         cmd = SmartExeOffLineImm(subcommand)
+        self.execute(cmd)
+        return cmd
+
+    def smart_read_log(self, log_address, count):
+        cmd = SmartReadLog16(count, log_address)
+        self.execute(cmd)
+        return cmd
+
+    def read_log(self, log_address, count, page_number=0, feature=0):
+        cmd = ReadLogExt(count, log_address, page_number, feature=feature)
         self.execute(cmd)
         return cmd
 

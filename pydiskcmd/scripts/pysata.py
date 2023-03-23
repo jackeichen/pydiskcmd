@@ -6,6 +6,7 @@ import optparse
 import binascii
 from pydiskcmd.pysata.sata import SATA
 from pydiskcmd.pysata.sata_spec import decode_smart_thresh
+from pydiskcmd.utils.ata_format_print import read_log_format_print_set,smart_read_log_format_print_set,read_log_decode_set
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scsi_ba_to_int
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
@@ -39,6 +40,8 @@ def print_help():
         print ("  identify                    Get identify information")
         print ("  self-test                   Start a disk self test")
         print ("  smart                       Get smart information")
+        print ("  read-log                    Get the GPL Log and show it")
+        print ("  smart-read-log              Get the smart Log and show it")
         print ("  standby                     Send standby command")
         print ("  read                        Send a read command to disk")
         print ("  write                       Send a write command to disk")
@@ -396,6 +399,102 @@ def self_test():
     else:
         parser.print_help()
 
+def read_log():
+    usage="usage: %prog read-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-l", "--log-address", type="int", dest="log_address", action="store", default=0,
+        help="Log address to read")
+    parser.add_option("-p", "--page-number", type="int", dest="page_number", action="store", default=0,
+        help="Page number offset in this log address")
+    parser.add_option("-c", "--count", type="int", dest="count", action="store", default=1,
+        help="Read log data transfer length, 512 Bytes per count")
+    parser.add_option("-f", "--feature", type="int", dest="feature", action="store", default=0,
+        help="Specify a feature in read log")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
+        help="Show status return value")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        ##
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
+            print ('issuing read-log command')
+            print ("%s:" % d.device._file_name)
+            print ('')
+            cmd = d.read_log(options.log_address, options.count, page_number=options.page_number, feature=options.feature)
+            return_descriptor = cmd.ata_status_return_descriptor
+            if options.show_status:
+                print ("CDB:", cmd.cdb)
+                _print_return_status(return_descriptor)
+        if cmd.datain:
+            if options.output_format == "normal":
+                func = read_log_format_print_set.get(options.log_address)
+                if func:
+                    if options.log_address == 0x07:
+                        func(cmd.datain, options.page_number)
+                    else:
+                        func(cmd.datain)
+                else:
+                    format_dump_bytes(cmd.datain) 
+            elif options.output_format == "raw":
+                print (cmd.datain)
+            else:
+                format_dump_bytes(cmd.datain) 
+        else:
+            print ("Something wrong while read log, no data read from log page.")
+    else:
+        parser.print_help()
+
+def smart_read_log():
+    usage="usage: %prog smart-read-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-l", "--log-address", type="int", dest="log_address", action="store", default=0,
+        help="Log address to read")
+    parser.add_option("-c", "--count", type="int", dest="count", action="store", default=1,
+        help="Read log data transfer length, 512 Bytes per count")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
+        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
+        help="Show status return value")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        ##
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
+            print ('issuing smart-read-log command')
+            print ("%s:" % d.device._file_name)
+            print ('')
+            cmd = d.smart_read_log(options.log_address, options.count)
+            return_descriptor = cmd.ata_status_return_descriptor
+            if options.show_status:
+                print ("CDB:", bytes(cmd.cdb))
+                print ('')
+                _print_return_status(return_descriptor)
+        if cmd.datain:
+            if options.output_format == "normal":
+                func = smart_read_log_format_print_set.get(options.log_address)
+                if func:
+                    func(cmd.datain)
+                else:
+                    format_dump_bytes(cmd.datain) 
+            elif options.output_format == "raw":
+                print (cmd.datain)
+            else:
+                format_dump_bytes(cmd.datain) 
+        else:
+            print ("Something wrong while read log, no data read from log page.")
+    else:
+        parser.print_help()
+
 def smart():
     usage="usage: %prog smart <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -569,6 +668,8 @@ commands_dict = {"list": _list,
                  "self-test": self_test, 
                  "smart": smart, 
                  "standby": standby_imm, 
+                 "read-log": read_log,
+                 "smart-read-log": smart_read_log,
                  "read": read_dma_ext,
                  "write": write_dma_ext,
                  "flush": flush,

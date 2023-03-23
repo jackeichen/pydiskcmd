@@ -246,8 +246,8 @@ Example to build and run your own SATA command in Linux Or Windows.
 ```
 ### Send an Identify command to SATA Disk
 ## pydiskcmd send SATA command by scsi passthrough12 or passthrough16 command
-## This will import a suitable SCSIDevice depends on youy OS,
-#  The SCSIDevice help to send the command to device and get the resuly from the device
+## This will import a suitable SCSIDevice depends on your OS,
+#  The SCSIDevice help to send the command to device and get the result from the device
 from pydiskcmd.utils import init_device
 ## ATACommand16 is the wrapper of ATA command, it help to build your own command
 #  You can read ACS-3 about the ATA command set, and

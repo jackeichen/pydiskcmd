@@ -149,12 +149,12 @@ Identify_Element_Type = {"FirmwareRevision": 'string',
                          "ModelNumber": 'string'}
 
 VSSmartPerAttrBitMap = {"ID": ['b', 0, 1],
-                            "flag": ['b', 1, 2],
-                            "value": ['b', 3, 1],
-                            "worst": ['b', 4, 1],
-                            "raw_value": ['b', 5, 6],
-                            "reserved": ['b', 11, 1],
-                           }
+                        "flag": ['b', 1, 2],
+                        "value": ['b', 3, 1],
+                        "worst": ['b', 4, 1],
+                        "raw_value": ['b', 5, 6],
+                         "reserved": ['b', 11, 1],
+                        }
 
 SmartFlagBitMap = {"Pre-fail": [0x01, 0],
                    "OnlineBit": [0x02, 0],
@@ -163,6 +163,88 @@ SmartFlagBitMap = {"Pre-fail": [0x01, 0],
                    "Eventcount": [0x10, 0],
                    "Selfpereserving": [0x20, 0],
                   }
+
+
+ReadLogLogDirectoryBitMap = {i: ['b', i*2, 2] for i in range(1, 256)}
+ReadLogLogDirectoryBitMap["LoggingVersion"] = ['b', 0, 2]
+SmartReadLogLogDirectoryBitMap = {i: ['b', i*2, 1] for i in range(1, 256)}
+SmartReadLogLogDirectoryBitMap["LoggingVersion"] = ['b', 0, 2]
+
+ReadLogLogDirectoryDescription = {0: "Log directory",
+                                  1: "Summary SMART Error log",
+                                  2: "Comprehensive SMART Error log",
+                                  3: "Extended Comprehensive SMART Error log",
+                                  4: "Device Statistics",
+                                  5: "Reserved for CFA",
+                                  6: "SMART Self-Test log",
+                                  7: "Extended SMART Self-Test log",
+                                  8: "Power Conditions",
+                                  9: "Selective Self-Test log",
+                                  10: "Device Statistics Notification",
+                                  11: "Reserved for CFA",
+                                  12: "Reserved",
+                                  13: "LPS Mis-alignment log",
+                                  range(14,16): "Reserved",
+                                  0x10: "NCQ Command Error log",
+                                  0x11: "SATA Phy Event Counters log",
+                                  0x12: "SATA NCQ Queue Management log",
+                                  0x13: "SATA NCQ Send and Receive log",
+                                  range(14,18): "Reserved for Serial ATA",
+                                  0x18: "Reserved",
+                                  0x19: "LBA Status",
+                                  range(0x1A,0x21): "Reserved",
+                                  0x21: "Write Stream Error log",
+                                  0x22: "Read Stream Error log",
+                                  0x23: "Obsolete",
+                                  0x24: "Current Device Internal Status Data log",
+                                  0x25: "Saved Device Internal Status Data log",
+                                  range(0x26,0x30): "Reserved",
+                                  0x30: "IDENTIFY DEVICE data",
+                                  range(0x31,0x80): "Reserved",
+                                  range(0x80,0xA0): "Host Specific",
+                                  range(0xA0,0xE0): "Device Vendor Specific",
+                                  0xE0: "SCT Command/Status",
+                                  0xE1: "SCT Data Transfer",
+                                  range(0xE2,0x100): "Reserved",
+                                 }
+
+
+ReadLogExtendedSelftestLogBitMap = {"revision number": ['b', 0, 1],
+                                    "descriptor index": ['b', 2, 2],
+                                    "entry": ['b', 4, 494],
+                                    "checksum": ['b', 511, 1],
+                                    }
+
+ExtendedSelftestLogDsrEntryBitMap = {"subcommand_lba": ['b', 0, 1],
+                                     "status": ['b', 1, 1],
+                                     "life_timestamp": ['b', 2, 2],
+                                     "failure_checkpoint": ['b', 4, 1],
+                                     "failing_lba": ['b', 5, 6],
+                                     "vendor_spec": ['b', 11, 15],
+                                     }
+
+SmartExecuteOfflineImmediateSubcommandsDescription = {0: "off-line offline",
+                                                      1: "Short offline",
+                                                      2: "Extended offline",
+                                                      3: "Conveyance offline",
+                                                      4: "Selective offline",
+                                                      0x7F: "Abort self-test",
+                                                      0x81: "Short captive",
+                                                      0x82: "Extended captive",
+                                                      0x83: "Conveyance captive",
+                                                      0x84: "Selective captive",
+                                                      }
+SelftestExecutionStatusDescription = {0: "Completed without error",
+                                      1: "Aborted by host",
+                                      2: "Interrupted by host",
+                                      3: "Running unfinished",
+                                      4: "Unkown failure",
+                                      5: "Electrical failure",
+                                      6: "Servo/Seek failure",
+                                      7: "Read failure",
+                                      8: "May handling damage",
+                                      15: "In progress",
+                                     }
 
 
 class SmartAttr(object):
@@ -218,3 +300,57 @@ def decode_smart_flag(raw_data):
     result = {}
     decode_bits(raw_data, SmartFlagBitMap, result)
     return result
+
+def decode_read_log_log_directory(raw_data):
+    result = {}
+    decode_bits(raw_data, ReadLogLogDirectoryBitMap, result)
+    for k in list(result.keys()):
+        temp = result.pop(k)
+        temp = temp[0]+(temp[1]<<8)
+        if temp > 0:
+            result[k] = temp
+    return result
+
+def decode_smart_read_log_log_directory(raw_data):
+    result = {}
+    decode_bits(raw_data, SmartReadLogLogDirectoryBitMap, result)
+    rev = result.pop("LoggingVersion")
+    rev = rev[0]+(rev[1]<<8)
+    ##
+    for k in list(result.keys()):
+        temp = result.pop(k)
+        temp = temp[0]
+        if temp > 0:
+            result[k] = temp
+    ##
+    result["LoggingVersion"] = rev
+    return result
+
+def decode_read_log_extend_selftest(raw_data):
+    result = []
+    if len(raw_data) % 512 == 0:
+        offset = 0
+        while (offset < len(raw_data)):
+            temp = {}
+            decode_bits(raw_data[offset:(offset+512)], ReadLogExtendedSelftestLogBitMap, temp)
+            if not (temp["revision number"][0] & 0xFF): # not first log
+                temp.pop("revision number")
+                temp.pop("descriptor index")
+                # 
+            unused_type = b'\x00' * 26
+            entry_raw_data = temp.pop("entry")
+            temp["entry"] = []
+            for i in range(19):
+                raw_d = entry_raw_data[(i*26):(i*26+26)]
+                if bytes(raw_d) != unused_type:
+                    temp_result = {}
+                    decode_bits(raw_d, ExtendedSelftestLogDsrEntryBitMap, temp_result)
+                    temp["entry"].append(temp_result)
+            ##
+            result.append(temp)
+            offset += 512
+    return result
+
+
+read_log_decode_set = {0: decode_read_log_log_directory, 7: decode_read_log_extend_selftest,}
+smart_read_log_decode_set = {0: decode_smart_read_log_log_directory,}

@@ -182,3 +182,25 @@ class SmartExeOffLineImm16(ATACommand16):
                               0,           # t_length
                               0,           # t_dir
                               )
+
+
+class SmartReadLog16(ATACommand16):
+    """
+    A class to send SMART EXECUTE OFF-LINE IMMEDIATE command to a ATA device
+    """
+    def __init__(self,
+                 count,
+                 log_address):
+        #      
+        lba_filed = log_address + (0xC24F << 8)
+        ##
+        ATACommand16.__init__(self,
+                              0xD5,        # fetures
+                              count,       # count
+                              lba_filed,   # lba
+                              0,           # device
+                              0xB0,        # command
+                              0x04,        # protocal
+                              2,           # t_length
+                              1,           # t_dir
+                              )

@@ -16,6 +16,7 @@ win_etc_file_absolute_path = os.path.join(win_base_path, "pydiskhealthd")
 ##
 
 def enable_systemd_pydiskhealthd():
+    CurrentBasePath = os.path.dirname(inspect.getfile(enable_systemd_pydiskhealthd))
     systemd_file_in = os.path.join(CurrentBasePath, "pydiskhealthd.service")
     if os.path.isfile(systemd_file_in):
         with open(systemd_file_in, "r") as f:
@@ -29,22 +30,6 @@ def enable_systemd_pydiskhealthd():
         print ("Write systemd service file(%s) Done!" % systemd_absolute_path)
     else:
         print ("No systemd service file in program")
-    ##
-    print ("")
-    CurrentBasePath = os.path.dirname(inspect.getfile(enable_systemd_pydiskhealthd))
-    etc_file_in = os.path.join(CurrentBasePath, "pydiskhealthd.cfg")
-    if os.path.isfile(etc_file_in):
-        with open(etc_file_in, "r") as f:
-            content = f.read()
-        print ("The bellow text will be write: ")
-        print ("*"*60)
-        print (content)
-        print ("*"*60)
-        with open(etc_file_absolute_path, "w") as f:
-            f.write(content)
-        print ("Write systemd service config file(%s) Done!" % etc_file_absolute_path)
-    else:
-        print ("No systemd service config file in program")
     print ("")
     ##
     os.system("systemctl daemon-reload")

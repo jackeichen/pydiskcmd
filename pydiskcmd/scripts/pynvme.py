@@ -54,7 +54,7 @@ def print_help():
         print ("  device-self-test      Perform the necessary tests to observe the performance")
         print ("  self-test-log         Retrieve the SELF-TEST Log, show it")
         print ("  pcie                  Get device PCIe status, show it")
-        print ("  flush                  Submit a flush command, return results")
+        print ("  flush                 Submit a flush command, return results")
         print ("  read                  Submit a read command, return results")
         print ("  write                 Submit a write command, return results")
         print ("  version               Shows the program version")
