@@ -74,35 +74,45 @@ def _list():
     print_format = "%-20s %-20s %-40s %-9s %-26s %-16s %-8s"
     print (print_format % ("Node", "SN", "Model", "Namespace", "Usage", "Format", "FW Rev"))
     print (print_format % ("-"*20, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
-    from pydiskcmd.system.os_tool import scan_nvme_system
-    for ctrl_name,ctrl_info in scan_nvme_system().items():
-        ## Get Identify info
-        with NVMe(init_device(ctrl_info.dev_path)) as d:
-            cmd_id_ctrl = d.id_ctrl()
-        ## para data
-        result = nvme_id_ctrl_decode(cmd_id_ctrl.data)
-        sn = ba_to_ascii_string(result.get("SN"), "")
-        mn = ba_to_ascii_string(result.get("MN"), "")
-        fw = ba_to_ascii_string(result.get("FR"), "")
-        ##
-        for ns_info in ctrl_info.retrieve_ns():
-            ## Get information now!
-            ## send identify controller and identify namespace
-            with NVMe(init_device(ctrl_info.dev_path)) as d:
-                cmd_id_ns = d.id_ns(ns_info.ns_id)
-            ## para data
-            result = nvme_id_ns_decode(cmd_id_ns.data)
+    from pydiskcmd.pydiskhealthd.all_device import scan_device,os_type
+    ##
+    for dev_context in scan_device(debug=False):
+        if dev_context.device_type == "nvme":
+            sn = dev_context.Serial
+            mn = dev_context.Model
+            fw = dev_context.fw
             #
-            lbaf = result.get("LBAF%s" % scsi_ba_to_int(result.get("FLBAS"), 'little'))
-            meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
-            lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
-            _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
-            #
-            NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
-            NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
-            usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
+            if os_type == 'Linux':
+                from pydiskcmd.system.lin_os_tool import NVMeController
+                dev_name = dev_context.dev_path.strip("/dev/")
+                ctrl_info = NVMeController(dev_name)
+                for ns_info in ctrl_info.retrieve_ns():
+                    node = ns_info.dev_path
+                    ns_id = ns_info.ns_id
+                    ## Get information now!
+                    ## send identify controller and identify namespace
+                    with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
+                        cmd_id_ns = d.id_ns(ns_info.ns_id)
+                    ## para data
+                    result = nvme_id_ns_decode(cmd_id_ns.data)
+                    #
+                    lbaf = result.get("LBAF%s" % scsi_ba_to_int(result.get("FLBAS"), 'little'))
+                    meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
+                    lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
+                    _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
+                    #
+                    NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
+                    NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
+                    usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
+            elif os_type == 'Windows':
+                node= dev_context.dev_path
+                ns_id = ''
+                usage = ''
+                _format = ''
+            else:
+                raise RuntimeError("OS %s Not support" % os_type)
             if options.output_format == "normal":
-                print (print_format % (ns_info.dev_path, sn, mn, ns_info.ns_id, usage, _format, fw))
+                print (print_format % (node, sn, mn, ns_id, usage, _format, fw))
 
 def smart_log():
     usage="usage: %prog smart-log <device> [OPTIONS]"
@@ -117,7 +127,7 @@ def smart_log():
         if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.smart_log()
         cmd.check_return_status()
         ##
@@ -150,7 +160,7 @@ def id_ctrl():
         if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.id_ctrl()
         cmd.check_return_status()
         if options.output_format == "binary":
@@ -197,7 +207,7 @@ def id_ns():
             parser.error("namespace id input error.")
             return
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.id_ns(options.namespace_id)
         cmd.check_return_status()
         ##
@@ -237,7 +247,7 @@ def error_log():
         if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.error_log_entry()
         cmd.check_return_status()
         ##
@@ -281,7 +291,7 @@ def fw_log():
         if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.fw_slot_info()
         cmd.check_return_status()
         ##
@@ -320,7 +330,7 @@ def fw_download():
             parser.error("No Firmware File provided")
             return
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             rc = d.nvme_fw_download(options.fw_path, xfer=options.xfer, offset=options.offset)
     else:
         parser.print_help()
@@ -341,7 +351,7 @@ def fw_commit():
             raise RuntimeError("Device not support!")
         ##
         smud = False
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             # get nvme ver
             smud = True if (d.ctrl_identify_info[260] & 0x20) else False
             #
@@ -382,7 +392,7 @@ def nvme_format():
         if options.lbaf < 0:
             parser.error("You need give the lbaf.")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.nvme_format(options.lbaf, nsid=options.namespace_id, mset=options.ms, pi=options.pi, pil=options.pil, ses=options.ses)
         cmd.check_return_status()
     else:
@@ -412,7 +422,7 @@ def persistent_event_log():
             except ValueError:
                 parser.error("int type is need with -f/--filter")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             ret = d.get_persistent_event_log(options.action)
         if ret == 6:
             print ("Device Not support Persistent Event log.")
@@ -511,7 +521,7 @@ self-test command:                                     \
         if options.test_code not in (1, 2, 0xe, 0xf):
             parser.error("-s/--self-test-code not match")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.self_test(options.test_code, ns_id=options.namespace_id)
         if cmd.cq_status == 0x1D:
             print ("The controller or NVM subsystem already has a device self-test operation in process.")
@@ -533,7 +543,7 @@ def self_test_log():
         if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.self_test_log()
         cmd.check_return_status()
         ##
@@ -572,7 +582,7 @@ def commands_supported_and_effects():
         if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.commands_supported_and_effects_log()
         ##
         if options.output_format == "binary":
@@ -647,7 +657,7 @@ def get_feature():
             parser.error("You should give a valid feature id")
         ##
         result = {}
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             if options.feature_id == 2:
                 cmd = _get_feature_power_management(d, options)
                 result = nvme_power_management_cq_decode(cmd.cq_cmd_spec)
@@ -728,7 +738,7 @@ def set_feature():
             else:
                 parser.error("Data file not exists")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.set_feature(options.feature_id,
                                 ns_id=options.namespace_id,
                                 sv=options.save,
@@ -771,7 +781,7 @@ def nvme_create_ns():
         if options.ncap < 1:
             parser.error("namespace capacity should > 0")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.ns_create(options.nsze,
                               options.ncap,
                               options.flbas,
@@ -802,7 +812,7 @@ def nvme_delete_ns():
             raise RuntimeError("Device not support!")
         #
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.ns_delete(options.namespace_id)
         ##
         cmd.check_return_status(success_hint=True, fail_hint=True)
@@ -831,7 +841,7 @@ def nvme_attach_ns():
         else:
             parser.error("give a ctrl_list")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.ns_attachment(options.namespace_id, 0, ctrl_list)
         ##
         cmd.check_return_status(success_hint=True, fail_hint=True)
@@ -860,7 +870,7 @@ def nvme_detach_ns():
         else:
             parser.error("give a ctrl_list")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.ns_attachment(options.namespace_id, 1, ctrl_list)
         ##
         cmd.check_return_status(success_hint=True, fail_hint=True)
@@ -885,11 +895,11 @@ def list_ns():
             raise RuntimeError("Device not support!")
         #
         if options.all:
-            with NVMe(init_device(dev)) as d:
+            with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.allocated_ns_ids(options.namespace_id)
         ##
         else:
-            with NVMe(init_device(dev)) as d:
+            with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.active_ns_ids(options.namespace_id)
         cmd.check_return_status(success_hint=False, fail_hint=True)
         ##
@@ -926,11 +936,11 @@ def list_ctrl():
             parser.error("namespace-id should > 0")
         ##
         if options.namespace_id is None:
-            with NVMe(init_device(dev)) as d:
+            with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.cnt_ids(options.cntid)
         ##
         else:
-            with NVMe(init_device(dev)) as d:
+            with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.ns_attached_cnt_ids(options.namespace_id, options.cntid)
         cmd.check_return_status(success_hint=False, fail_hint=True)
         ##
@@ -965,7 +975,7 @@ def read():
         if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.read(options.namespace_id, options.start_block, options.block_count)
         cmd.check_return_status(success_hint=False, fail_hint=True)
         ##
@@ -1052,7 +1062,7 @@ def flush():
         if not check_device_exist(dev):
             raise RuntimeError("Device not support!")
         ##
-        with NVMe(init_device(dev)) as d:
+        with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.flush(options.namespace_id)
         cmd.check_return_status(True)
     else:
@@ -1070,9 +1080,6 @@ def pcie():
     
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
-        ##
-        from pydiskcmd.pypci.pci_lib import map_pci_device
-        ##
         PCIePowerPath = "/sys/bus/pci/slots/%s/power"
         ##
         if options.power and options.power not in ("status", "on", "off"):
@@ -1089,27 +1096,19 @@ def pcie():
                         print ("Powering on device")
                         with open(power_file, 'w') as f:
                             f.write("1")
-                        return
                     else:
                         parser.error("Cannot find power file in %s" % power_file)
                 else:
                     parser.error("You may need combine with --slot_num")
             elif options.power == "status":
-                print ("Device is offline, and you set the device slot number is %s." % options.slot_num)
+                print ("Device is offline")
                 print ("")
-                if options.slot_num >= 0:
-                    power_file = PCIePowerPath % options.slot_num
-                    if os.path.isfile(power_file):
-                        with open(power_file, 'r') as f:
-                            status = f.read().strip()
-                        print ("Current PCIe power status: %s" % ("on" if status == '1' else "off"))
-                        return
-                    else:
-                        parser.error("Cannot find power file in %s" % power_file)
-                else:
-                    parser.error("You may need combine with --slot_num")
             else:
-                raise RuntimeError("Device not support!")
+                print ("Device is offline")
+                print ("")
+            return
+        ##
+        from pydiskcmd.pypci.pci_lib import map_pci_device
         ##
         bus_address = map_pcie_addr_by_nvme_ctrl_path(dev)
         if bus_address:
@@ -1191,9 +1190,6 @@ commands_dict = {"list": _list,
                  "help": print_help}
 
 def pynvme():
-    # Do not support windows now
-    if os_type != "Linux":
-        raise NotImplementedError("pydiskhealth cannot run in OS:%s" % os_type)
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command in commands_dict:

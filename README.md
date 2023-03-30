@@ -49,17 +49,17 @@ Support List
 |-----------------------|-----|------|-----|------|
 | CentOS/RHEL 7.6       | x64 | Y    | Y   | Y    |
 | CentOS/RHEL 8.4       | x64 | Y    | Y   | Y    |
-| Windows 10 Pro        | x64 | Y    | Y   | N,D  |
-| Windows Server 2019   | x64 | Y    | Y   | N    |
-| Windows Server 2022   | x64 | Y    | Y   | N    |
+| RHEL 9.1              | x64 | Y    | Y   | Y    |
+| Windows 10 Pro        | x64 | Y    | Y   | Y    |
+| Windows Server 2019   | x64 | Y    | Y   | T    |
+| Windows Server 2022   | x64 | Y    | Y   | T    |
 
-Y: support, N: Non-support, D: developing.
+Y: support, N: Non-support, D: Developing, T: Under Testing
 
 Note:
 
-    * Only some of the commands are tested, Do Not guarantee all the other commands work.
-    * This tool should work in Linux, but only CentOS/RHEL 7.6 and 8.4 in test
-    * Be Carefull using in other windows version.
+    * Only some of the commands are tested, Do Not guarantee all the other commands work;
+    * This tool should work in Linux&Windows, but may be incompatible in OS other than this Support List;
     * Support Direct-Connection/HBA Mode/JBOD Mode, RAID Mode is not support.
 
 
@@ -197,14 +197,14 @@ Example to build and run your own NVMe command in Linux.
 ## <Command> is the wrapper of raw command data structure, you can find it in pydiskcmd/pynvme/nvme_command,
 #  <build_command> is the methmod to build cdw data structure
 ##
-from pydiskcmd.pynvme.nvme_command import Command,build_command
+from pydiskcmd.pynvme.nvme_command import LinCommand,build_int_by_bitmap
 ## for running your own command in device, and get the result.
 from pydiskcmd.utils import init_device
 
 CmdOPCode = 0x80 # nvme format command OP code, see nvme spec
-IOCTL_REQ = Command.linux_req.get("NVME_IOCTL_ADMIN_CMD") # NVME_IOCTL_ADMIN_CMD Code type
+IOCTL_REQ = LinCommand.linux_req.get("NVME_IOCTL_ADMIN_CMD") # NVME_IOCTL_ADMIN_CMD Code type
 
-class Format(Command): 
+class Format(LinCommand): 
     def __init__(self, 
                  lbaf,            # the lbaf to format, see nvme spec
                  mset=0,          # the mset to format, see nvme spec
@@ -218,20 +218,21 @@ class Format(Command):
         #    key: the name of value
         #    value: (the bit-map of value, Byte offset in DWord, value to set)
         ##
-        cdw10 = build_command({"lbaf": (0x0F, 0, lbaf), # the location of lbaf in cdw10, see nvme spec
-                               "mset": (0x10, 0 ,mset), # the location of mset in cdw10, see nvme spec
-                               "pi": (0xE0, 0, pi),     # the location of pi in cdw10, see nvme spec
-                               "pil": (0x01, 1, pil),   # the location of pil in cdw10, see nvme spec
-                               "ses": (0x0E, 1, ses)})  # the location of ses in cdw10, see nvme spec
-        ## build command
-        super(Format, self).__init__(IOCTL_REQ,
-                                     opcode=CmdOPCode,
-                                     nsid=nsid,
-                                     cdw10=cdw10,
-                                     timeout_ms=timeout)
+        cdw10 = build_int_by_bitmap({"lbaf": (0x0F, 0, lbaf), # the location of lbaf in cdw10, see nvme spec
+                                     "mset": (0x10, 0 ,mset), # the location of mset in cdw10, see nvme spec
+                                     "pi": (0xE0, 0, pi),     # the location of pi in cdw10, see nvme spec
+                                     "pil": (0x01, 1, pil),   # the location of pil in cdw10, see nvme spec
+                                     "ses": (0x0E, 1, ses)})  # the location of ses in cdw10, see nvme spec
+        ##
+        super(Format, self).__init__(IOCTL_REQ)
+        # build command
+        self.build_command(opcode=CmdOPCode,
+                           nsid=nsid,
+                           cdw10=cdw10,
+                           timeout_ms=timeout)
 
 cmd = Format(0, nsid=1) ## format namespace 1 to lbaf 0
-with init_device("/dev/nvme1") as d: ## open a nvme device: /dev/nvme1
+with init_device('/dev/nvme1', open_t='nvme') as d: ## open a nvme device: /dev/nvme1
     d.execute(cmd)
 ## Get the command result-> 
 print (cmd.cq_cmd_spec) # Command Specific Status Values, see nvme spec
@@ -300,6 +301,10 @@ smartie is a pure-python library for getting basic disk information such as
 model, serial number, disk health, temperature, etc...
 
 * smartie: https://github.com/TkTech/smartie
+
+Communicate with NVMe SSD using Windows' inbox device driver
+
+* nvmetool-win: https://github.com/ken-yossy/nvmetool-win
 
 
 Support

@@ -516,6 +516,7 @@ def smart():
             print ('issuing smart command')
             print ("%s:" % d.device._file_name)
             cmd = d.smart_read_data(SMART_KEY)
+            raw_smart_read_data = cmd.datain
             return_descriptor = cmd.ata_status_return_descriptor
             if options.show_status:
                 _print_return_status(return_descriptor)
@@ -556,8 +557,22 @@ def smart():
                            bytearray2hex_l(vs_smart, i+5, 6))           # RAW_VALUE0
                            )
             elif options.output_format == "raw":
+                print ("SMART Read DATA bellow:")
+                print ("")
+                print (raw_smart_read_data)
+                print ("")
+                print ("")
+                print ("SMART THRESH value:")
+                print ("")
                 print (cmd.datain)
             else:
+                print ("SMART Read DATA bellow:")
+                print ("")
+                format_dump_bytes(raw_smart_read_data)
+                print ("")
+                print ("")
+                print ("SMART THRESH value:")
+                print ("")
                 format_dump_bytes(cmd.datain) 
     else:
         parser.print_help()

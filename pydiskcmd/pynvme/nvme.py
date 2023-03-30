@@ -22,7 +22,7 @@ from pydiskcmd.pynvme.cdb_nvme_write import Write
 from pydiskcmd.pynvme.cdb_nvme_flush import Flush
 from pydiskcmd.exceptions import *
 
-code_version = "0.1.1"
+code_version = "0.1.2"
 
 class NVMe(object):
     def __init__(self, dev):

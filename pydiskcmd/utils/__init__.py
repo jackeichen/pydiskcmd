@@ -15,7 +15,7 @@ def init_device(dev, read_write=False, open_t=None):
         device = SCSIDevice(dev, read_write)
     elif open_t == 'nvme':
         from pydiskcmd.pynvme.nvme_device import NVMeDevice
-        if os_type == "Windows" and dev.startswith("PHYSICALDRIVE"):
+        if os_type == "Windows" and dev.upper().startswith("PHYSICALDRIVE"):
             dev = "\\\\.\\" + dev.upper()
         device = NVMeDevice(dev, read_write)
     elif open_t == None and os_type == "Linux":

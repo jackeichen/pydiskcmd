@@ -6,6 +6,7 @@
 import os
 import traceback
 from pydiskcmd.system.os_tool import os_type
+from pydiskcmd.exceptions import *
 
 
 if os_type == "Linux":
@@ -32,7 +33,6 @@ if os_type == "Linux":
             return cmd
 
 elif os_type == "Windows":
-    raise NotImplementedError("Cannot support NVMe Device in Windows!")
     from pydiskcmd.common.win_device import WinDevice
     class NVMeDevice(WinDevice):
         def __init__(self, 
@@ -47,19 +47,16 @@ elif os_type == "Windows":
 
             :param cmd: a Command Structure
             """
-            ## transfer command to windows mode
-            pass
             ## 
-            try:
-                cmd.cq_status = WinDevice.execute(self, 
-                                                  cmd.req_id,  # IOControl Code to use, from winioctlcon
-                                                  cmd.cdb,      # datain
-                                                  cmd.cdb)
-            except:
-                traceback.print_exc()
-            else:
-                ## After execute. will transfer result to Command Structure
-                pass
+            if not cmd.cdb:
+                raise CommandDataStrucError("Invalid Command Data Structure %s" % cmd.cdb)
+            WinDevice.execute(self, 
+                              cmd.req_id,  # IOControl Code to use, from winioctlcon
+                              cmd.cdb,      # datain
+                              cmd.cdb)
+            # Usually 0 if it goes into here.
+            # 
+            cmd.cq_status = 0
             return cmd
 else:
     raise NotImplementedError("%s not support" % os_type)

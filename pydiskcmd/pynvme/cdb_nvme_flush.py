@@ -8,19 +8,20 @@ CmdOPCode = 0x00
 #####
 
 if os_type == "Linux":
-    from pydiskcmd.pynvme.nvme_command import Command
+    from pydiskcmd.pynvme.nvme_command import LinCommand
     ## linux command
-    IOCTL_REQ = Command.linux_req.get("NVME_IOCTL_IO_CMD")
-    class Flush(Command):
+    IOCTL_REQ = LinCommand.linux_req.get("NVME_IOCTL_IO_CMD")
+    class Flush(LinCommand):
         def __init__(self, ns_id):
             ##   
-            super(Flush, self).__init__(IOCTL_REQ,
-                                       opcode=CmdOPCode,
-                                       nsid=ns_id
-                                       )
+            super(Flush, self).__init__(IOCTL_REQ)
+            self.build_command(opcode=CmdOPCode,
+                               nsid=ns_id
+                               )
 
 elif os_type == "Windows":
-    class Flush(object):
+    from pydiskcmd.pynvme.nvme_command import WinCommand
+    class Flush(WinCommand):
         ## TODO.
         pass
 

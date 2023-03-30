@@ -8,10 +8,10 @@ CmdOPCode = 0x02
 #####
 
 if os_type == "Linux":
-    from pydiskcmd.pynvme.nvme_command import Command,build_command
+    from pydiskcmd.pynvme.nvme_command import LinCommand,build_int_by_bitmap
     ## linux command
-    IOCTL_REQ = Command.linux_req.get("NVME_IOCTL_IO_CMD")
-    class Read(Command):
+    IOCTL_REQ = LinCommand.linux_req.get("NVME_IOCTL_IO_CMD")
+    class Read(LinCommand):
         def __init__(self, 
                      ns_id,
                      slba, 
@@ -30,34 +30,35 @@ if os_type == "Linux":
             ### build command
             cdw10 = slba & 0xFFFFFFFF
             cdw11 = (slba >> 32) & 0xFFFFFFFF
-            cdw12 = build_command({"NLB": (0xFFFF, 0, nlba),
-                                   "PRINFO": (0x3C, 3, prinfo),
-                                   "FUA": (0x40, 3, fua),
-                                   "LR": (0x80, 3, lr),
-                                  })
-            cdw13 = build_command({"DSM": (0xFF, 0, dsm)})   
+            cdw12 = build_int_by_bitmap({"NLB": (0xFFFF, 0, nlba),
+                                         "PRINFO": (0x3C, 3, prinfo),
+                                         "FUA": (0x40, 3, fua),
+                                         "LR": (0x80, 3, lr),
+                                        })
+            cdw13 = build_int_by_bitmap({"DSM": (0xFF, 0, dsm)})   
             cdw14 = eilbrt
-            cdw15 = build_command({"ELBAT": (0xFFFF, 0, elbat),
-                                   "ELBATM": (0xFFFF, 2, elbatm),
-                                  }) 
+            cdw15 = build_int_by_bitmap({"ELBAT": (0xFFFF, 0, elbat),
+                                         "ELBATM": (0xFFFF, 2, elbatm),
+                                        }) 
             ##   
-            super(Read, self).__init__(IOCTL_REQ,
-                                       opcode=CmdOPCode,
-                                       nsid=ns_id,
-                                       metadata=metadata,  ## Metadata Pointer
-                                       addr=addr,      ## Data Pointer
-                                       metadata_len=metadata_len, ## Metadata length
-                                       data_len=data_len,     ## used to create data buffer
-                                       cdw10=cdw10,
-                                       cdw11=cdw11,
-                                       cdw12=cdw12,
-                                       cdw13=cdw13,
-                                       cdw14=cdw14,
-                                       cdw15=cdw15,
-                                       )
+            super(Read, self).__init__(IOCTL_REQ)
+            self.build_command(opcode=CmdOPCode,
+                               nsid=ns_id,
+                               metadata=metadata,  ## Metadata Pointer
+                               addr=addr,      ## Data Pointer
+                               metadata_len=metadata_len, ## Metadata length
+                               data_len=data_len,     ## used to create data buffer
+                               cdw10=cdw10,
+                               cdw11=cdw11,
+                               cdw12=cdw12,
+                               cdw13=cdw13,
+                               cdw14=cdw14,
+                               cdw15=cdw15,
+                               )
 
 elif os_type == "Windows":
-    class Read(object):
+    from pydiskcmd.pynvme.nvme_command import WinCommand
+    class Read(WinCommand):
         ## TODO.
         pass
 

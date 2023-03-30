@@ -198,6 +198,7 @@ class NVMeDeviceBase(object):
             result = nvme_id_ctrl_decode(self._id_ctrl)
         self.__serial = ba_to_ascii_string(result.get("SN"), "")
         self.__model = ba_to_ascii_string(result.get("MN"), "")
+        self.__fw = ba_to_ascii_string(result.get("FR"), "")
 
     @property
     def device_id(self):
@@ -214,6 +215,10 @@ class NVMeDeviceBase(object):
     @property
     def Serial(self):
         return self.__serial
+
+    @property
+    def fw(self):
+        return self.__fw
 
     @property
     def id_ctrl_info(self):

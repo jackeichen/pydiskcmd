@@ -9,5 +9,9 @@ class ExecuteCmdErr(Exception):
     pass
 
 
+class CommandDataStrucError(Exception):
+    pass
+    
+
 class BuildNVMeCommandError(Exception):
     pass
