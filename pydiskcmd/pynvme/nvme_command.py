@@ -75,7 +75,10 @@ class LinCommand(CommandBase):
 
 class WinCommand(CommandBase):
     win_req = {"IOCTL_STORAGE_QUERY_PROPERTY": 0x2D1400,
-               "IOCTL_STORAGE_PROTOCOL_COMMAND": None,}
+               "IOCTL_STORAGE_PROTOCOL_COMMAND": None,
+               "IOCTL_STORAGE_FIRMWARE_DOWNLOAD": 0x2DDC04,
+               "IOCTL_STORAGE_FIRMWARE_ACTIVATE": 0x2DDC08,
+               }
 
     def __init__(self, req_id):
         super(WinCommand, self).__init__(req_id)

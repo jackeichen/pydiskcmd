@@ -96,7 +96,6 @@ class CmdStructure(LittleEndianStructure):
         self.metadata_len = metadata_len
 
 
-
 class DataBuffer(LittleEndianStructure):
     def __init__(self, length):
         self.__len = length

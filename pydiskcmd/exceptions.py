@@ -9,6 +9,10 @@ class ExecuteCmdErr(Exception):
     pass
 
 
+class CommandNotSupport(Exception):
+    pass
+
+
 class CommandDataStrucError(Exception):
     pass
     

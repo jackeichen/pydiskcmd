@@ -251,11 +251,11 @@ class NVMeDevice(NVMeDeviceBase):
         self.nvme_feature_support = NVMeFeatureStatus()
         if self.id_ctrl_info[261] & 0x10:
             self.nvme_feature_support.persistent_event_log = True
-        if os_type == 'Windows':
-            self.nvme_feature_support.pcie = False
-            self.nvme_feature_support.nvme_aer = False
         #
         self.os_feature_status = OSFeatureStatus()
+        if os_type == 'Windows':
+            self.os_feature_status.pcie_check = False
+            self.os_feature_status.nvme_aer_check = False
         #
         self.check_feature_support = {"pcie": self.nvme_feature_support.pcie and self.os_feature_status.pcie_check,
                                       "smart": self.nvme_feature_support.smart,

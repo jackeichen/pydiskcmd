@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmd.system.os_tool import os_type
+from pydiskcmd.exceptions import CommandNotSupport
 
 #####
 CmdOPCode = 0x02
@@ -25,11 +26,11 @@ if os_type == "Linux":
                                 cdw10=cdw10,)
 
     class ErrorLog(LinCommand):
-        def __init__(self, max_entry):
+        def __init__(self, max_entry, loge_page_offset=0):
             ## get the max number log entries
             numbet_dw = max_entry * 16 ## 16 = 64 / 4
             numd = numbet_dw - 1
-            ## the numbet_dw <= 256*16= 4096,
+            ## Identify controller Byte 262, so the numbet_dw <= 256*16= 4096,
             #  so 0x0FFF is enough for numd
             numdl = numd & 0x0FFF
             ### build command
@@ -109,15 +110,46 @@ if os_type == "Linux":
                                data_len=4096,
                                cdw10=cdw10)
 elif os_type == "Windows":
-    from pydiskcmd.pynvme.nvme_command import WinCommand
-    from pydiskcmd.pynvme.win_nvme_command import NVMeStorageQueryPropertyWithBuffer512,NVMeStorageQueryPropertyWithBuffer4096
+    from pydiskcmd.pynvme.nvme_command import WinCommand,build_int_by_bitmap
+    from pydiskcmd.pynvme.win_nvme_command import (
+        NVMeStorageQueryPropertyWithBuffer512,
+        NVMeStorageQueryPropertyWithBuffer564,
+        NVMeStorageQueryPropertyWithBuffer4096,
+        get_NVMeStorageQueryPropertyWithBuffer,
+    )
     IOCTL_REQ = WinCommand.win_req.get("IOCTL_STORAGE_QUERY_PROPERTY")
     ##
     class FWSlotInfo(WinCommand):
-        pass
+        def __init__(self, *args, **kwargs):
+            super(FWSlotInfo, self).__init__(IOCTL_REQ)
+            self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
+                               DataType=2,       # NVMeDataTypeLogPage
+                               RequestValue=3,   # log id
+                               RequestSubValue=0, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               ProtocolDataLength=512,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            self.cdb = NVMeStorageQueryPropertyWithBuffer512(**kwargs)
+            return self.cdb
 
     class ErrorLog(WinCommand):
-        pass
+        def __init__(self, max_entry, loge_page_offset=0, **kwargs):
+            self.__data_len = max_entry * 64
+            ##
+            super(ErrorLog, self).__init__(IOCTL_REQ)
+            self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
+                               DataType=2,       # NVMeDataTypeLogPage
+                               RequestValue=1,   # log id
+                               RequestSubValue=loge_page_offset&0xFF, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue2=(loge_page_offset>>32)&0xFF, # the upper 32-bit value of the offset within a log page from which to start returning data.
+                               ProtocolDataLength=self.__data_len,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            temp = get_NVMeStorageQueryPropertyWithBuffer(self.__data_len)
+            self.cdb = temp(**kwargs)
+            return self.cdb
 
     class SmartLog(WinCommand):
         def __init__(self, *args, **kwargs):
@@ -134,10 +166,48 @@ elif os_type == "Windows":
             return self.cdb
 
     class SelfTestLog(WinCommand):
-        pass
+        def __init__(self, *args, **kwargs):
+            super(SelfTestLog, self).__init__(IOCTL_REQ)
+            self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
+                               DataType=2,       # NVMeDataTypeLogPage
+                               RequestValue=0x06,   # log id
+                               RequestSubValue=0, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               ProtocolDataLength=564,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            self.cdb = NVMeStorageQueryPropertyWithBuffer564(**kwargs)
+            return self.cdb
 
     class PersistentEventLog(WinCommand):
-        pass
+        def __init__(self,
+                     lsp,
+                     numdl,
+                     lpol=0,
+                     lpou=0,
+                     data_addr=None):
+            raise CommandNotSupport("PersistentEventLog Not Support")
+            ##
+            self.__data_len = (numdl + 1) * 4
+            request_sub_value4 = build_int_by_bitmap({"RetainAsynEvent": [0x01, 0, 0],
+                                                      "LogSpecificField": [0x1E, 0, lsp],
+                                                      "Reserved": [0xFFFFFFE0, 0, 0],}
+                                                    )
+            ##
+            super(PersistentEventLog, self).__init__(IOCTL_REQ)
+            self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
+                               DataType=2,       # NVMeDataTypeLogPage
+                               RequestValue=0x0D,   # log id
+                               RequestSubValue=lpol, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue2=lpou, # the upper 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue4=request_sub_value4,  # https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddstor/ns-ntddstor-storage_protocol_data_subvalue_get_log_page
+                               ProtocolDataLength=self.__data_len,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            temp = get_NVMeStorageQueryPropertyWithBuffer(self.__data_len)
+            self.cdb = temp(**kwargs)
+            return self.cdb
 
     class CommandsSupportedAndEffectsLog(WinCommand):
         def __init__(self):

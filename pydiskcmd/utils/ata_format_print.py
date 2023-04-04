@@ -1,7 +1,10 @@
 # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
-from collections import Iterable
+try:
+    from collections import Iterable
+except ImportError:
+    from collections.abc import Iterable
 from pydiskcmd.pysata.sata_spec import (
     read_log_decode_set,
     smart_read_log_decode_set,

@@ -29,6 +29,7 @@ if os_type == "Linux":
 
 elif os_type == "Windows":
     from pydiskcmd.pynvme.nvme_command import WinCommand
+    IOCTL_REQ = WinCommand.win_req.get("IOCTL_STORAGE_FIRMWARE_DOWNLOAD")
     class FWImageDownload(WinCommand):
         ## TODO.
         pass

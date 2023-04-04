@@ -10,6 +10,8 @@ NVMeStorageQueryPropertyProtocolType = 3 # ProtocolTypeNvme
 NVMeStorageQueryPropertyDataType = 2     # NVMeDataTypeLogPage
 
 ##
+# https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddstor/ne-ntddstor-_storage_protocol_nvme_data_type
+##
 
 class NVMeStorageQueryPropertyHeader(Structure):
     _fields_ = [
@@ -40,6 +42,7 @@ class NVMeStorageQueryPropertyHeader(Structure):
         DataType=0,
         RequestValue=0,
         RequestSubValue=0,
+        ProtocolDataOffset=40,
         ProtocolDataLength=0,
         RequestSubValue2=0,
         RequestSubValue3=0,
@@ -51,12 +54,61 @@ class NVMeStorageQueryPropertyHeader(Structure):
         self.DataType = DataType
         self.ProtocolDataRequestValue = RequestValue
         self.ProtocolDataRequestSubValue = RequestSubValue
-        self.ProtocolDataOffset = 40
+        self.ProtocolDataOffset = ProtocolDataOffset
         self.ProtocolDataLength = ProtocolDataLength
         self.FixedProtocolReturnData = 0
         self.ProtocolDataRequestSubValue2 = RequestSubValue2
         self.ProtocolDataRequestSubValue3 = RequestSubValue3
         self.ProtocolDataRequestSubValue4 = RequestSubValue4
+
+
+class NVMeStorageQueryPropertyWithoutBuffer(Structure):
+    _fields_ = [
+        ('nsqp', NVMeStorageQueryPropertyHeader),
+    ]
+
+    _pack_ = 1
+
+    def __init__(self, **kwargs):
+        self.nsqp = NVMeStorageQueryPropertyHeader(**kwargs)
+
+    @property
+    def _data_buf(self):
+        return None
+    
+    @property
+    def _metadata_buf(self):
+        return None
+
+    @property
+    def result(self):
+        return self.nsqp.FixedProtocolReturnData
+
+
+def get_NVMeStorageQueryPropertyWithBuffer(data_len):
+    class NVMeStorageQueryPropertyWithBuffer(Structure):
+        _fields_ = [
+            ('nsqp', NVMeStorageQueryPropertyHeader),
+            ('raw_data', c_ubyte * data_len)
+        ]
+        _pack_ = 1
+
+        def __init__(self, **kwargs):
+            self.nsqp = NVMeStorageQueryPropertyHeader(**kwargs)
+
+        @property
+        def _data_buf(self):
+            return self.raw_data
+        
+        @property
+        def _metadata_buf(self):
+            return None
+
+        @property
+        def result(self):
+            return self.nsqp.FixedProtocolReturnData
+    return NVMeStorageQueryPropertyWithBuffer
+
 
 class NVMeStorageQueryPropertyWithBuffer512(Structure):
     _fields_ = [
@@ -73,6 +125,30 @@ class NVMeStorageQueryPropertyWithBuffer512(Structure):
     def _data_buf(self):
         return self.raw_data
     
+    @property
+    def _metadata_buf(self):
+        return None
+
+    @property
+    def result(self):
+        return self.nsqp.FixedProtocolReturnData
+
+
+class NVMeStorageQueryPropertyWithBuffer564(Structure):
+    _fields_ = [
+        ('nsqp', NVMeStorageQueryPropertyHeader),
+        ('raw_data', c_ubyte * 564)
+    ]
+
+    _pack_ = 1
+
+    def __init__(self, **kwargs):
+        self.nsqp = NVMeStorageQueryPropertyHeader(**kwargs)
+
+    @property
+    def _data_buf(self):
+        return self.raw_data
+
     @property
     def _metadata_buf(self):
         return None
@@ -104,7 +180,3 @@ class NVMeStorageQueryPropertyWithBuffer4096(Structure):
     @property
     def result(self):
         return self.nsqp.FixedProtocolReturnData
-
-
-
-

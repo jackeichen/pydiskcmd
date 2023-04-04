@@ -128,7 +128,7 @@ class NVMe(object):
         self.execute(cmd)
         return cmd
 
-    def error_log_entry(self):
+    def error_log_entry(self, loge_page_offset=0):
         ## get the max number log entries
         max_number = self.__ctrl_identify_info[262] + 1
         cmd = ErrorLog(max_number)
