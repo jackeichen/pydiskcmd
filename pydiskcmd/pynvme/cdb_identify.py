@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmd.system.os_tool import os_type
+from pydiskcmd.exceptions import CommandNotSupport
 
 #####
 CmdOPCode = 0x06
@@ -99,18 +100,23 @@ elif os_type == "Windows":
             return self.cdb
 
     class IDNS(WinCommand):
-        pass
+        def __init__(self, *args, **kwargs):
+            raise CommandNotSupport("IDNS Not Support")
 
     class IDActiveNS(WinCommand):
-        pass
+        def __init__(self, *args, **kwargs):
+            raise CommandNotSupport("IDActiveNS Not Support")
 
     class IDAllocatedNS(WinCommand):
-        pass
+        def __init__(self, *args, **kwargs):
+            raise CommandNotSupport("IDAllocatedNS Not Support")
 
     class IDCtrlListInSubsystem(WinCommand):
-        pass
+        def __init__(self, *args, **kwargs):
+            raise CommandNotSupport("IDCtrlListInSubsystem Not Support")
 
     class IDCtrlListAttachedToNS(WinCommand):
-        pass
+        def __init__(self, *args, **kwargs):
+            raise CommandNotSupport("IDCtrlListAttachedToNS Not Support")
 else:
     raise NotImplementedError("%s not support" % os_type)

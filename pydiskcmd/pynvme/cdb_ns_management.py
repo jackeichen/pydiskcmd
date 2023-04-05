@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmd.system.os_tool import os_type
+from pydiskcmd.exceptions import CommandNotSupport
 
 #####
 CmdOPCode = 0x0D
@@ -76,12 +77,12 @@ if os_type == "Linux":
 elif os_type == "Windows":
     from pydiskcmd.pynvme.nvme_command import WinCommand
     class NSCreate(WinCommand):
-        ## TODO.
-        pass
+        def __init__(self, *args, **kwargs):
+            raise CommandNotSupport("NSCreate Not Support")
 
     class NSDelete(WinCommand):
-        ## TODO.
-        pass
+        def __init__(self, *args, **kwargs):
+            raise CommandNotSupport("NSDelete Not Support")
 
 else:
     raise NotImplementedError("%s not support" % os_type)

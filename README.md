@@ -51,6 +51,7 @@ Support List
 | CentOS/RHEL 8.4       | x64 | Y    | Y   | Y    |
 | RHEL 9.1              | x64 | Y    | Y   | Y    |
 | Windows 10 Pro        | x64 | Y    | Y   | Y    |
+| Windows 11            | x64 | Y    | Y   | Y    |
 | Windows Server 2019   | x64 | Y    | Y   | T    |
 | Windows Server 2022   | x64 | Y    | Y   | T    |
 

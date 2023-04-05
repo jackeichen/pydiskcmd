@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmd.system.os_tool import os_type
+from pydiskcmd.exceptions import CommandNotSupport
 
 #####
 CmdOPCode = 0x11
@@ -32,6 +33,7 @@ elif os_type == "Windows":
     IOCTL_REQ = WinCommand.win_req.get("IOCTL_STORAGE_FIRMWARE_DOWNLOAD")
     class FWImageDownload(WinCommand):
         ## TODO.
-        pass
+        def __init__(self, *args, **kwargs):
+            raise CommandNotSupport("FWImageDownload Not Support")
 else:
     raise NotImplementedError("%s not support" % os_type)
