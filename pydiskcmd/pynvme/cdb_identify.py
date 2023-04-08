@@ -61,7 +61,7 @@ if os_type == "Linux":
         def __init__(self, cnt_id):
             ## build command
             cdw10 = build_int_by_bitmap({"CNS": (0xFF, 0, 0x13),
-                                   "CNTID": (0xFFFF, 2, cnt_id)})
+                                         "CNTID": (0xFFFF, 2, cnt_id)})
             super(IDCtrlListInSubsystem, self).__init__(IOCTL_REQ)
             self.build_command(opcode=CmdOPCode,
                                data_len=4096,
@@ -74,14 +74,14 @@ if os_type == "Linux":
                      cnt_id):
             ## build command
             cdw10 = build_int_by_bitmap({"CNS": (0xFF, 0, 0x12),
-                                   "CNTID": (0xFFFF, 2, cnt_id)})
+                                         "CNTID": (0xFFFF, 2, cnt_id)})
             super(IDCtrlListAttachedToNS, self).__init__(IOCTL_REQ)
             self.build_command(opcode=CmdOPCode,
                                nsid=ns_id,
                                data_len=4096,
                                cdw10=cdw10)
 elif os_type == "Windows":
-    from pydiskcmd.pynvme.nvme_command import WinCommand
+    from pydiskcmd.pynvme.nvme_command import WinCommand,build_int_by_bitmap
     from pydiskcmd.pynvme.win_nvme_command import NVMeStorageQueryPropertyWithBuffer4096
     #
     IOCTL_REQ = WinCommand.win_req.get("IOCTL_STORAGE_QUERY_PROPERTY")
@@ -100,8 +100,24 @@ elif os_type == "Windows":
             return self.cdb
 
     class IDNS(WinCommand):
-        def __init__(self, *args, **kwargs):
-            raise CommandNotSupport("IDNS Not Support")
+        def __init__(self, ns_id):
+            super(IDNS, self).__init__(IOCTL_REQ)
+            ##
+            # NSID Always =1 Now!
+            if ns_id != 1:
+                raise CommandNotSupport("ns_id will be always 1 in windows now!")
+            dwNSID = build_int_by_bitmap({"NSID": (0xFFFFFFFF, 0, ns_id)})
+            #
+            self.build_command(PropertyId=49,    # StorageDeviceProtocolSpecificProperty
+                               DataType=1,       # NVMeDataTypeIdentify
+                               RequestValue=0,   # CNS
+                               RequestSubValue=dwNSID,
+                               ProtocolDataLength=4096,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            self.cdb = NVMeStorageQueryPropertyWithBuffer4096(**kwargs)
+            return self.cdb
 
     class IDActiveNS(WinCommand):
         def __init__(self, *args, **kwargs):

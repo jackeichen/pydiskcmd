@@ -237,6 +237,7 @@ class OSFeatureStatus(object):
     def __init__(self):
         self.pcie_check = True if os_type in ("Linux",) else False
         self.nvme_aer_check = check_aer_support()
+        self.persistent_event_check = True if os_type in ("Linux",) else False
 
 
 class NVMeDevice(NVMeDeviceBase):
@@ -253,13 +254,10 @@ class NVMeDevice(NVMeDeviceBase):
             self.nvme_feature_support.persistent_event_log = True
         #
         self.os_feature_status = OSFeatureStatus()
-        if os_type == 'Windows':
-            self.os_feature_status.pcie_check = False
-            self.os_feature_status.nvme_aer_check = False
         #
         self.check_feature_support = {"pcie": self.nvme_feature_support.pcie and self.os_feature_status.pcie_check,
                                       "smart": self.nvme_feature_support.smart,
-                                      "persistent_event_log": self.nvme_feature_support.persistent_event_log,
+                                      "persistent_event_log": self.nvme_feature_support.persistent_event_log and self.os_feature_status.persistent_event_check,
                                       "nvme_aer": self.nvme_feature_support.nvme_aer and self.os_feature_status.nvme_aer_check}
         ##
         if self.check_feature_support.get("pcie"):

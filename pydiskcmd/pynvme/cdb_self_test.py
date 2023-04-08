@@ -42,11 +42,11 @@ elif os_type == "Windows":
             ##
             cdw10 = build_int_by_bitmap({"stc": (0x0F, 0, stc),})
             super(SelfTest, self).__init__(IOCTL_REQ)
-            self.build_command(h_version=STORAGE_PROTOCOL_STRUCTURE_VERSION,    # StorageDeviceProtocolSpecificProperty
-                               h_flags=STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST,       # NVMeDataTypeLogPage
-                               h_error_info_length=0,   # log id
-                               h_d2d_transfer_length=0, #  lower 32-bit value of the offset within a log page from which to start returning data.
-                               h_dfd_transfer_length=0,    # data len
+            self.build_command(h_version=STORAGE_PROTOCOL_STRUCTURE_VERSION,    
+                               h_flags=STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST,   
+                               h_error_info_length=0,   
+                               h_d2d_transfer_length=0,
+                               h_dfd_transfer_length=0,   
                                h_timeout=10,
                                h_error_info_offset=0,
                                h_d2d_buffer_offset=0,

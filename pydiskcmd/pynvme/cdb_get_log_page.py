@@ -186,15 +186,17 @@ elif os_type == "Windows":
                      lpol=0,
                      lpou=0,
                      data_addr=None):
-            raise CommandNotSupport("PersistentEventLog Not Support")
+            # raise CommandNotSupport("PersistentEventLog Not Support")
             ##
             self.__data_len = (numdl + 1) * 4
             request_sub_value4 = build_int_by_bitmap({"RetainAsynEvent": [0x01, 0, 0],
                                                       "LogSpecificField": [0x1E, 0, lsp],
-                                                      "Reserved": [0xFFFFFFE0, 0, 0],}
+                                                      #"Reserved": [0xFFFFFFE0, 0, 0],
+                                                      }
                                                     )
             ##
             super(PersistentEventLog, self).__init__(IOCTL_REQ)
+            # https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddstor/ne-ntddstor-_storage_protocol_nvme_data_type
             self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
                                DataType=2,       # NVMeDataTypeLogPage
                                RequestValue=0x0D,   # log id

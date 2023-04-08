@@ -104,15 +104,30 @@ def _list():
                     NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
                     NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
                     usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
+                    if options.output_format == "normal":
+                        print (print_format % (node, sn, mn, ns_id, usage, _format, fw))
             elif os_type == 'Windows':
                 node= dev_context.dev_path
-                ns_id = ''
-                usage = ''
-                _format = ''
+                ns_id = 1  # always 1 in windows now!
+                ## Get information now!
+                ## send identify controller and identify namespace
+                with NVMe(init_device(node, open_t='nvme')) as d:
+                    cmd_id_ns = d.id_ns(ns_id)
+                ## para data
+                result = nvme_id_ns_decode(cmd_id_ns.data)
+                #
+                lbaf = result.get("LBAF%s" % scsi_ba_to_int(result.get("FLBAS"), 'little'))
+                meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
+                lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
+                _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
+                #
+                NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
+                NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
+                usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
+                if options.output_format == "normal":
+                    print (print_format % (node, sn, mn, ns_id, usage, _format, fw))
             else:
                 raise RuntimeError("OS %s Not support" % os_type)
-            if options.output_format == "normal":
-                print (print_format % (node, sn, mn, ns_id, usage, _format, fw))
 
 def smart_log():
     usage="usage: %prog smart-log <device> [OPTIONS]"

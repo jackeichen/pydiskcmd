@@ -318,7 +318,9 @@ class StorageProtocolCommand(Structure):
         self.spch.CommandSpecific = h_command_spec
         self.spch.Reserved0 = 0
         self.spch.FixedProtocolReturnData = 0
-        self.spch.Reserved1 = 0
+        self.spch.Reserved1_0 = 0
+        self.spch.Reserved1_1 = 0
+        self.spch.Reserved1_2 = 0
         self.nvme_command = NVMECommand(**kwargs)
 
     @property
