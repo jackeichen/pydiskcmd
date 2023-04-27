@@ -14,7 +14,7 @@ and etc. But I still hope to develop a tool to cover all the sata,sas,nvme disks
 It should be easily installed and should be able to send raw commands to target 
 disks, provide a high-level API to build raw command with different protocal. 
 Besides, it could monitor the health of the disks, especially take full advantage 
-of NVMe(which offer a better monitoring mechanism).
+of NVMe(which offer a better monitoring mechanism). 
 
 While in Windows, rarely find out an open source user level disk tool. I hope it 
 is convenient to handle a disk in windows as if it is in Linux.
@@ -50,6 +50,7 @@ Support List
 | CentOS/RHEL 7.6       | x64 | Y    | Y   | Y    |
 | CentOS/RHEL 8.4       | x64 | Y    | Y   | Y    |
 | RHEL 9.1              | x64 | Y    | Y   | Y    |
+| Ubuntu 22.04          | x64 | Y    | Y   | Y    |
 | Windows 10 Pro        | x64 | Y    | Y   | Y    |
 | Windows 11            | x64 | Y    | Y   | Y    |
 | Windows Server 2019   | x64 | Y    | Y   | T    |
@@ -155,7 +156,7 @@ For NVMe Disk:
   * AER Event Check(Only in Linux);
 
 The tool provide a real-time NVMe Asynchronous Event Request check by reading Linux trace file(Need Enable 
-Linux Trace function). You can set the event you want to trigger it by sending nvme set-feature command. 
+Linux Trace function). You can set the event that you want to trigger by sending nvme set-feature command. 
 Examples(set temperature warning):
 
     $ pynvme get-feature /dev/nvme0 -f 0x0B 
@@ -189,8 +190,8 @@ Advanced Usage
 ==============
 You can find some examples about how to use this tool in the dir of pydiskcmd/examples/.
 
-NVMe Command 
-------------
+Build Your Own Command 
+----------------------
 Example to build and run your own NVMe command in Linux.
 
 ```
@@ -241,8 +242,6 @@ SC,SCT = cmd.check_return_status() # Get Command Status Code and Status Code Typ
 print ("Command Status Code=%d, Status Code Type=%d" % (SC,SCT))
 ```
 
-SATA Command
-------------
 Example to build and run your own SATA command in Linux Or Windows.
 
 ```
@@ -286,6 +285,12 @@ print ("Identify data read from device is:")
 print (cmd.datain)
 ```
 
+Example to build and run your own SCSI command in Linux Or Windows.
+
+```
+TBD
+```
+
 
 Acknowledgements
 ================
@@ -306,6 +311,12 @@ model, serial number, disk health, temperature, etc...
 Communicate with NVMe SSD using Windows' inbox device driver
 
 * nvmetool-win: https://github.com/ken-yossy/nvmetool-win
+
+
+Reference
+=========
+How SSDs Fail – NVMe™ SSD Management, Error Reporting, and Logging Capabilities: 
+https://nvmexpress.org/how-ssds-fail-nvme-ssd-management-error-reporting-and-logging-capabilities/
 
 
 Support

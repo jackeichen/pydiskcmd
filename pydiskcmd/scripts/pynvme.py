@@ -10,9 +10,9 @@ from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmd.pynvme.nvme_command import DataBuffer
 ##
 from pydiskcmd.pynvme.nvme_spec import *
+from pydiskcmd.utils import nvme_format_print
 from pydiskcmd.system.env_var import os_type
 from pydiskcmd.system.os_tool import check_device_exist
-from pydiskcmd.system.lin_os_tool import map_pcie_addr_by_nvme_ctrl_path
 
 Version = '0.1.0'
 
@@ -56,7 +56,9 @@ def print_help():
         print ("  pcie                  Get device PCIe status, show it")
         print ("  flush                 Submit a flush command, return results")
         print ("  read                  Submit a read command, return results")
+        print ("  verify                Submit a verify command, return results")
         print ("  write                 Submit a write command, return results")
+        print ("  get-lba-status        Submit a Get LBA Status command, return results")
         print ("  version               Shows the program version")
         print ("  help                  Display this help")
         print ("")
@@ -132,8 +134,8 @@ def _list():
 def smart_log():
     usage="usage: %prog smart-log <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -146,27 +148,15 @@ def smart_log():
             cmd = d.smart_log()
         cmd.check_return_status()
         ##
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data, end=511)
-        elif options.output_format == "normal":
-            result = nvme_smart_decode(cmd.data)
-            for k,v in result.items():
-                if k == "Composite Temperature":
-                    print ("%-40s: %.2f" % ("%s(C)" % k,scsi_ba_to_int(v, 'little')-273.15))
-                elif k in ("Critical Warning",):
-                    print ("%-40s: %#x" % (k,scsi_ba_to_int(v, 'little')))
-                else:
-                    print ("%-40s: %s" % (k,scsi_ba_to_int(v, 'little')))
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_smart_log(cmd.data, print_type=options.output_format)
     else:
         parser.print_help()
 
 def id_ctrl():
     usage="usage: %prog id-ctrl <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -178,28 +168,7 @@ def id_ctrl():
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.id_ctrl()
         cmd.check_return_status()
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data, byteorder='big')
-        elif options.output_format == "normal":
-            result = nvme_id_ctrl_decode(cmd.data)
-            for k,v in result.items():
-                if k in ("VID", "SSVID", "VER", "RTD3R", "RTD3E", "OAES", "OACS", "FRMW", "LPA", "SANICAP", "SQES", "CQES", "FNA", "SGLS"):
-                    print ("%-10s: %#x" % (k,scsi_ba_to_int(v, 'little')))
-                elif k in ("SN", "MN", "FR", "SUBNQN"):
-                    print ("%-10s: %s" % (k,ba_to_ascii_string(v, "")))
-                elif k in ("IEEE",):
-                    print ("%-10s: %x" % (k,scsi_ba_to_int(v, 'little')))
-                elif k.startswith("PSD"):
-                    print ("%-10s:" % k)
-                    for m,n in result[k].items():
-                        if isinstance(n, bytes):
-                            print ("     %-5s:%s" % (m,scsi_ba_to_int(n, 'little')))
-                        else:
-                            print ("     %-5s:%s" % (m,n))
-                else:
-                    print ("%-10s: %s" % (k,scsi_ba_to_int(v, 'little')))
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_id_ctrl(cmd.data, print_type=options.output_format)
     else:
         parser.print_help()
 
@@ -1016,6 +985,29 @@ def read():
     else:
         parser.print_help()
 
+def verify():
+    usage="usage: %prog verify <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=1,
+        help="namespace to read(default 1)")
+    parser.add_option("-s", "--start-block", type="int", dest="start_block", action="store", default=0,
+        help="64-bit addr of first block to access")
+    parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
+        help="number of blocks (zeroes based) on device to access")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.verify(options.namespace_id, options.start_block, options.block_count)
+        cmd.check_return_status(success_hint=True, fail_hint=True)
+    else:
+        parser.print_help()
+
 def write():
     usage="usage: %prog write <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -1083,6 +1075,47 @@ def flush():
     else:
         parser.print_help()
 
+def get_lba_status():
+    usage="usage: %prog get-lba-status <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0xFFFFFFFF,
+        help="Indicate the namespace in which the device flush has to be carried out")
+    parser.add_option("-s", "--start-block", type="int", dest="start_block", action="store", default=0,
+        help="64-bit address of the first logical block addressed by this command")
+    parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=1,
+        help="the length(zeroes based) of the range of contiguous LBAs, default 1.")
+    parser.add_option("-e", "--entry-count", type="int", dest="entry_count", action="store", default=0,
+        help="the maximum number of dwords to return")
+    parser.add_option("-a", "--action-type", type="int", dest="action_type", action="store", default=16,
+        help="the mechanism the controller uses in determining the LBA Status Descriptors to return. 0x10 Untracked LBAs, 0x11 Tracked LBAs.")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
+    parser.add_option("-t", "--timeout", type="int", dest="timeout", action="store", default=60000,
+        help="timeout value, in milliseconds")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        mndw = 2 + 4*options.entry_count - 1 # zero based
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.get_lba_status(options.namespace_id, # ns_id
+                                   options.start_block,  # slba
+                                   mndw,                 # mndw
+                                   options.action_type,  # atype
+                                   options.block_count,  # Range Length
+                                   timeout=options.timeout, # timeout
+                                   )
+        SC,SCT = cmd.check_return_status(False)
+        ##
+        if SC == 0 and SCT == 0:
+            nvme_format_print.format_print_LBA_Status_Descriptor(cmd.data, print_type=options.output_format)
+    else:
+        parser.print_help()
+
 def pcie():
     usage="usage: %prog pcie <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -1092,7 +1125,7 @@ def pcie():
         help="combine with -p on|status")
     parser.add_option("-d", "--detail", dest="detail_info", action="store_true", default=False,
         help="Get the detail information.")
-    
+
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
         PCIePowerPath = "/sys/bus/pci/slots/%s/power"
@@ -1124,6 +1157,7 @@ def pcie():
             return
         ##
         from pydiskcmd.pypci.pci_lib import map_pci_device
+        from pydiskcmd.system.lin_os_tool import map_pcie_addr_by_nvme_ctrl_path
         ##
         bus_address = map_pcie_addr_by_nvme_ctrl_path(dev)
         if bus_address:
@@ -1200,7 +1234,9 @@ commands_dict = {"list": _list,
                  "pcie": pcie,
                  "flush": flush,
                  "read": read,
+                 "verify": verify,
                  "write": write,
+                 "get-lba-status":get_lba_status,
                  "version": version,
                  "help": print_help}
 

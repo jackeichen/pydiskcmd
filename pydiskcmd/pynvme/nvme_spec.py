@@ -239,6 +239,14 @@ commands_supported_and_effects_bit_mask = {"CSUPP": [0x01, 0],
                                            "UUIDSS": [0x08, 2],
                                            }
 
+LBAStatusDescriptorListHeader_bit_mask = {"NLSD": ('b', 0, 4),       # Number of LBA Status Descriptors
+                                          "CMPC": ('b', 4, 1),       # Completion Condition
+                                          }
+
+LBAStatusDescriptorEntry_bit_mask = {"DSLBA": ('b', 0, 8),       # Descriptor Starting LBA
+                                     "NLB": ('b', 8, 4),         # Number of Logical Blocks
+                                     "Status": ('b', 13, 1),     # This field contains additional status about this LBA range.
+                                     }
 
 
 class ErrorInfomationLogEntryUnit(object):
@@ -267,6 +275,7 @@ def nvme_id_ctrl_decode(data):
     result = {}
     decode_bits(data, nvme_id_ctrl_bit_mask, result)
     ## power state
+    result["PSD"] = {}
     for i in range(32):
         key = "PSD%s" % i
         _offset = 2048 + 32*i
@@ -274,7 +283,7 @@ def nvme_id_ctrl_decode(data):
         power_state = {}
         decode_bits(_data, nvme_id_ctrl_ps_bit_mask, power_state)
         if power_state.get("MP") != b'\x00\x00':
-            result[key] = power_state
+            result["PSD"][i] = power_state
     return result
 
 def nvme_id_ns_decode(data):
@@ -392,4 +401,21 @@ def decode_commands_supported_and_effects(data):
         decode_bits(data[i*4:(i+1)*4], commands_supported_and_effects_bit_mask, temp)
         if temp["CSUPP"]:
             result[1].append(temp)
+    return result
+
+def decode_LBA_Status_Descriptor_List(data):
+    result = {"header": {}, "entry_list": []}
+    ##
+    decode_bits(data[0:8], LBAStatusDescriptorListHeader_bit_mask, result["header"])
+    #
+    index = 8
+    while True:
+        temp_data = data[index:(index+16)]
+        if temp_data:
+            temp_res = {}
+            decode_bits(temp_data, LBAStatusDescriptorEntry_bit_mask, temp_res)
+            result["entry_list"].append(temp_res)
+            index += 16
+        else:
+            break
     return result

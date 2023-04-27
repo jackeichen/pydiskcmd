@@ -44,7 +44,7 @@ class SmartTrace(object):
         self.thresh_value = thresh_value
         self.thresh_info = decode_smart_thresh(self.thresh_value[2:362])
         ## define smart cache, it usually store the decode smart here
-        self.__smart_cache_depth = 100
+        self.__smart_cache_depth = 5
         self.__smart_cache = [None,] * self.__smart_cache_depth
         self.__smart_cache_index = 0
         self.__smart_cache_index_rollover_cycle = 0

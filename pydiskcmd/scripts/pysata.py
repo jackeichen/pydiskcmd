@@ -78,7 +78,7 @@ def _list():
             sn = bytearray2string(translocate_bytearray(dev_context.id_info[20:40]))
             fw = bytearray2string(translocate_bytearray(dev_context.id_info[46:54]))
             mn = bytearray2string(translocate_bytearray(dev_context.id_info[54:94]))
-            logical_sector_num = int(binascii.hexlify(translocate_bytearray(dev_context.id_info[200:204], 2)),16)
+            logical_sector_num = int(binascii.hexlify(translocate_bytearray(dev_context.id_info[200:208], 2)),16)
             if dev_context.id_info[213] & 0xC0 == 0x40: # word 106 valid
                 if dev_context.id_info[213] & 0x10:
                     logical_sector_size = int(binascii.hexlify(translocate_bytearray(dev_context.id_info[234:238], 2)),16) * 2

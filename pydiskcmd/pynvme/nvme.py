@@ -18,8 +18,10 @@ from pydiskcmd.pynvme.cdb_self_test import SelfTest
 from pydiskcmd.pynvme.cdb_ns_management import NSCreate,NSDelete
 from pydiskcmd.pynvme.cdb_ns_attachment import NSAttachment
 from pydiskcmd.pynvme.cdb_nvme_read import Read
+from pydiskcmd.pynvme.cdb_nvme_verify import Verify
 from pydiskcmd.pynvme.cdb_nvme_write import Write
 from pydiskcmd.pynvme.cdb_nvme_flush import Flush
+from pydiskcmd.pynvme.cdb_nvme_get_lba_status import GetLBAStatus
 from pydiskcmd.exceptions import *
 
 code_version = "0.1.2"
@@ -375,7 +377,17 @@ class NVMe(object):
         self.execute(cmd)
         return cmd
 
+    def verify(self, ns_id, slba, nlba):
+        cmd = Verify(ns_id, slba, nlba)
+        self.execute(cmd)
+        return cmd
+
     def write(self, ns_id, slba, nlba, data, metadata_buffer=None):
         cmd = Write(ns_id, slba, nlba, data, metadata_buffer=metadata_buffer)
+        self.execute(cmd)
+        return cmd
+
+    def get_lba_status(self, ns_id, slba, mndw, atype, rl, timeout=60000):
+        cmd = GetLBAStatus(ns_id, slba, mndw, atype, rl, timeout=60000)
         self.execute(cmd)
         return cmd
