@@ -12,3 +12,8 @@ Q2. How to work around when pip3 install python-scsi "PYSCSI requires Python '~=
     This will occur when X < 7, in my case the python version is 3.6.8(default installed in OS),
     it works well when I replace the "python_requires = ~= 3.7" to "python_requires = ~= 3.6" in
     setup.cfg.
+
+Q3. Cannot install python-scsi in python 3.6?
+    You can avoid it by install it without pyproject.toml:
+    1. # mv pyproject.toml pyproject.toml.bak
+    2. # pip3 install .

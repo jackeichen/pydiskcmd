@@ -285,10 +285,73 @@ print ("Identify data read from device is:")
 print (cmd.datain)
 ```
 
-Example to build and run your own SCSI command in Linux Or Windows.
+Example to build and run your own SCSI command in Linux Or Windows. It is a little different from
+NVMe Or SATA, the methmod is from the project python-scsi.
 
 ```
-TBD
+from pyscsi.pyscsi.scsi_command import SCSICommand
+from pyscsi.pyscsi.scsi_enum_command import mmc, sbc, smc, spc, ssc
+from pydiskcmd.utils import init_device
+
+class Read16(SCSICommand):
+    ## You need define the _cdb_bits to build cdb
+
+    _cdb_bits = {
+        "opcode": [0xFF, 0],
+        "rdprotect": [0xE0, 1],
+        "dpo": [0x10, 1],
+        "fua": [0x08, 1],
+        "rarc": [0x04, 1],
+        "lba": [0xFFFFFFFFFFFFFFFF, 2],
+        "group": [0x1F, 14],
+        "tl": [0xFFFFFFFF, 10],
+    }
+
+    def __init__(
+        self, lba, tl, rdprotect=0, dpo=0, fua=0, rarc=0, group=0
+    ):
+        """
+        initialize a new instance
+
+        :param blocksize: a blocksize
+        :param lba: Logical Block Address
+        :param tl: transfer length
+        :param rdprotect=0:
+        :param dpo=0:
+        :param fua=0:
+        :param rarc=0:
+        :param group=0:
+        """
+        if blocksize == 0:
+            raise SCSICommand.MissingBlocksizeException
+        
+        ##
+        # This command is sbc command->READ_16, usually get by inquiry command, and
+        # and the device is 512 byte logical format.
+        ##
+        opcode = sbc.READ_16
+        blocksize= 512
+        ## Build command
+        SCSICommand.__init__(self, opcode, 0, blocksize * tl)
+
+        self.cdb = self.build_cdb(
+            opcode=self.opcode.value,
+            lba=lba,
+            tl=tl,
+            rdprotect=rdprotect,
+            dpo=dpo,
+            fua=fua,
+            rarc=rarc,
+            group=group,
+        )
+## send command: 4k read from LBA 0 to LBA 7
+cmd = Read16(0, 8)
+## Execute Command
+with init_device("/dev/sdb", open_t='scsi') as d:
+    d.execute(cmd)
+## Get the result
+print (cmd.datain)
+
 ```
 
 
