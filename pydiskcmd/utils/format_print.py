@@ -95,3 +95,6 @@ def human_read_capacity(size_b, kb_base=1000, float_print="%.2f"):
             break
     size_b = float_print % (size_b*kb_base)
     return "%s %s" % (size_b, u)
+
+def deocde_format_bits(data_dict, check_dict):
+    pass

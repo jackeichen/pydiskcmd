@@ -29,6 +29,10 @@ class LinDevice(DeviceBase):
         ino = get_inode(self._file_name)
         return ino != self._ino
 
+    @property
+    def device_name(self):
+        return self._file_name.replace("/dev/", "")
+
     def open(self):
         """
         :param dev:

@@ -22,6 +22,10 @@ class WinDevice(DeviceBase):
         # always return False,
         return False
 
+    @property
+    def device_name(self):
+        return self._file_name.replace("\\\\.\\", "")
+
     def _kernel32(self):
         # Opens the Kernel32.dll, which can be quite a slow process, and
         # saves it for future use.

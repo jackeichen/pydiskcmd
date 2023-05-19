@@ -16,7 +16,6 @@ if os_type == "Linux":
         def __init__(self, 
                      stc,
                      ns_id=0xFFFFFFFF):
-            raise CommandNotSupport("SelfTest Not Support")
             ### build command
             cdw10 = build_int_by_bitmap({"stc": (0x0F, 0, stc),})
             ##   
@@ -42,6 +41,7 @@ elif os_type == "Windows":
             ##
             cdw10 = build_int_by_bitmap({"stc": (0x0F, 0, stc),})
             super(SelfTest, self).__init__(IOCTL_REQ)
+            raise CommandNotSupport("SelfTest Not Support")
             self.build_command(h_version=STORAGE_PROTOCOL_STRUCTURE_VERSION,    
                                h_flags=STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST,   
                                h_error_info_length=0,   

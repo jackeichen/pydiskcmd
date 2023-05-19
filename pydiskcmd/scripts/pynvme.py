@@ -6,10 +6,8 @@ import optparse
 from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme import NVMe
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
-from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmd.pynvme.nvme_command import DataBuffer
 ##
-from pydiskcmd.pynvme.nvme_spec import *
 from pydiskcmd.utils import nvme_format_print
 from pydiskcmd.system.env_var import os_type
 from pydiskcmd.system.os_tool import check_device_exist
@@ -77,6 +75,7 @@ def _list():
     print (print_format % ("Node", "SN", "Model", "Namespace", "Usage", "Format", "FW Rev"))
     print (print_format % ("-"*20, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
     from pydiskcmd.pydiskhealthd.all_device import scan_device,os_type
+    scsi_ba_to_int = nvme_format_print.scsi_ba_to_int
     ##
     for dev_context in scan_device(debug=False):
         if dev_context.device_type == "nvme":
@@ -96,9 +95,9 @@ def _list():
                     with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
                         cmd_id_ns = d.id_ns(ns_info.ns_id)
                     ## para data
-                    result = nvme_id_ns_decode(cmd_id_ns.data)
+                    result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
                     #
-                    lbaf = result.get("LBAF%s" % scsi_ba_to_int(result.get("FLBAS"), 'little'))
+                    lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little'))
                     meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
                     lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
                     _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
@@ -116,9 +115,9 @@ def _list():
                 with NVMe(init_device(node, open_t='nvme')) as d:
                     cmd_id_ns = d.id_ns(ns_id)
                 ## para data
-                result = nvme_id_ns_decode(cmd_id_ns.data)
+                result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
                 #
-                lbaf = result.get("LBAF%s" % scsi_ba_to_int(result.get("FLBAS"), 'little'))
+                lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little'))
                 meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
                 lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
                 _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
@@ -177,8 +176,8 @@ def id_ns():
     parser = optparse.OptionParser(usage)
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store",default=1,
         help="identifier of desired namespace. Default 1")
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -195,34 +194,15 @@ def id_ns():
             cmd = d.id_ns(options.namespace_id)
         cmd.check_return_status()
         ##
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data)
-        elif options.output_format == "normal":
-            result = nvme_id_ns_decode(cmd.data)
-            for k,v in result.items():
-                if k in ("NSZE", "NCAP", "NUSE", "MC", "DPC"):
-                    print ("%-10s: %#x" % (k,scsi_ba_to_int(v, 'little')))
-                elif k in ("NGUID", "EUI64"):
-                    print ("%-10s: %x" % (k,scsi_ba_to_int(v, 'big')))
-                elif k.startswith("LBAF"):
-                    print ("%-10s:" % k)
-                    for m,n in result[k].items():
-                        if isinstance(n, bytes):
-                            print ("     %-5s:%s" % (m,scsi_ba_to_int(n, 'little')))
-                        else:
-                            print ("     %-5s:%s" % (m,n))
-                else:
-                    print ("%-10s: %s" % (k,scsi_ba_to_int(v, 'little')))
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_id_ns(cmd.data, print_type=options.output_format)
     else:
         parser.print_help()
 
 def error_log():
     usage="usage: %prog error-log <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -235,38 +215,15 @@ def error_log():
             cmd = d.error_log_entry()
         cmd.check_return_status()
         ##
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data)
-        elif options.output_format == "normal":
-            error_log_entry_list = nvme_error_log_decode(cmd.data)
-            if error_log_entry_list:
-                print ('Error Log Entries for device:%s entries:%s' % (dev, len(error_log_entry_list)))
-                print ('.................')
-            for index,unit in enumerate(error_log_entry_list):
-                print ('Entry[%s]' % index)
-                print ('.................')
-                print ('error_count     : %s' % unit.error_count)
-                print ('sqid            : %s' % unit.sqid)
-                print ('cmdid           : %s' % unit.cid)
-                print ('status_field    : %s' % unit.status_field)
-                print ('parm_err_loc    : %s' % unit.para_error_location)
-                print ('lba             : %s' % unit.lba)
-                print ('nsid            : %s' % unit.ns)
-                print ('vs              : %s' % unit.vendor_spec_info_ava)
-                print ('trtype          : %s' % unit.transport_type)
-                print ('cs              : %s' % unit.command_spec_info)
-                print ('trtype_spec_info: %s' % unit.transport_type_spec_info)
-                print ('.................')
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_error_log(cmd.data, dev=dev, print_type=options.output_format)
     else:
         parser.print_help()
 
 def fw_log():
     usage="usage: %prog fw-log <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -279,17 +236,7 @@ def fw_log():
             cmd = d.fw_slot_info()
         cmd.check_return_status()
         ##
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data, end=511)
-        elif options.output_format == "normal":
-            result = nvme_fw_slot_info_decode(cmd.data)
-            for k,v in result.items():
-                if "FRS" in k:
-                    print ("%-5s: %s" % (k,ba_to_ascii_string(v, "")))
-                else:
-                    print ("%-5s: %#x" % (k,scsi_ba_to_int(v, 'little')))
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_fw_log(cmd.data, dev=d.device.device_name, print_type=options.output_format)
     else:
         parser.print_help()
 
@@ -387,8 +334,8 @@ def persistent_event_log():
     parser = optparse.OptionParser(usage)
     parser.add_option("-a", "--action", type="int", dest="action", action="store", default=3,
         help="action of get persistent event log, 0: open, 1: read, 2: close, 3: check status")
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
     parser.add_option("-f", "--filter", type="str", dest="filter", action="store", default='',
         help="Show the event of the specified event type when --action=normal, split with comma(ex. 2,3)")
 
@@ -434,51 +381,12 @@ def persistent_event_log():
                 if not ret:
                     print ("No avaliable data, please check if support persistent event log Or if open the context")
                     return
-                event_log_header = persistent_event_log_header_decode(ret[0:512])
-                event_log_events = persistent_event_log_events_decode(ret[512:], scsi_ba_to_int(event_log_header.get("TNEV"), 'little'))
-                if options.output_format == "binary":
-                    format_dump_bytes(ret)
-                elif options.output_format == "normal":
-                    ## format print
-                    print ("Persistent Event Log Header: ")
-                    for k,v in event_log_header.items():
-                        if k in ("LogID", "VID", "SSVID"):
-                            print ("%-10s: %#x" % (k,scsi_ba_to_int(v, 'little')))
-                        elif k in ("SN", "MN", "SUBNQN"):
-                            print ("%-10s: %s" % (k,ba_to_ascii_string(v, "")))
-                        elif k == "SEB":
-                            print ("Supported Events Bitmap: ")
-                            for m,n in v.items():
-                                print ("     %-20s:%s" % (m,n))
-                        else:
-                            print ("%-10s: %s" % (k,scsi_ba_to_int(v, 'little')))
-                    ##
-                    print ("="*60)
-                    if event_log_events:
-                        print ("Persistent Event Log Events: ")
-                        print ('......................')
-                    for k,v in event_log_events.items():
-                        if _filter and (scsi_ba_to_int(v['event_log_event_header']['event_type'], 'little') not in _filter):
-                            continue
-                        print ('Entry[%s]' % k)
-                        print ('......................')
-                        for m,n in v.items():
-                            if m == 'event_log_event_header' and n:
-                                for p,q in n.items():
-                                    print ('%-20s : %s' % (p,scsi_ba_to_int(q, 'little')))
-                            elif m in ("vendor_spec_info", "event_log_event_data"):
-                                print ('%-20s : %s' % (m,n))
-                            else:
-                                print ('%-20s : %s' % (m,scsi_ba_to_int(n, 'little')))
-                        print ('......................')
-                else:
-                    print (ret)
+                nvme_format_print.format_print_event_log(ret, dev=d.device.device_name, print_type=options.output_format, event_filter=_filter)
             elif isinstance(ret, int):
                 if ret == 0:
                     print ("Command success.")
                 else:
                     print ("Command failed.")
-            
     else:
         parser.print_help()
 
@@ -517,8 +425,8 @@ self-test command:                                     \
 def self_test_log():
     usage="usage: %prog self-test-log <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -531,33 +439,15 @@ def self_test_log():
             cmd = d.self_test_log()
         cmd.check_return_status()
         ##
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data)
-        elif options.output_format == "normal":
-            result = self_test_log_decode(cmd.data)
-            print ("Current Device Self-Test Operation Status :  %s" % result["operation_status"])
-            print ("Current Device Self-Test Process          :  %s" % result["test_process"])
-            print ('')
-            print_format = "  %-40s: %s"
-            for i in range(20):
-                k = "LogEntry%s" % i
-                if k in result:
-                    print (k)
-                    for _k,v in result[k].items():
-                        if isinstance(v, bytes):
-                            v = scsi_ba_to_int(v, 'little')
-                        print (print_format % (_k, v))
-                    print ('-'*45)
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_self_test_log(cmd.data, dev=d.device.device_name, print_type=options.output_format)
     else:
         parser.print_help()
 
 def commands_supported_and_effects():
     usage="usage: %prog commands-se-log <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -569,39 +459,7 @@ def commands_supported_and_effects():
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.commands_supported_and_effects_log()
         ##
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data)
-        elif options.output_format == "normal":
-            result = decode_commands_supported_and_effects(cmd.data)
-            admin_cmd = result[0]
-            io_cmd = result[1]
-            if admin_cmd:
-                print ("Admin Command support:")
-                for i in admin_cmd:
-                    print ("."*10)
-                    print ("%-8s: %d" % ("opcode", i.get("opcode")))
-                    for k,v in i.items():
-                        if k != "opcode":
-                            print ("%-8s: %d" % (k, v))
-            else:
-                print ("No support admin command")
-                print ("")
-            print ("")
-            print ("")
-            if io_cmd:
-                print ("IO Command support:")
-                for i in io_cmd:
-                    print ("."*10)
-                    print ("%-8s: %d" % ("opcode", i.get("opcode")))
-                    for k,v in i.items():
-                        if k != "opcode":
-                            print ("%-8s: %d" % (k, v))
-            else:
-                print ("No support admin command")
-                print ("")
-            print ("")
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_supported_and_effects(cmd.data, dev=d.device.device_name, print_type=options.output_format)
     else:
         parser.print_help()
 
@@ -644,7 +502,7 @@ def get_feature():
         with NVMe(init_device(dev, open_t='nvme')) as d:
             if options.feature_id == 2:
                 cmd = _get_feature_power_management(d, options)
-                result = nvme_power_management_cq_decode(cmd.cq_cmd_spec)
+                result = nvme_format_print.nvme_power_management_cq_decode(cmd.cq_cmd_spec)
             elif options.feature_id == 3:
                 cmd = _get_feature_lba_range_type(d, options)
             else:
@@ -868,8 +726,8 @@ def list_ns():
         help="first nsid returned list should start from(0 based value)")
     parser.add_option("-a", "--all", dest="all", action="store_true", default=False,
         help="show all namespaces in the subsystem, whether attached or inactive")
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -887,14 +745,7 @@ def list_ns():
                 cmd = d.active_ns_ids(options.namespace_id)
         cmd.check_return_status(success_hint=False, fail_hint=True)
         ##
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data)
-        elif options.output_format == "normal":
-            result = decode_ns_list_format(cmd.data)
-            for k,v in enumerate(result):
-                print ("[%4d]:%d" % (k,v))
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_list_ns(cmd.data, dev=d.device.device_name, print_type=options.output_format)
         ##
     else:
         parser.print_help()
@@ -906,8 +757,8 @@ def list_ctrl():
         help="controller to display(0 means all)")
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=None,
         help="optional namespace attached to controller")
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -928,14 +779,7 @@ def list_ctrl():
                 cmd = d.ns_attached_cnt_ids(options.namespace_id, options.cntid)
         cmd.check_return_status(success_hint=False, fail_hint=True)
         ##
-        if options.output_format == "binary":
-            format_dump_bytes(cmd.data)
-        elif options.output_format == "normal":
-            result = decode_ctrl_list_format(cmd.data)
-            for k,v in enumerate(result):
-                print ("[%4d]:%d" % (k,v))
-        else:
-            print (cmd.data)
+        nvme_format_print.format_print_list_ctrl(cmd.data, dev=d.device.device_name, print_type=options.output_format)
         ##
     else:
         parser.print_help()
@@ -949,8 +793,8 @@ def read():
         help="64-bit addr of first block to access")
     parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
         help="number of blocks (zeroes based) on device to access")
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["binary", "raw"],default="binary",
-        help="Output format: binary|raw, default binary")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["raw", "hex"],default="raw",
+        help="Output format: raw|hex, default raw")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -963,24 +807,7 @@ def read():
             cmd = d.read(options.namespace_id, options.start_block, options.block_count)
         cmd.check_return_status(success_hint=False, fail_hint=True)
         ##
-        if options.output_format == "binary":
-            if cmd.meta_data:
-                print ("Metadata read:")
-                format_dump_bytes(cmd.meta_data, byteorder="obverse")
-            else:
-                print ("No metadata.")
-            print ("")
-            print ("Data read:")
-            format_dump_bytes(cmd.data, byteorder="obverse")
-        else:
-            if cmd.meta_data:
-                print ("Metadata read:")
-                print (cmd.meta_data)
-            else:
-                print ("No metadata.")
-            print ("")
-            print ("Data read:")
-            print (cmd.data)
+        nvme_format_print.format_print_read_data(cmd.meta_data, cmd.data, dev=d.device.device_name, print_type=options.output_format)
         ##
     else:
         parser.print_help()

@@ -313,7 +313,6 @@ class Read16(SCSICommand):
         """
         initialize a new instance
 
-        :param blocksize: a blocksize
         :param lba: Logical Block Address
         :param tl: transfer length
         :param rdprotect=0:
@@ -351,7 +350,6 @@ with init_device("/dev/sdb", open_t='scsi') as d:
     d.execute(cmd)
 ## Get the result
 print (cmd.datain)
-
 ```
 
 

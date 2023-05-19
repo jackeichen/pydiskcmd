@@ -264,6 +264,24 @@ class ErrorInfomationLogEntryUnit(object):
         self.command_spec_info = data[32:40]
         self.transport_type_spec_info = data[40:42]
 
+    def _to_int(self, b):
+        if not isinstance(b, int):
+            b = int.from_bytes(b, byteorder='little', signed=False)
+        return b
+
+    def dump(self):
+        return {"error_count": self._to_int(self.error_count),
+                "sqid": self._to_int(self.sqid),
+                "cmdid": self._to_int(self.cid),
+                "status_field": self._to_int(self.status_field),
+                "parm_err_loc": self._to_int(self.para_error_location),
+                "lba": self._to_int(self.lba),
+                "nsid": self._to_int(self.ns),
+                "vs": self._to_int(self.vendor_spec_info_ava),
+                "trtype": self._to_int(self.transport_type),
+                "cs": self._to_int(self.command_spec_info),
+                "trtype_spec_info": self._to_int(self.transport_type_spec_info),
+               }
 
 
 def nvme_smart_decode(data):
@@ -277,7 +295,6 @@ def nvme_id_ctrl_decode(data):
     ## power state
     result["PSD"] = {}
     for i in range(32):
-        key = "PSD%s" % i
         _offset = 2048 + 32*i
         _data = data[_offset:(_offset+32)]
         power_state = {}
@@ -290,14 +307,14 @@ def nvme_id_ns_decode(data):
     result = {}
     decode_bits(data, nvme_id_ns_bit_mask, result)
     ## lba format
+    result["LBAF"] = {}
     for i in range(16):
-        key = "LBAF%s" % i
         _offset = 128 + 4*i
         _data = data[_offset:(_offset+4)]
         lba_format = {}
         decode_bits(_data, nvme_id_ns_lbaf_bit_mask, lba_format)
         if lba_format.get("LBADS") != b'\x00':
-            result[key] = lba_format
+            result["LBAF"][i] = lba_format
     return result
 
 def nvme_fw_slot_info_decode(data, check_invalid_frs=True):
@@ -361,12 +378,13 @@ def persistent_event_log_events_decode(raw_data, total_event_number):
 def self_test_log_decode(raw_data):
     result = {}
     decode_bits(raw_data, self_test_log_bit_mask, result)
+    result["LogEntry"] = {}
     ## by nvme spec 1.4a
     for i in range(20):
         temp = {}
         decode_bits(raw_data[4+i*28:32+i*28], self_test_return_data_struc_bit_mask, temp)
         if temp["test_result"] != 0x0F:
-            result["LogEntry%s" % i] = temp
+            result["LogEntry"][i] = temp
     return result
 
 def decode_ctrl_list_format(raw_data):
