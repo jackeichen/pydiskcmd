@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 from __future__ import print_function
-
+import json
 
 int_to_hex_map = {0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7',
                   8: '8', 9: '9', 10: 'a', 11: 'b', 12: 'c', 13: 'd', 14: 'e', 15: 'f'}
@@ -98,3 +98,6 @@ def human_read_capacity(size_b, kb_base=1000, float_print="%.2f"):
 
 def deocde_format_bits(data_dict, check_dict):
     pass
+
+def json_print(json_object):
+    print (json.dumps(json_object, sort_keys=False, indent=2))

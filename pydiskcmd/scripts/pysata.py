@@ -5,19 +5,18 @@ import sys,os
 import optparse
 import binascii
 from pydiskcmd.pysata.sata import SATA
-from pydiskcmd.pysata.sata_spec import decode_smart_thresh
-from pydiskcmd.utils.ata_format_print import read_log_format_print_set,smart_read_log_format_print_set,read_log_decode_set
+from pydiskcmd.utils.ata_format_print import (
+    read_log_format_print_set,
+    smart_read_log_format_print_set,
+    read_log_decode_set,
+    format_print_identify,
+    format_print_smart,
+    )
 from pydiskcmd.utils import init_device
-from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scsi_ba_to_int
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.system.os_tool import check_device_exist
 
 Version = '0.2.0'
-
-def bytearray2hex_l(data,start,offset):
-    a = data[start:start+offset][::-1]
-    t = binascii.hexlify(a)
-    return int(t,16)
 
 def version():
     print ("pysata version %s" % Version)
@@ -72,6 +71,7 @@ def _list():
     print (print_format % ("Node", "SN", "Model", "Capacity", "Format(L/P)", "FW Rev"))
     print (print_format % ("-"*20, "-"*20, "-"*40, "-"*26, "-"*16, "-"*8))
     from pydiskcmd.pydiskhealthd.all_device import scan_device
+    from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray
     for dev_context in scan_device(debug=False):
         ## check ATA device
         if dev_context.device_type == "ata":
@@ -306,8 +306,8 @@ def accessible_max_address():
 def identify():
     usage="usage: %prog identify <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
 
@@ -323,32 +323,12 @@ def identify():
             print ('issuing identify command')
             print ("%s:" % d.device._file_name)
             cmd = d.identify()
-            return_descriptor = cmd.ata_status_return_descriptor
-            if options.show_status:
-                _print_return_status(return_descriptor)
-            print ('')
-            print ('status err_bit:', return_descriptor.get("status") & 0x01)
-            data = cmd.result
-        if data:
-            if options.output_format == "normal":
-                from pydiskcmd.pysata.sata_spec import Identify_Element_Type
-                for k,v in data.items():
-                    type = Identify_Element_Type.get(k)
-                    if type == 'string':
-                        value = bytearray2string(translocate_bytearray(v))
-                    elif type == 'int':
-                        value = int(binascii.hexlify(translocate_bytearray(v, 2)),16)
-                        value = value *512/1024/1024/1024  # byte --> GB
-                        value = "%.2f GB" % value
-                    elif type:
-                        value = bytearray2string(translocate_bytearray(v))
-                    else:
-                        continue
-                    print ("%s: %s" % (k, value))
-            elif options.output_format == "raw":
-                print (cmd.datain)
-            else:
-                format_dump_bytes(cmd.datain)
+        return_descriptor = cmd.ata_status_return_descriptor
+        if options.show_status:
+            _print_return_status(return_descriptor)
+        print ('')
+        print ('status err_bit:', return_descriptor.get("status") & 0x01)
+        format_print_identify(cmd, print_type=options.output_format)
     else:
         parser.print_help()
 
@@ -498,8 +478,8 @@ def smart_read_log():
 def smart():
     usage="usage: %prog smart <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
 
@@ -510,70 +490,23 @@ def smart():
         if not check_device_exist(dev):
             raise RuntimeError("Device not exist!")
         ##
-        from pydiskcmd.pysata.sata_spec import SMART_KEY,SMART_ATTR
-        data = ''
+        from pydiskcmd.pysata.sata_spec import SMART_KEY
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing smart command')
             print ("%s:" % d.device._file_name)
-            cmd = d.smart_read_data(SMART_KEY)
-            raw_smart_read_data = cmd.datain
-            return_descriptor = cmd.ata_status_return_descriptor
+            cmd_read_data = d.smart_read_data(SMART_KEY)
+            return_descriptor = cmd_read_data.ata_status_return_descriptor
             if options.show_status:
+                print ("Smart Read Data:")
                 _print_return_status(return_descriptor)
-            data = cmd.result
-            vs_smart = data.pop('smartInfo')
-            general_smart = data
             ##
-            cmd = d.smart_read_thresh()
-            smart_thread = decode_smart_thresh(cmd.datain[2:362])
+            cmd_thread = d.smart_read_thresh()
+            return_descriptor = cmd_thread.ata_status_return_descriptor
+            if options.show_status:
+                print ("Smart Read Thresh:")
+                _print_return_status(return_descriptor)
         ##
-        if data:
-            if options.output_format == "normal":
-                print ('General SMART Values:')
-                print ('=' * 100)
-                for name,value in general_smart.items():
-                    dt = value[::-1]
-                    r = binascii.hexlify(dt)
-                    print ('%34s: %-10d [0x%s]' % (name,int(r,16),r.decode()))
-                print ('')
-                print ('Vendor Specific SMART Attributes with Thresholds:')
-                print ('=' * 100)
-                print_fomrat = '%3s %-25s %-6s %-6s %-6s %-10s %s'
-                print (print_fomrat %
-                      ('ID#','ATTRIBUTE_NAME','FLAG','VALUE','WORST','THRESHOLD','RAW_VALUE'))
-                print ('-'*100)
-                print_fomrat = '%3s %-25s %#-6x %-6s %-6s %-10s %s'
-                for i in range(0, 359, 12):
-                    ID = str(vs_smart[i])
-                    if ID not in SMART_ATTR:
-                        continue
-                    print (print_fomrat %
-                          (ID,                                          # ID
-                           SMART_ATTR[ID],                              # ATTRIBUTE_NAME
-                           scsi_ba_to_int(vs_smart[i+1:i+3], 'little'), # FLAG
-                           vs_smart[i+3],                               # VALUE
-                           vs_smart[i+4],                               # WORST
-                           smart_thread[vs_smart[i]],                   # THRESHOLD
-                           bytearray2hex_l(vs_smart, i+5, 6))           # RAW_VALUE0
-                           )
-            elif options.output_format == "raw":
-                print ("SMART Read DATA bellow:")
-                print ("")
-                print (raw_smart_read_data)
-                print ("")
-                print ("")
-                print ("SMART THRESH value:")
-                print ("")
-                print (cmd.datain)
-            else:
-                print ("SMART Read DATA bellow:")
-                print ("")
-                format_dump_bytes(raw_smart_read_data)
-                print ("")
-                print ("")
-                print ("SMART THRESH value:")
-                print ("")
-                format_dump_bytes(cmd.datain) 
+        format_print_smart(cmd_read_data, cmd_thread, print_type=options.output_format)
     else:
         parser.print_help()
 

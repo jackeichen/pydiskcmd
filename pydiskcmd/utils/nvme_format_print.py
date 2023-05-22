@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
-import json
 from pydiskcmd.pynvme.nvme_spec import (
     decode_LBA_Status_Descriptor_List,
     nvme_smart_decode,
@@ -17,12 +16,9 @@ from pydiskcmd.pynvme.nvme_spec import (
     decode_ctrl_list_format,
     nvme_power_management_cq_decode,
     )
-from pydiskcmd.utils.format_print import format_dump_bytes
+from pydiskcmd.utils.format_print import format_dump_bytes,json_print
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 
-
-def json_print(json_object):
-    print (json.dumps(json_object, sort_keys=False, indent=2))
 
 def format_print_LBA_Status_Descriptor(raw_data, print_type='normal'):
     if print_type == 'normal':

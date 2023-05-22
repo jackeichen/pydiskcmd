@@ -5,14 +5,25 @@ try:
     from collections import Iterable
 except ImportError:
     from collections.abc import Iterable
+import binascii
 from pydiskcmd.pysata.sata_spec import (
     read_log_decode_set,
     smart_read_log_decode_set,
+    decode_smart_thresh,
+    SMART_KEY,
+    SMART_ATTR,
     SmartExecuteOfflineImmediateSubcommandsDescription,
     SelftestExecutionStatusDescription,
     ReadLogLogDirectoryDescription,
 ) 
-from pydiskcmd.utils.converter import scsi_ba_to_int
+from pydiskcmd.utils.converter import bytearray2string,translocate_bytearray,scsi_ba_to_int
+from pydiskcmd.utils.format_print import format_dump_bytes,json_print
+
+
+def bytearray2hex_l(data,start,offset):
+    a = data[start:start+offset][::-1]
+    t = binascii.hexlify(a)
+    return int(t,16)
 
 
 def _get_log_directory_description(log_address):
@@ -78,3 +89,101 @@ def print_read_log_extend_selftest(raw_data, page_offset):
 
 read_log_format_print_set = {0: print_read_log_LogDirectory, 7: print_read_log_extend_selftest}
 smart_read_log_format_print_set = {0: print_smart_read_log_LogDirectory,}
+
+#############################
+def format_print_identify(cmd, dev='', print_type='normal'):
+    if print_type == 'normal' or print_type == 'json':
+        target = {}
+        for k,v in cmd.result.items():
+            if k in ("FirmwareRevision", "SerialNumber", "ModelNumber"):
+                value = bytearray2string(translocate_bytearray(v))
+            elif k in ("Capacity", "NormalEraseTime"):
+                value = int(binascii.hexlify(translocate_bytearray(v, 2)),16)
+                if k == "Capacity":
+                    value = value *512/1024/1024/1024  # byte --> GB
+                    value = "%.2f GB" % value
+            else:
+                value = int(binascii.hexlify(translocate_bytearray(v, 2)),16)
+            target[k] = value
+        if print_type == 'normal':
+            for k,v in target.items():
+                print ("%s: %s" % (k, v))
+        else:
+            json_print(target)
+    elif print_type == 'hex':
+        format_dump_bytes(cmd.datain, byteorder='obverse')
+    elif print_type == 'raw':
+        print (cmd.datain)
+    else:
+        raise NotImplementedError("Not Support type: %s" % print_type)
+
+def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal'):
+    if print_type == 'normal' or print_type == 'json':
+        target = {"vendor_spec": {}, "general_info": {}}
+        for name,value in cmd_read_data.result.items(): 
+            if name != 'smartInfo':
+                target["general_info"][name] = scsi_ba_to_int(value, 'little')
+        ##
+        smart_thread = decode_smart_thresh(cmd_thread.datain[2:362])
+        data = cmd_read_data.result['smartInfo']
+        for i in range(0, 359, 12):
+            ID = data[i]
+            if ID:
+                attr_name = SMART_ATTR[ID] if ID in SMART_ATTR else 'Unknown_Attribute'
+                flag = data[i+1:i+3]
+                value = data[i+3]
+                worst = data[i+4]
+                raw_value = data[i+5:i+11]
+                target["vendor_spec"][ID] = {"AttrName": SMART_ATTR[ID] if ID in SMART_ATTR else 'Unknown_Attribute',
+                                             "Flag": scsi_ba_to_int(data[i+1:i+3], 'little'),
+                                             "Value": data[i+3],
+                                             "Worst": data[i+4],
+                                             "Thresh": smart_thread[ID],
+                                             "RawValue": scsi_ba_to_int(data[i+5:i+11], 'little')}
+        if print_type == 'normal':
+            print ('General SMART Values:')
+            print ('=' * 100)
+            for name,value in target["general_info"].items():
+                print ('%34s: %-10d [%#x]' % (name,value,value))
+            
+            print ('')
+            print ('Vendor Specific SMART Attributes with Thresholds:')
+            print ('=' * 100)
+            print_fomrat = '%3s %-25s %-6s %-6s %-6s %-10s %s'
+            print (print_fomrat %
+                  ('ID#','ATTRIBUTE_NAME','FLAG','VALUE','WORST','THRESHOLD','RAW_VALUE'))
+            print ('-'*100)
+            print_fomrat = '%3s %-25s %#-6x %-6s %-6s %-10s %s'
+            for ID,value in target["vendor_spec"].items():
+                print (print_fomrat %
+                      (ID,                                          # ID
+                       value["AttrName"],                              # ATTRIBUTE_NAME
+                       value["Flag"], # FLAG
+                       value["Value"],                               # VALUE
+                       value["Worst"],                               # WORST
+                       value["Thresh"],                   # THRESHOLD
+                       value["RawValue"])           # RAW_VALUE0
+                       )
+        else:
+            json_print(target)
+    elif print_type == 'hex':
+        print ("SMART Read DATA bellow:")
+        print ("")
+        format_dump_bytes(cmd_read_data.datain, byteorder='obverse')
+        print ("")
+        print ("")
+        print ("SMART THRESH value:")
+        print ("")
+        format_dump_bytes(cmd_thread.datain, byteorder='obverse')
+    elif print_type == 'raw':
+        print ("SMART Read DATA bellow:")
+        print ("")
+        print (cmd_read_data.datain)
+        print ("")
+        print ("")
+        print ("SMART THRESH value:")
+        print ("")
+        print (cmd_thread.datain)
+    else:
+        raise NotImplementedError("Not Support type: %s" % print_type)
+
