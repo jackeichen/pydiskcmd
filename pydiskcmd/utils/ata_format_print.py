@@ -25,6 +25,11 @@ def bytearray2hex_l(data,start,offset):
     t = binascii.hexlify(a)
     return int(t,16)
 
+def _print_return_status(ata_status_return_descriptor):
+    print ("Return Status:")
+    for k,v in ata_status_return_descriptor.items():
+        print ("%-30s: %s" % (k,v))
+    print ('')
 
 def _get_log_directory_description(log_address):
     if log_address in ReadLogLogDirectoryDescription:
@@ -91,9 +96,18 @@ read_log_format_print_set = {0: print_read_log_LogDirectory, 7: print_read_log_e
 smart_read_log_format_print_set = {0: print_smart_read_log_LogDirectory,}
 
 #############################
-def format_print_identify(cmd, dev='', print_type='normal'):
+def format_print_identify(cmd, dev='', print_type='normal', show_status=False):
+    return_descriptor = cmd.ata_status_return_descriptor
+    if show_status:
+        if print_type != 'json':
+            _print_return_status(return_descriptor)
+    elif print_type != 'json':
+        print ('')
+        print ('status err_bit:', return_descriptor.get("status") & 0x01)
+    print ('')
     if print_type == 'normal' or print_type == 'json':
-        target = {}
+        target = {"return_status": return_descriptor,
+                  "content": {}}
         for k,v in cmd.result.items():
             if k in ("FirmwareRevision", "SerialNumber", "ModelNumber"):
                 value = bytearray2string(translocate_bytearray(v))
@@ -104,9 +118,9 @@ def format_print_identify(cmd, dev='', print_type='normal'):
                     value = "%.2f GB" % value
             else:
                 value = int(binascii.hexlify(translocate_bytearray(v, 2)),16)
-            target[k] = value
+            target["content"][k] = value
         if print_type == 'normal':
-            for k,v in target.items():
+            for k,v in target["content"].items():
                 print ("%s: %s" % (k, v))
         else:
             json_print(target)
@@ -117,12 +131,28 @@ def format_print_identify(cmd, dev='', print_type='normal'):
     else:
         raise NotImplementedError("Not Support type: %s" % print_type)
 
-def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal'):
+def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal', show_status=False):
+    print ('')
+    if show_status:
+        if print_type != 'json':
+            print ('Smart Read Data Status:')
+            print ('')
+            _print_return_status(cmd_read_data.ata_status_return_descriptor)
+            print ('Smart Threshold Status:')
+            print ('')
+            _print_return_status(cmd_thread.ata_status_return_descriptor)
+    elif print_type != 'json':
+        print ('')
+        print ('status err_bit of Smart Read Data:', cmd_read_data.ata_status_return_descriptor.get("status") & 0x01)
+        print ('status err_bit of Smart Threshold:', cmd_thread.ata_status_return_descriptor.get("status") & 0x01)
+    print ('')
     if print_type == 'normal' or print_type == 'json':
-        target = {"vendor_spec": {}, "general_info": {}}
+        target = {"return_status": {"smart_read_data": cmd_read_data.ata_status_return_descriptor, "smart_thread": cmd_thread.ata_status_return_descriptor}, 
+                  "content": {"vendor_spec": {}, "general_info": {}},
+                  }
         for name,value in cmd_read_data.result.items(): 
             if name != 'smartInfo':
-                target["general_info"][name] = scsi_ba_to_int(value, 'little')
+                target["content"]["general_info"][name] = scsi_ba_to_int(value, 'little')
         ##
         smart_thread = decode_smart_thresh(cmd_thread.datain[2:362])
         data = cmd_read_data.result['smartInfo']
@@ -134,7 +164,7 @@ def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal'):
                 value = data[i+3]
                 worst = data[i+4]
                 raw_value = data[i+5:i+11]
-                target["vendor_spec"][ID] = {"AttrName": SMART_ATTR[ID] if ID in SMART_ATTR else 'Unknown_Attribute',
+                target["content"]["vendor_spec"][ID] = {"AttrName": SMART_ATTR[ID] if ID in SMART_ATTR else 'Unknown_Attribute',
                                              "Flag": scsi_ba_to_int(data[i+1:i+3], 'little'),
                                              "Value": data[i+3],
                                              "Worst": data[i+4],
@@ -143,7 +173,7 @@ def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal'):
         if print_type == 'normal':
             print ('General SMART Values:')
             print ('=' * 100)
-            for name,value in target["general_info"].items():
+            for name,value in target["content"]["general_info"].items():
                 print ('%34s: %-10d [%#x]' % (name,value,value))
             
             print ('')
@@ -154,7 +184,7 @@ def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal'):
                   ('ID#','ATTRIBUTE_NAME','FLAG','VALUE','WORST','THRESHOLD','RAW_VALUE'))
             print ('-'*100)
             print_fomrat = '%3s %-25s %#-6x %-6s %-6s %-10s %s'
-            for ID,value in target["vendor_spec"].items():
+            for ID,value in target["content"]["vendor_spec"].items():
                 print (print_fomrat %
                       (ID,                                          # ID
                        value["AttrName"],                              # ATTRIBUTE_NAME
@@ -186,4 +216,3 @@ def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal'):
         print (cmd_thread.datain)
     else:
         raise NotImplementedError("Not Support type: %s" % print_type)
-

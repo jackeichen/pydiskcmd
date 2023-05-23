@@ -6,6 +6,7 @@ import optparse
 import binascii
 from pydiskcmd.pysata.sata import SATA
 from pydiskcmd.utils.ata_format_print import (
+    _print_return_status,
     read_log_format_print_set,
     smart_read_log_format_print_set,
     read_log_decode_set,
@@ -52,12 +53,6 @@ def print_help():
         print ("")
         print ("See 'pysata help <command>' or 'pysata <command> --help' for more information on a sub-command")
     return 0
-
-def _print_return_status(ata_status_return_descriptor):
-    print ("Return Status:")
-    for k,v in ata_status_return_descriptor.items():
-        print ("%-30s: %s" % (k,v))
-    print ('')
 
 def _list():
     usage="usage: %prog smart-log <device> [OPTIONS]"
@@ -165,8 +160,8 @@ def read_dma_ext():
         if not check_device_exist(dev):
             raise RuntimeError("Device %s not exist!" % dev)
         ##
+        print ('issuing read DMA EXT command.')
         with SATA(init_device(dev, open_t='ata'), 512) as d:
-            print ('issuing read DMA EXT command.')
             print ("%s:" % d.device._file_name)
             cmd = d.read_DMAEXT16(options.slba, options.nlb)
             return_descriptor = cmd.ata_status_return_descriptor
@@ -318,17 +313,13 @@ def identify():
         if not check_device_exist(dev):
             raise RuntimeError("Device not exist!")
         ##
-        data = ''
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        if options.output_format != 'json':
             print ('issuing identify command')
-            print ("%s:" % d.device._file_name)
+            print ('Device: %s' % dev)
+            print ('')
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             cmd = d.identify()
-        return_descriptor = cmd.ata_status_return_descriptor
-        if options.show_status:
-            _print_return_status(return_descriptor)
-        print ('')
-        print ('status err_bit:', return_descriptor.get("status") & 0x01)
-        format_print_identify(cmd, print_type=options.output_format)
+        format_print_identify(cmd, print_type=options.output_format, show_status=options.show_status)
     else:
         parser.print_help()
 
@@ -491,22 +482,16 @@ def smart():
             raise RuntimeError("Device not exist!")
         ##
         from pydiskcmd.pysata.sata_spec import SMART_KEY
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        #
+        if options.output_format != 'json':
             print ('issuing smart command')
-            print ("%s:" % d.device._file_name)
+            print ('Device: %s' % dev)
+            print ('')
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
             cmd_read_data = d.smart_read_data(SMART_KEY)
-            return_descriptor = cmd_read_data.ata_status_return_descriptor
-            if options.show_status:
-                print ("Smart Read Data:")
-                _print_return_status(return_descriptor)
-            ##
             cmd_thread = d.smart_read_thresh()
-            return_descriptor = cmd_thread.ata_status_return_descriptor
-            if options.show_status:
-                print ("Smart Read Thresh:")
-                _print_return_status(return_descriptor)
         ##
-        format_print_smart(cmd_read_data, cmd_thread, print_type=options.output_format)
+        format_print_smart(cmd_read_data, cmd_thread, print_type=options.output_format, show_status=options.show_status)
     else:
         parser.print_help()
 
