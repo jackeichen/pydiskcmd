@@ -132,7 +132,6 @@ def format_print_identify(cmd, dev='', print_type='normal', show_status=False):
         raise NotImplementedError("Not Support type: %s" % print_type)
 
 def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal', show_status=False):
-    print ('')
     if show_status:
         if print_type != 'json':
             print ('Smart Read Data Status:')

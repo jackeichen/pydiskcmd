@@ -106,6 +106,29 @@ pydiskutils
 It is a program that show and manage pydiskcmd tool. Use bellow command to get help:
 
     $ pydiskutils --help
+```
+Usage: pydiskutils [OPTION] [args...]
+
+Options:
+  --version             show program's version number and exit
+  -h, --help            show this help message and exit
+  -d DEVICE_ID, --device=DEVICE_ID
+                        Specify the device id to check, default all.
+  --show_stored_disk    Show stored disks information.
+  --show_temperature    Show the history of disk temperature
+  -o OUPUT_FORMAT, --ouput_format=OUPUT_FORMAT
+                        The format of output, should be
+                        console|picture|jsonfile
+  -f OUPUT_FILE, --ouput_file=OUPUT_FILE
+                        The name of output file.
+  --enable=ENABLE_FUNC  Enable programe functions, include
+                        cmd_completion|auto_startup
+  --disable=DISABLE_FUNC
+                        Disable programe functions, include auto_startup
+  --code_version=CODE_VERSION
+                        Check code version: pydiskcmd|nvme|ata|scsi, default
+                        pydiskcmd
+```
 
 pynvme
 ------
@@ -114,6 +137,47 @@ command to get help:
 
     $ pynvme help
 
+```
+pynvme-0.1.0
+usage: pynvme <command> [<device>] [<args>]
+
+The '<device>' may be either an NVMe character device (ex: /dev/nvme0) or an
+nvme block device (ex: /dev/nvme0n1).
+
+The following are all implemented sub-commands:
+  list                  List all NVMe devices and namespaces on machine
+  list-ns               Send NVMe Identify List, display structure
+  list-ctrl             Send NVMe Identify Controller List, display structure
+  smart-log             Retrieve SMART Log, show it
+  id-ctrl               Send NVMe Identify Controller
+  id-ns                 Send NVMe Identify Namespace, display structure
+  nvme-create-ns        Creates a namespace with the provided parameters
+  nvme-delete-ns        Deletes a namespace from the controller
+  nvme-attach-ns        Attaches a namespace to requested controller(s)
+  nvme-detach-ns        Detaches a namespace from requested controller(s)
+  error-log             Retrieve Error Log, show it
+  commands-se-log       Retrieve Commands Supported and Effects Log, and show it
+  fw-log                Retrieve FW Log, show it
+  fw-download           Download new firmware
+  fw-commit             Verify and commit firmware to a specific slot
+  get-feature           Get feature and show the resulting value
+  set-feature           Set a feature and show the resulting value
+  format                Format namespace with new block format
+  persistent_event_log  Get persistent event log from device
+  device-self-test      Perform the necessary tests to observe the performance
+  self-test-log         Retrieve the SELF-TEST Log, show it
+  pcie                  Get device PCIe status, show it
+  flush                 Submit a flush command, return results
+  read                  Submit a read command, return results
+  verify                Submit a verify command, return results
+  write                 Submit a write command, return results
+  get-lba-status        Submit a Get LBA Status command, return results
+  version               Shows the program version
+  help                  Display this help
+
+See 'pynvme help <command>' or 'pynvme <command> --help' for more information on a sub-command
+```
+
 pysata
 ------
 It is a sata command tool, to send ATA command to SATA Disk, with some limitted 
@@ -121,12 +185,56 @@ commands inside. Use bellow command to get help:
 
     $ pysata help
 
+```
+pysata-0.2.0
+usage: pysata <command> [<device>] [<args>]
+
+The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
+
+The following are all implemented sub-commands:
+  list                        List all ATA devices on machine
+  check-PowerMode             Check Disk Power Mode
+  accessible-MaxAddress       Send Accessible Max Address command
+  identify                    Get identify information
+  self-test                   Start a disk self test
+  smart                       Get smart information
+  read-log                    Get the GPL Log and show it
+  smart-read-log              Get the smart Log and show it
+  standby                     Send standby command
+  read                        Send a read command to disk
+  write                       Send a write command to disk
+  flush                       Send a flush command to disk
+  trim                        Send a trim command to disk
+  download_fw                 Download firmware to target disk
+  version                     Shows the program version
+  help                        Display this help
+
+See 'pysata help <command>' or 'pysata <command> --help' for more information on a sub-command
+```
+
 pyscsi
 ------
 It is a scsi command tool, to send scsi command to SAS Disk, with some limitted 
 commands inside. Use bellow command to get help:
 
     $ pyscsi help
+
+```
+pyscsi 0.2.0
+usage: pyscsi <command> [<device>] [<args>]
+
+The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
+
+The following are all implemented sub-commands:
+  inq                         Send scsi inquiry command
+  getlbastatus                Get LBA Status from target SCSI device
+  read                        Send a read command to disk
+  write                       Send a write command to disk
+  version                     Shows the program version
+  help                        Display this help
+
+See 'pyscsi help <command>' or 'pyscsi <command> --help' for more information on a sub-command
+```
 
 pydiskhealthd
 -------------
