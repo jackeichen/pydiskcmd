@@ -239,8 +239,8 @@ See 'pyscsi help <command>' or 'pyscsi <command> --help' for more information on
 
 pydiskhealthd
 -------------
-This is a Disk Health Monitoring and Reporting tool only for Linux. See below pydiskhealthd 
-for more detail. Use bellow command to get help:
+This is a Disk Health Monitoring and Reporting tool. See below pydiskhealthd for more detail. 
+Use bellow command to get help:
 
     $ pydiskhealthd -h
 
@@ -257,12 +257,12 @@ in /var/log/pydiskcmd/pydiskhealthd.log or windows in C:\Windows\Temp\pydiskcmd\
 or both of them.
 
 For NVMe Disk:
-  
-  * PCIe Link Status(Only in Linux);
-  * PCIe AER Registers(Only in Linux);
+
   * smart values;
   * Persistent Event Logs;
   * AER Event Check(Only in Linux);
+  * PCIe Link Status(Only in Linux);
+  * PCIe AER Registers(Only in Linux);
 
 The tool provide a real-time NVMe Asynchronous Event Request check by reading Linux trace file(Need Enable 
 Linux Trace function). You can set the event that you want to trigger by sending nvme set-feature command. 

@@ -9,7 +9,7 @@ from pydiskcmd.pynvme.cdb_identify import IDCtrl,IDNS,IDActiveNS,IDAllocatedNS,I
 from pydiskcmd.pynvme.cdb_set_feature import SetFeature
 from pydiskcmd.pynvme.cdb_get_feature import GetFeature
 from pydiskcmd.pynvme.cdb_get_feature import GetFeature
-from pydiskcmd.pynvme.cdb_get_log_page import FWSlotInfo,ErrorLog,SmartLog,SelfTestLog,PersistentEventLog
+from pydiskcmd.pynvme.cdb_get_log_page import FWSlotInfo,ErrorLog,SmartLog,SelfTestLog,PersistentEventLog,TelemetryHostInitiatedLog,TelemetryControllerInitiatedLog
 from pydiskcmd.pynvme.cdb_get_log_page import CommandsSupportedAndEffectsLog
 from pydiskcmd.pynvme.cdb_fw_download import FWImageDownload
 from pydiskcmd.pynvme.cdb_fw_commit import FWCommit
@@ -266,6 +266,16 @@ class NVMe(object):
 
     def commands_supported_and_effects_log(self):
         cmd = CommandsSupportedAndEffectsLog()
+        self.execute(cmd)
+        return cmd
+
+    def telemetry_host_log(self, numdl, create_telemetry=0, lpol=0, lpou=0):
+        cmd = TelemetryHostInitiatedLog(create_telemetry, numdl, lpol=lpol, lpou=lpou)
+        self.execute(cmd)
+        return cmd
+
+    def telemetry_ctrl_log(self, numdl, lpol=0, lpou=0):
+        cmd = TelemetryControllerInitiatedLog(numdl, lpol=lpol, lpou=lpou)
         self.execute(cmd)
         return cmd
 

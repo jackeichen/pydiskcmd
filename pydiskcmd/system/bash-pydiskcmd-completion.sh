@@ -8,9 +8,9 @@ _pysata_cmds="list check-PowerMode accessible-MaxAddress identify self-test \
           version help"
 
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
-          format persistent_event_log device-self-test self-test-log get-feature \
-          set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns nvme-attach-ns \
-          nvme-detach-ns commands-se-log pcie flush read write version help"
+          format persistent_event_log device-self-test self-test-log telemetry-log \
+          get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns nvme-attach-ns \
+          nvme-detach-ns commands-se-log pcie flush read write get-lba-status version help"
 
 _pyscsi_cmds="inq getlbastatus read write version help"
 
@@ -202,6 +202,10 @@ pynvme_list_opts () {
         "self-test-log")
 		opts+=" -o --output-format= -h --help"
 		;;
+        "telemetry-log")
+		opts+=" -o --output-file= -g --host-generate -c --controller-init \
+            -d --data-area -h --help"
+		;;
         "get-feature")
 		opts+=" -n --namespace-id= -f --feature-id= -s --sel= -l --data-len \
             -c --cdw11= -o --output-format= -h --help"
@@ -244,6 +248,11 @@ pynvme_list_opts () {
         "write")
 		opts+=" -n --namespace-id= -s --start-block= -c --block-count= \
             -d --data= -f --data-file= -h --help"
+		;;
+        "get-lba-status")
+		opts+=" -n --namespace-id= -s --start-block= -c --block-count= \
+            -e --entry-count= -a --action-type= -o --output-format= \
+            -t --timeout= -h --help"
 		;;
         "version")
 		opts+=""

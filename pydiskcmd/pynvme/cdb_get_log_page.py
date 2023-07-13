@@ -87,8 +87,8 @@ if os_type == "Linux":
                                          "lsp": (0x0F, 1, lsp),   # Read Log Data
                                          "rae": (0x80, 1, 0),
                                          "numdl": (0x0FFF, 2, numdl),})
-            cdw12 = build_int_by_bitmap({"lpol": (0xFFFF, 0, lpol)})
-            cdw13 = build_int_by_bitmap({"lpou": (0xFFFF, 0, lpou)})
+            cdw12 = build_int_by_bitmap({"lpol": (0xFFFFFFFF, 0, lpol)})
+            cdw13 = build_int_by_bitmap({"lpou": (0xFFFFFFFF, 0, lpou)})
             ##     
             super(PersistentEventLog, self).__init__(IOCTL_REQ)
             self.build_command(opcode=CmdOPCode,
@@ -109,6 +109,51 @@ if os_type == "Linux":
             self.build_command(opcode=CmdOPCode,
                                data_len=4096,
                                cdw10=cdw10)
+
+
+    class TelemetryHostInitiatedLog(LinCommand):
+        def __init__(self,
+                     create_telemetry,
+                     numdl,
+                     lpol=0,
+                     lpou=0,
+                     data_addr=None):
+            cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, 0x07),
+                                         "create_telemetry": (0x01, 1, create_telemetry),   # Read Log Data
+                                         "rae": (0x80, 1, 0),
+                                         "numdl": (0x0FFF, 2, numdl),})
+            cdw12 = build_int_by_bitmap({"lpol": (0xFFFFFFFF, 0, lpol)})
+            cdw13 = build_int_by_bitmap({"lpou": (0xFFFFFFFF, 0, lpou)})
+            ##     
+            super(TelemetryHostInitiatedLog, self).__init__(IOCTL_REQ)
+            self.build_command(opcode=CmdOPCode,
+                               addr=data_addr,
+                               data_len=(numdl+1)*4,
+                               cdw10=cdw10,
+                               cdw12=cdw12,
+                               cdw13=cdw13,)
+
+
+    class TelemetryControllerInitiatedLog(LinCommand):
+        def __init__(self,
+                     numdl,
+                     lpol=0,
+                     lpou=0,
+                     data_addr=None):
+            cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, 0x08),
+                                         "lsp": (0x0F, 1, 0),   # Read Log Data
+                                         "rae": (0x80, 1, 0),
+                                         "numdl": (0x0FFF, 2, numdl),})
+            cdw12 = build_int_by_bitmap({"lpol": (0xFFFFFFFF, 0, lpol)})
+            cdw13 = build_int_by_bitmap({"lpou": (0xFFFFFFFF, 0, lpou)})
+            ##     
+            super(TelemetryControllerInitiatedLog, self).__init__(IOCTL_REQ)
+            self.build_command(opcode=CmdOPCode,
+                               addr=data_addr,
+                               data_len=(numdl+1)*4,
+                               cdw10=cdw10,
+                               cdw12=cdw12,
+                               cdw13=cdw13,)
 elif os_type == "Windows":
     from pydiskcmd.pynvme.nvme_command import WinCommand,build_int_by_bitmap
     from pydiskcmd.pynvme.win_nvme_command import (
@@ -225,5 +270,24 @@ elif os_type == "Windows":
             self.cdb = NVMeStorageQueryPropertyWithBuffer4096(**kwargs)
             return self.cdb
 
+
+    class TelemetryHostInitiatedLog(WinCommand):
+        def __init__(self,
+                     lsp,
+                     numdl,
+                     lpol=0,
+                     lpou=0,
+                     data_addr=None):
+            raise CommandNotSupport("TelemetryHostInitiatedLog Not Support")
+
+
+    class TelemetryControllerInitiatedLog(WinCommand):
+        def __init__(self,
+                     lsp,
+                     numdl,
+                     lpol=0,
+                     lpou=0,
+                     data_addr=None):
+            raise CommandNotSupport("TelemetryControllerInitiatedLog Not Support")
 else:
     raise NotImplementedError("%s not support" % os_type)
