@@ -14,17 +14,92 @@ NVMeStorageQueryPropertyDataType = 2     # NVMeDataTypeLogPage
 STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST = 0x80000000
 STORAGE_PROTOCOL_COMMAND_LENGTH_NVME = 0x40 # 64 bytes nvme command structure
 STORAGE_PROTOCOL_STRUCTURE_VERSION = 0x1
+##
+NVME_MAX_LOG_SIZE = 4096
+
+class STORAGE_SET_TYPE(Enum):
+    PropertyStandardSet    = 0
+    PropertyExistsSet      = 1
+    PropertySetMaxDefined  = 2
+##
+class StoragePropertyID(Enum): 
+    StorageDeviceProperty                                    = 0
+    StorageAdapterProperty                                   = 1
+    StorageDeviceIDProperty                                  = 2
+    StorageDeviceUniqueIDProperty                            = 3
+    StorageDeviceWriteCacheProperty                          = 4
+    StorageMiniportProperty                                  = 5
+    StorageAccessAlignmentProperty                           = 6
+    StorageDeviceSeekPenaltyProperty                         = 7
+    StorageDeviceTrimProperty                                = 8
+    StorageDeviceWriteAggregationProperty                    = 9
+    StorageDeviceDeviceTelemetryProperty                     = 10
+    StorageDeviceLBProvisioningProperty                      = 11
+    StorageDevicePowerProperty                               = 12
+    StorageDeviceCopyOffloadProperty                         = 13
+    StorageDeviceResiliencyProperty                          = 14
+    StorageDeviceMediumProductType                           = 15
+    StorageAdapterRpmbProperty                               = 16
+    StorageAdapterCryptoProperty                             = 17
+    StorageDeviceIoCapabilityProperty                        = 18
+    StorageAdapterProtocolSpecificProperty                   = 19
+    StorageDeviceProtocolSpecificProperty                    = 20
+    StorageAdapterTemperatureProperty                        = 21
+    StorageDeviceTemperatureProperty                         = 22
+    StorageAdapterPhysicalTopologyProperty                   = 23
+    StorageDevicePhysicalTopologyProperty                    = 24
+    StorageDeviceAttributesProperty                          = 25
+    StorageDeviceManagementStatus                            = 26
+    StorageAdapterSerialNumberProperty                       = 27
+    StorageDeviceLocationProperty                            = 28
+    StorageDeviceNumaProperty                                = 29
+    StorageDeviceZonedDeviceProperty                         = 30
+    StorageDeviceUnsafeShutdownCount                         = 31
+    StorageDeviceEnduranceProperty                           = 32
+
+#
 
 class STORAGE_PROTOCOL_TYPE(Enum):
-	ProtocolTypeUnknown = 0x00
-	ProtocolTypeScsi    = auto()
-	ProtocolTypeAta     = auto()
-	ProtocolTypeNvme    = auto()
-	ProtocolTypeSd      = auto()
+    ProtocolTypeUnknown = 0x00
+    ProtocolTypeScsi    = auto()
+    ProtocolTypeAta     = auto()
+    ProtocolTypeNvme    = auto()
+    ProtocolTypeSd      = auto()
 
 class STORAGE_PROTOCOL_SPECIFIC_NVME_COMMAND(Enum):
     ADMIN = 0x01   # STORAGE_PROTOCOL_SPECIFIC_NVME_ADMIN_COMMAND
     NVM   = 0x02   # STORAGE_PROTOCOL_SPECIFIC_NVME_NVM_COMMAND
+
+
+class TStorageProtocolNVMeDataType(Enum):
+    NVMeDataTypeUnknown = 0
+    NVMeDataTypeIdentify = 1
+    NVMeDataTypeLogPage = 2
+    NVMeDataTypeFeature = 3
+
+class NVME_FEATURES(Enum):
+    NVME_FEATURE_ARBITRATION                            = 0x01,
+    NVME_FEATURE_POWER_MANAGEMENT                       = 0x02,
+    NVME_FEATURE_LBA_RANGE_TYPE                         = 0x03,
+    NVME_FEATURE_TEMPERATURE_THRESHOLD                  = 0x04,
+    NVME_FEATURE_ERROR_RECOVERY                         = 0x05,
+    NVME_FEATURE_VOLATILE_WRITE_CACHE                   = 0x06,
+    NVME_FEATURE_NUMBER_OF_QUEUES                       = 0x07,
+    NVME_FEATURE_INTERRUPT_COALESCING                   = 0x08,
+    NVME_FEATURE_INTERRUPT_VECTOR_CONFIG                = 0x09,
+    NVME_FEATURE_WRITE_ATOMICITY                        = 0x0A,
+    NVME_FEATURE_ASYNC_EVENT_CONFIG                     = 0x0B,
+    NVME_FEATURE_AUTONOMOUS_POWER_STATE_TRANSITION      = 0x0C,
+    NVME_FEATURE_HOST_MEMORY_BUFFER                     = 0x0D,
+    NVME_FEATURE_TIMESTAMP                              = 0x0E,
+    NVME_FEATURE_KEEP_ALIVE                             = 0x0F,
+    NVME_FEATURE_HOST_CONTROLLED_THERMAL_MANAGEMENT     = 0x10,
+    NVME_FEATURE_NONOPERATIONAL_POWER_STATE             = 0x11,
+    #
+    NVME_FEATURE_NVM_SOFTWARE_PROGRESS_MARKER           = 0x80,
+    NVME_FEATURE_NVM_HOST_IDENTIFIER                    = 0x81,
+    NVME_FEATURE_NVM_RESERVATION_NOTIFICATION_MASK      = 0x82,
+    NVME_FEATURE_NVM_RESERVATION_PERSISTANCE            = 0x83,
 
 ##
 # https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddstor/ne-ntddstor-_storage_protocol_nvme_data_type
@@ -77,6 +152,57 @@ class NVMeStorageQueryPropertyHeader(Structure):
         self.ProtocolDataRequestSubValue2 = RequestSubValue2
         self.ProtocolDataRequestSubValue3 = RequestSubValue3
         self.ProtocolDataRequestSubValue4 = RequestSubValue4
+
+
+class IOCTLSTORAGESETPROPERTY(Structure):
+    _fields_ = [
+        ("PropertyId", c_uint32),
+        ("SetType", c_uint32),
+        ("ProtocolType", c_uint32),
+        ("DataType", c_uint32),
+        ("ProtocolDataValue", c_uint32),
+        ("ProtocolDataSubValue", c_uint32),
+        ("ProtocolDataOffset", c_uint32),
+        ("ProtocolDataLength", c_uint32),
+        ("FixedProtocolReturnData", c_uint32),
+        ("ProtocolDataSubValue2", c_uint32),
+        ("ProtocolDataSubValue3", c_uint32),
+        ("ProtocolDataSubValue4", c_uint32),
+        ("ProtocolDataSubValue5", c_uint32),
+        ("Reserved", c_uint32*5),
+        ("DATA_DESCRIPTOR_EXT", c_uint8*NVME_MAX_LOG_SIZE)
+        
+    ]
+    _pack_ = 1
+
+    def __init__(
+        self,
+        PropertyId=StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
+        SetType=STORAGE_SET_TYPE.PropertyStandardSet.value,
+        ProtocolType=STORAGE_PROTOCOL_TYPE.ProtocolTypeNvme.value,
+        DataType=TStorageProtocolNVMeDataType.NVMeDataTypeFeature.value,
+        ProtocolDataValue=NVME_FEATURES.NVME_FEATURE_HOST_CONTROLLED_THERMAL_MANAGEMENT.value,
+        CDW11=0,                     #ProtocolDataSubValue
+        ProtocolDataOffset=0,
+        ProtocolDataLength=0,
+        CDW12=0,
+        CDW13=0,
+        CDW14=0,
+        CDW15=0,
+    ):
+        self.PropertyId = PropertyId
+        self.SetType = SetType
+        self.ProtocolType = ProtocolType
+        self.DataType = DataType
+        self.ProtocolDataValue = ProtocolDataValue
+        self.ProtocolDataSubValue = CDW11
+        self.ProtocolDataOffset = ProtocolDataOffset
+        self.ProtocolDataLength = ProtocolDataLength
+        self.FixedProtocolReturnData = 0
+        self.ProtocolDataSubValue2 = CDW12
+        self.ProtocolDataSubValue3 = CDW13
+        self.ProtocolDataSubValue4 = CDW14
+        self.ProtocolDataSubValue5 = CDW15
 
 
 class NVMeStorageQueryPropertyWithoutBuffer(Structure):
@@ -218,9 +344,7 @@ class StorageProtocolCommandHeader(Structure):
         ("CommandSpecific", c_uint32),
         ("Reserved0", c_uint32),
         ("FixedProtocolReturnData", c_uint32),
-        ("Reserved1_0", c_uint32),
-        ("Reserved1_1", c_uint32),
-        ("Reserved1_2", c_uint32),
+        ("Reserved1", c_uint32*3),
     ]
     _pack_ = 1
 
@@ -318,9 +442,6 @@ class StorageProtocolCommand(Structure):
         self.spch.CommandSpecific = h_command_spec
         self.spch.Reserved0 = 0
         self.spch.FixedProtocolReturnData = 0
-        self.spch.Reserved1_0 = 0
-        self.spch.Reserved1_1 = 0
-        self.spch.Reserved1_2 = 0
         self.nvme_command = NVMECommand(**kwargs)
 
     @property

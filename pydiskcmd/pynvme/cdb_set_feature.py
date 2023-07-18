@@ -42,10 +42,37 @@ if os_type == "Linux":
                                cdw15=cdw15,)
 
 elif os_type == "Windows":
-    from pydiskcmd.pynvme.nvme_command import WinCommand
+    from pydiskcmd.pynvme.nvme_command import WinCommand,build_int_by_bitmap
+    from pydiskcmd.pynvme import win_nvme_command
+    IOCTL_REQ = WinCommand.win_req.get("IOCTL_STORAGE_SET_PROPERTY")
+
     class SetFeature(WinCommand):
-        def __init__(self, *args, **kwargs):
-            raise CommandNotSupport("SetFeature Not Support")
+        def __init__(self, 
+                     feature_id, 
+                     ns_id=0,  # dummy value for windows
+                     sv=0, 
+                     uuid_index=0, 
+                     cdw11=0, 
+                     cdw12=0, 
+                     cdw13=0, 
+                     cdw15=0,
+                     data_in=None):
+            ### build command
+            cdw14 = build_int_by_bitmap({"UUID": (0x7F, 0, uuid_index),})
+            ##
+            super(SetFeature, self).__init__(IOCTL_REQ)
+            self.build_command(ProtocolDataValue=feature_id,
+                               CDW11=cdw11,
+                               CDW12=cdw12,
+                               CDW13=cdw13,
+                               CDW14=cdw14,
+                               CDW15=cdw15,
+                               )
+            raise CommandNotSupport("SetFeature in Windows Not Support.")
+
+        def build_command(self, **kwargs):
+            self.cdb = win_nvme_command.IOCTLSTORAGESETPROPERTY(**kwargs)
+            return self.cdb
 
 else:
     raise NotImplementedError("%s not support" % os_type)

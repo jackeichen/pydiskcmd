@@ -273,21 +273,50 @@ elif os_type == "Windows":
 
     class TelemetryHostInitiatedLog(WinCommand):
         def __init__(self,
-                     lsp,
+                     create_telemetry,
                      numdl,
                      lpol=0,
                      lpou=0,
                      data_addr=None):
-            raise CommandNotSupport("TelemetryHostInitiatedLog Not Support")
+            self.__data_len = (numdl + 1) * 4
+            ##
+            super(TelemetryHostInitiatedLog, self).__init__(IOCTL_REQ)
+            # https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddstor/ne-ntddstor-_storage_protocol_nvme_data_type
+            self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
+                               DataType=2,       # NVMeDataTypeLogPage
+                               RequestValue=0x07,   # log id
+                               RequestSubValue=lpol, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue2=lpou, # the upper 32-bit value of the offset within a log page from which to start returning data.
+                               ProtocolDataLength=self.__data_len,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            temp = get_NVMeStorageQueryPropertyWithBuffer(self.__data_len)
+            self.cdb = temp(**kwargs)
+            return self.cdb
 
 
     class TelemetryControllerInitiatedLog(WinCommand):
         def __init__(self,
-                     lsp,
                      numdl,
                      lpol=0,
                      lpou=0,
                      data_addr=None):
-            raise CommandNotSupport("TelemetryControllerInitiatedLog Not Support")
+            self.__data_len = (numdl + 1) * 4
+            ##
+            super(TelemetryControllerInitiatedLog, self).__init__(IOCTL_REQ)
+            # https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddstor/ne-ntddstor-_storage_protocol_nvme_data_type
+            self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
+                               DataType=2,       # NVMeDataTypeLogPage
+                               RequestValue=0x08,   # log id
+                               RequestSubValue=lpol, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue2=lpou, # the upper 32-bit value of the offset within a log page from which to start returning data.
+                               ProtocolDataLength=self.__data_len,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            temp = get_NVMeStorageQueryPropertyWithBuffer(self.__data_len)
+            self.cdb = temp(**kwargs)
+            return self.cdb
 else:
     raise NotImplementedError("%s not support" % os_type)
