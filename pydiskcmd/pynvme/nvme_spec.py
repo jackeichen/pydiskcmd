@@ -165,6 +165,18 @@ nvme_fw_slot_info_bit_mask  = {"AFI": ('b', 0, 1),      ## Active Firmware Info
                                "FRS7": ('b', 56, 8),    ## Firmware Revision for Slot 7
                               }
 
+nvme_sanitize_log_bit_mask  = {"SPROG": ('b', 0, 2),             ## Sanitize Progress (SPROG)
+                               "SSTAT": ('b', 2, 2),             ## Sanitize Status (SSTAT)
+                               "SCDW10": ('b', 4, 4),            ## Sanitize Command Dword 10 Information (SCDW10)
+                               "Overwrite_Time": ('b', 8, 4),    ## Estimated Time For Overwrite
+                               "BlockErase_Time": ('b', 12, 4),  ## Estimated Time For Block Erase
+                               "CryptoErase_Time": ('b', 16, 4), ## Estimated Time For Crypto Erase
+                               "Overwrite_No-Deallocate_Estimated": ('b', 20, 4),    ## Estimated Time For Overwrite With No-Deallocate Media Modification
+                               "BlockErase_No-Deallocate_Estimated": ('b', 24, 4),   ## Estimated Time For Block Erase With No-Deallocate Media Modification
+                               "CryptoErase_No-Deallocate_Estimated": ('b', 28, 4),  ## Estimated Time For Crypto Erase With No-Deallocate Media Modification
+                              }
+
+nvme_sanitize_log_SSTAT_bit_mask = {}
 
 nvme_power_management_cq_bit_mask = {"PS": [0x1F, 0],   ## Power State
                                      "WH": [0xE0, 0],   ## Workload Hint
@@ -436,4 +448,11 @@ def decode_LBA_Status_Descriptor_List(data):
             index += 16
         else:
             break
+    return result
+
+def decode_sanitize_log(data):
+    result = {}
+    decode_bits(data, nvme_sanitize_log_bit_mask, result)
+    for k,v in result.items():
+        result[k] = scsi_ba_to_int(v, 'little')
     return result

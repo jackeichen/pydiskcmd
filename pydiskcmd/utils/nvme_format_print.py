@@ -15,6 +15,7 @@ from pydiskcmd.pynvme.nvme_spec import (
     decode_ns_list_format,
     decode_ctrl_list_format,
     nvme_power_management_cq_decode,
+    decode_sanitize_log,
     )
 from pydiskcmd.utils.format_print import format_dump_bytes,json_print
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
@@ -413,5 +414,37 @@ def format_print_read_data(meta_data, data, dev='', print_type='normal'):
         print ("")
         print ("Data read:")
         print (data)
+    else:
+        raise NotImplementedError("Not Support type: %s" % print_type)
+
+def format_print_sanitize_log(raw_data, dev='', print_type='normal'):
+    if print_type == 'normal':
+        def get_estimated_time_description(t):
+            if t == 0xFFFFFFFF:
+                return " (No time period reported)"
+            elif t == 0:
+                return " (Sanitize is background running)"
+            else:
+                return ""
+        result = decode_sanitize_log(raw_data)
+        if result["SPROG"] != 0xFFFF:
+            print ("%-47s: %.2f%%" % ("Sanitize Progress", result["SPROG"]/65536*100))
+        else:
+            print ("%-47s: %s" % ("Sanitize Progress", "No sanitize is running"))
+        print ("%-47s: %#x" % ("Sanitize Status", result["SSTAT"]))
+        print ("%-47s: %#x" % ("Sanitize Command Dword 10 Information", result["SCDW10"]))
+        print ("%-47s: %d%s" % ("Estimated Time For Overwrite", result["Overwrite_Time"], get_estimated_time_description(result["Overwrite_Time"])))
+        print ("%-47s: %d%s" % ("Estimated Time For Block Erase", result["BlockErase_Time"], get_estimated_time_description(result["BlockErase_Time"])))
+        print ("%-47s: %d%s" % ("Estimated Time For Crypto Erase", result["CryptoErase_Time"], get_estimated_time_description(result["CryptoErase_Time"])))
+        print ("%-47s: %d%s" % ("Estimated Time For Overwrite (No-Deallocate)", result["Overwrite_No-Deallocate_Estimated"], get_estimated_time_description(result["Overwrite_No-Deallocate_Estimated"])))
+        print ("%-47s: %d%s" % ("Estimated Time For Block Erase (No-Deallocate)", result["BlockErase_No-Deallocate_Estimated"], get_estimated_time_description(result["BlockErase_No-Deallocate_Estimated"])))
+        print ("%-47s: %d%s" % ("Estimated Time For Crypto Erase (No-Deallocate)", result["CryptoErase_No-Deallocate_Estimated"], get_estimated_time_description(result["CryptoErase_No-Deallocate_Estimated"])))
+    elif print_type == 'hex':
+        format_dump_bytes(raw_data, byteorder='obverse')
+    elif print_type == 'raw':
+        print (raw_data)
+    elif print_type == 'json':
+        result = decode_sanitize_log(raw_data)
+        json_print(result)
     else:
         raise NotImplementedError("Not Support type: %s" % print_type)

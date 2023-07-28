@@ -16,6 +16,15 @@ STORAGE_PROTOCOL_COMMAND_LENGTH_NVME = 0x40 # 64 bytes nvme command structure
 STORAGE_PROTOCOL_STRUCTURE_VERSION = 0x1
 ##
 NVME_MAX_LOG_SIZE = 4096
+##
+STORAGE_HW_FIRMWARE_REQUEST_FLAG_CONTROLLER = 1
+STORAGE_HW_FIRMWARE_REQUEST_FLAG_LAST_SEGMENT = 2
+STORAGE_HW_FIRMWARE_REQUEST_FLAG_FIRST_SEGMENT = 4
+STORAGE_HW_FIRMWARE_REQUEST_FLAG_REPLACE_EXISTING_IMAGE = 1073741824
+STORAGE_HW_FIRMWARE_REQUEST_FLAG_SWITCH_TO_EXISTING_FIRMWARE = 2147483648
+STORAGE_HW_FIRMWARE_INVALID_SLOT = 255
+STORAGE_HW_FIRMWARE_REVISION_LENGTH = 16
+
 
 class STORAGE_SET_TYPE(Enum):
     PropertyStandardSet    = 0
@@ -457,4 +466,58 @@ class StorageProtocolCommand(Structure):
     @property
     def result(self):
         return self.spch.FixedProtocolReturnData
+
+
+class STORAGE_HW_FIRMWARE_DOWNLOAD(Structure):
+    _fields_ = [
+        ("Version", c_uint32),
+        ("Size", c_uint32),
+        ("Flags", c_uint32),
+        ("Slot", c_uint8),
+        ("Reserved", c_uint8 * 3),
+        ("Offset", c_uint64),
+        ("BufferSize", c_uint64),
+        ("ImageBuffer", POINTER(c_ubyte)),
+    ]
+    _pack_ = 1
+
+    def __init__(self,
+                 Flags,
+                 Slot,
+                 Offset,
+                 data,
+                 ):
+        self.Version = 32 # wait to verify? The version of this structure. This should be set to sizeof(STORAGE_HW_FIRMWARE_DOWNLOAD).
+        self.Size = 0         #   The size of this structure and the download image buffer.
+        self.Flags = Flags      # Flags associated with this download. The following are valid flags that this member can hold.
+        self.Slot = Slot        # The slot number that the firmware image will be downloaded to.
+        self.Offset = Offset    # The offset in this buffer of where the Image file begins. This should be aligned to ImagePayloadAlignment from STORAGE_HW_FIRMWARE_INFO.
+        self.BufferSize = 0      # The buffer size of the ImageBuffer. This should be a multiple of ImagePayloadAlignment from STORAGE_HW_FIRMWARE_INFO.
+        self.set_data(data)      #
+
+    def set_data(self, value):
+        if not isinstance(value, (bytes,)):
+            raise ValueError("Bytes expected.")
+        self.ImageBuffer = cast(value, POINTER(c_ubyte))
+        self.BufferSize = len(value)
+        self.Size = self.Version + self.BufferSize
+
+
+class STORAGE_HW_FIRMWARE_ACTIVATE(Structure):
+    _fields_ = [
+        ("Version", c_uint32),
+        ("Size", c_uint32),
+        ("Flags", c_uint32),
+        ("Slot", c_uint8),
+        ("Reserved0", c_uint8 * 3),
+    ]
+    _pack_ = 1
+    def __init__(self,
+                 Flags,
+                 Slot,
+                 ):
+        self.Version = 16  # The version of this structure. This should be set to sizeof(STORAGE_HW_FIRMWARE_ACTIVATE).
+        self.Size = 16     # The size of this structure. This should be set to sizeof(STORAGE_HW_FIRMWARE_ACTIVATE).
+        self.Flags = Flags # The flags associated with the activation request. The following are valid flags that can be set in this member.
+        self.Slot = Slot   # The slot with the firmware image that is to be activated.
 

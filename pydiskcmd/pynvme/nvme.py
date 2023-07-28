@@ -9,11 +9,12 @@ from pydiskcmd.pynvme.cdb_identify import IDCtrl,IDNS,IDActiveNS,IDAllocatedNS,I
 from pydiskcmd.pynvme.cdb_set_feature import SetFeature
 from pydiskcmd.pynvme.cdb_get_feature import GetFeature
 from pydiskcmd.pynvme.cdb_get_feature import GetFeature
-from pydiskcmd.pynvme.cdb_get_log_page import FWSlotInfo,ErrorLog,SmartLog,SelfTestLog,PersistentEventLog,TelemetryHostInitiatedLog,TelemetryControllerInitiatedLog
+from pydiskcmd.pynvme.cdb_get_log_page import FWSlotInfo,ErrorLog,SmartLog,SelfTestLog,PersistentEventLog,TelemetryHostInitiatedLog,TelemetryControllerInitiatedLog,SanitizeStatus
 from pydiskcmd.pynvme.cdb_get_log_page import CommandsSupportedAndEffectsLog
 from pydiskcmd.pynvme.cdb_fw_download import FWImageDownload
 from pydiskcmd.pynvme.cdb_fw_commit import FWCommit
 from pydiskcmd.pynvme.cdb_format import Format
+from pydiskcmd.pynvme.cdb_nvme_sanitize import Sanitize
 from pydiskcmd.pynvme.cdb_self_test import SelfTest
 from pydiskcmd.pynvme.cdb_ns_management import NSCreate,NSDelete
 from pydiskcmd.pynvme.cdb_ns_attachment import NSAttachment
@@ -333,6 +334,16 @@ class NVMe(object):
             print ("Any secure erase performed as part of a format results in a secure erase of the particular namespace specified")
         ###
         cmd = Format(lbaf, nsid=nsid, **kwargs)
+        self.execute(cmd)
+        return cmd
+
+    def sanitize(self, action, ause, owpass, oipbp, no_deallocate, ovrpat=0):
+        cmd = Sanitize(action, ause, owpass, oipbp, no_deallocate, ovrpat=ovrpat)
+        self.execute(cmd)
+        return cmd
+
+    def sanitize_log(self, numdl, lpol=0, lpou=0):
+        cmd = SanitizeStatus(numdl, lpol=lpol, lpou=lpou)
         self.execute(cmd)
         return cmd
 

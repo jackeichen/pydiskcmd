@@ -8,9 +8,10 @@ _pysata_cmds="list check-PowerMode accessible-MaxAddress identify self-test \
           version help"
 
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
-          format persistent_event_log device-self-test self-test-log telemetry-log \
-          get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns nvme-attach-ns \
-          nvme-detach-ns commands-se-log pcie flush read write get-lba-status version help"
+          format sanitize persistent_event_log device-self-test self-test-log telemetry-log \
+          sanitize_log get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns \
+          nvme-attach-ns nvme-detach-ns commands-se-log pcie flush read write get-lba-status \
+          version help"
 
 _pyscsi_cmds="inq getlbastatus read write version help"
 
@@ -182,6 +183,9 @@ pynvme_list_opts () {
         "fw-log")
 		opts+=" -o --output-format= -h --help"
 		;;
+        "sanitize-log")
+		opts+=" -o --output-format= -h --help"
+		;;
         "fw-download")
 		opts+=" -f --fw= -x --xfer= -o --offset= -h --help"
 		;;
@@ -191,6 +195,10 @@ pynvme_list_opts () {
         "format")
 		opts+=" -n --namespace-id= -l --lbaf= -s --ses= -i --pi= \
             -p --pil= -h --help"
+		;;
+        "sanitize")
+		opts+=" -d --no-dealloc -i --oipbp= -n --owpass= -u --ause= \
+            -a --sanact= -p --ovrpat= -h --help"
 		;;
         "persistent_event_log")
 		opts+=" -a --action= -o --output-format= -f --filter= \

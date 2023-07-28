@@ -154,6 +154,28 @@ if os_type == "Linux":
                                cdw10=cdw10,
                                cdw12=cdw12,
                                cdw13=cdw13,)
+
+
+    class SanitizeStatus(LinCommand):
+        def __init__(self,
+                     numdl,
+                     lpol=0,
+                     lpou=0,
+                     data_addr=None):
+            cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, 0x81),
+                                         "lsp": (0x0F, 1, 0),   # 
+                                         "rae": (0x80, 1, 0),
+                                         "numdl": (0x0FFF, 2, numdl),})
+            cdw12 = build_int_by_bitmap({"lpol": (0xFFFFFFFF, 0, lpol)})
+            cdw13 = build_int_by_bitmap({"lpou": (0xFFFFFFFF, 0, lpou)})
+            ##     
+            super(SanitizeStatus, self).__init__(IOCTL_REQ)
+            self.build_command(opcode=CmdOPCode,
+                               addr=data_addr,
+                               data_len=(numdl+1)*4,
+                               cdw10=cdw10,
+                               cdw12=cdw12,
+                               cdw13=cdw13,)
 elif os_type == "Windows":
     from pydiskcmd.pynvme.nvme_command import WinCommand,build_int_by_bitmap
     from pydiskcmd.pynvme.win_nvme_command import (
@@ -309,6 +331,29 @@ elif os_type == "Windows":
             self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
                                DataType=2,       # NVMeDataTypeLogPage
                                RequestValue=0x08,   # log id
+                               RequestSubValue=lpol, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue2=lpou, # the upper 32-bit value of the offset within a log page from which to start returning data.
+                               ProtocolDataLength=self.__data_len,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            temp = get_NVMeStorageQueryPropertyWithBuffer(self.__data_len)
+            self.cdb = temp(**kwargs)
+            return self.cdb
+
+    class SanitizeStatus(WinCommand):
+        def __init__(self,
+                     numdl,
+                     lpol=0,
+                     lpou=0,
+                     data_addr=None):
+            self.__data_len = (numdl + 1) * 4
+            ##
+            super(TelemetryControllerInitiatedLog, self).__init__(IOCTL_REQ)
+            # https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddstor/ne-ntddstor-_storage_protocol_nvme_data_type
+            self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
+                               DataType=2,       # NVMeDataTypeLogPage
+                               RequestValue=0x81,   # log id
                                RequestSubValue=lpol, #  lower 32-bit value of the offset within a log page from which to start returning data.
                                RequestSubValue2=lpou, # the upper 32-bit value of the offset within a log page from which to start returning data.
                                ProtocolDataLength=self.__data_len,    # data len

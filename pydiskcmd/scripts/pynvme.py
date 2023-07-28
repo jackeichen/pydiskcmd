@@ -43,11 +43,13 @@ def print_help():
         print ("  error-log             Retrieve Error Log, show it")
         print ("  commands-se-log       Retrieve Commands Supported and Effects Log, and show it")
         print ("  fw-log                Retrieve FW Log, show it")
+        print ("  sanitize-log          Retrieve Sanitize Log, show it")
         print ("  fw-download           Download new firmware")
         print ("  fw-commit             Verify and commit firmware to a specific slot")
         print ("  get-feature           Get feature and show the resulting value")
         print ("  set-feature           Set a feature and show the resulting value")
         print ("  format                Format namespace with new block format")
+        print ("  sanitize              Submit a sanitize command")
         print ("  persistent_event_log  Get persistent event log from device")
         print ("  device-self-test      Perform the necessary tests to observe the performance")
         print ("  self-test-log         Retrieve the SELF-TEST Log, show it")
@@ -238,6 +240,27 @@ def fw_log():
         cmd.check_return_status()
         ##
         nvme_format_print.format_print_fw_log(cmd.data, dev=d.device.device_name, print_type=options.output_format)
+    else:
+        parser.print_help()
+
+def sanitize_log():
+    usage="usage: %prog sanitize-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.sanitize_log(127, lpol=0, lpou=0)
+        cmd.check_return_status()
+        ##
+        nvme_format_print.format_print_sanitize_log(cmd.data, dev=d.device.device_name, print_type=options.output_format)
     else:
         parser.print_help()
 
@@ -854,6 +877,56 @@ def list_ctrl():
     else:
         parser.print_help()
 
+def sanitize():
+    usage="usage: %prog sanitize <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-d", "--no-dealloc", dest="no_dealloc", action="store_false", default=True,
+        help="No deallocate after sanitize.")
+    parser.add_option("-i", "--oipbp", type="int", dest="oipbp", action="store", default=0,
+        help="Overwrite invert pattern between passes.")
+    parser.add_option("-n", "--owpass", type="int", dest="owpass", action="store", default=1,
+        help="Overwrite pass count.")
+    parser.add_option("-u", "--ause", type="int", dest="ause", action="store", default=0,
+        help="Allow unrestricted sanitize exit.")
+    parser.add_option("-a", "--sanact", type="int", dest="sanact", action="store", default=0,
+        help="Sanitize action.")
+    parser.add_option("-p", "--ovrpat", type="int", dest="ovrpat", action="store", default=0,
+        help="Overwrite pattern.")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        #
+        if options.no_dealloc:
+            no_dealloc = 0
+        else:
+            no_dealloc = 1
+        if options.oipbp:
+            oipbp = 1
+        else:
+            oipbp = 0
+        if 0 <= options.owpass <= 15:
+            owpass = options.owpass
+        else:
+            parser.error("owpass should be 0-15")
+        if options.ause:
+            ause = 1
+        else:
+            ause = 0
+        if 0 <= options.sanact <= 7:
+            sanact = options.sanact
+        else:
+            parser.error("sanact should be 0-7")
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.sanitize(sanact, ause, owpass, oipbp, no_dealloc, ovrpat=options.ovrpat)
+        cmd.check_return_status(success_hint=True, fail_hint=True)
+    else:
+        parser.print_help()
+
 def read():
     usage="usage: %prog read <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -1116,6 +1189,7 @@ commands_dict = {"list": _list,
                  "error-log": error_log,
                  "fw-log": fw_log,
                  "telemetry-log": telemetry_log,
+                 "sanitize-log": sanitize_log,
                  "fw-download": fw_download, 
                  "fw-commit": fw_commit, 
                  "nvme-create-ns": nvme_create_ns,
@@ -1125,6 +1199,7 @@ commands_dict = {"list": _list,
                  "get-feature": get_feature,
                  "set-feature": set_feature,
                  "format": nvme_format,
+                 "sanitize": sanitize,
                  "persistent_event_log": persistent_event_log,
                  "device-self-test": device_self_test,
                  "self-test-log": self_test_log,

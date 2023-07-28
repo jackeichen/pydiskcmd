@@ -28,8 +28,24 @@ if os_type == "Linux":
 
 elif os_type == "Windows":
     from pydiskcmd.pynvme.nvme_command import WinCommand
+    from pydiskcmd.pynvme.win_nvme_command import (
+        STORAGE_HW_FIRMWARE_ACTIVATE,
+        STORAGE_HW_FIRMWARE_REQUEST_FLAG_CONTROLLER,
+        STORAGE_HW_FIRMWARE_REQUEST_FLAG_SWITCH_TO_EXISTING_FIRMWARE,
+    )
+    IOCTL_REQ = WinCommand.win_req.get("IOCTL_STORAGE_FIRMWARE_ACTIVATE")
     class FWCommit(WinCommand):
-        def __init__(self, *args, **kwargs):
+        def __init__(self, 
+                     fw_slot, 
+                     action,
+                     bpid=0):
+            super(FWCommit, self).__init__(IOCTL_REQ)
+            flags = STORAGE_HW_FIRMWARE_REQUEST_FLAG_CONTROLLER | STORAGE_HW_FIRMWARE_REQUEST_FLAG_SWITCH_TO_EXISTING_FIRMWARE
+            self.build_command(flags, fw_slot)
             raise CommandNotSupport("FWCommit Not Support")
+
+        def build_command(self, Flags, Slot):
+            self.cdb = STORAGE_HW_FIRMWARE_ACTIVATE(Flags, Slot)
+            return self.cdb
 else:
     raise NotImplementedError("%s not support" % os_type)
