@@ -143,7 +143,7 @@ pynvme-0.1.0
 usage: pynvme <command> [<device>] [<args>]
 
 The '<device>' may be either an NVMe character device (ex: /dev/nvme0) or an
-nvme block device (ex: /dev/nvme0n1).
+nvme block device (ex: /dev/nvme0n1) in Linux, while PhysicalDrive<X> in Windows.
 
 The following are all implemented sub-commands:
   list                  List all NVMe devices and namespaces on machine
@@ -159,14 +159,17 @@ The following are all implemented sub-commands:
   error-log             Retrieve Error Log, show it
   commands-se-log       Retrieve Commands Supported and Effects Log, and show it
   fw-log                Retrieve FW Log, show it
+  sanitize-log          Retrieve Sanitize Log, show it
   fw-download           Download new firmware
   fw-commit             Verify and commit firmware to a specific slot
   get-feature           Get feature and show the resulting value
   set-feature           Set a feature and show the resulting value
   format                Format namespace with new block format
+  sanitize              Submit a sanitize command
   persistent_event_log  Get persistent event log from device
   device-self-test      Perform the necessary tests to observe the performance
   self-test-log         Retrieve the SELF-TEST Log, show it
+  telemetry-log         Retrieve the Telemetry Log, show it
   pcie                  Get device PCIe status, show it
   flush                 Submit a flush command, return results
   read                  Submit a read command, return results
@@ -244,6 +247,25 @@ Use bellow command to get help:
 
     $ pydiskhealthd -h
 
+```
+Usage: pydiskhealthd [OPTION] [args...]
+
+Options:
+  --version             show program's version number and exit
+  -h, --help            show this help message and exit
+  -t CHECK_INTERVAL, --check_interval=CHECK_INTERVAL
+                        Check inetrval time to check device health, default 1
+                        hour.
+  --nvme_aer_t=NVME_AER_TYPE
+                        How to check nvme aer with linux trace methmod:
+                        loop|real_time|off
+  --check_daemon_running
+                        If check the pydiskheald daemon runnning, default
+                        true.
+  -c CONFIG_FILE, --config_file=CONFIG_FILE
+                        Give a config file.
+```
+
 
 pydiskhealthd
 =============
@@ -283,7 +305,7 @@ backend service and start-up service. Enable and start it by:
 
     $ pydiskutils --enable=auto_startup 
 
-After that, the linux user can manage the pydiskhealthd with task name "pydiskhealthd".
+After that, the user can manage the pydiskhealthd with task name "pydiskhealthd".
 
 Linux:
 
@@ -292,7 +314,6 @@ Linux:
 Or Windows:
 
 `> schtasks /Query /TN pydiskhealthd`
-
 
 
 Advanced Usage

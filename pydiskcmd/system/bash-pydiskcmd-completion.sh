@@ -9,11 +9,11 @@ _pysata_cmds="list check-PowerMode accessible-MaxAddress identify self-test \
 
 _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
           format sanitize persistent_event_log device-self-test self-test-log telemetry-log \
-          sanitize_log get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns \
+          sanitize-log get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns \
           nvme-attach-ns nvme-detach-ns commands-se-log pcie flush read write get-lba-status \
           version help"
 
-_pyscsi_cmds="inq getlbastatus read write version help"
+_pyscsi_cmds="inq getlbastatus readcap luns log-sense read write version help"
 
 
 pysata_list_opts () {
@@ -119,6 +119,15 @@ pyscsi_list_opts () {
 		;;
         "getlbastatus")
 		opts+=" -l --lba= -o --output-format= -h --help"
+		;;
+        "readcap")
+		opts+=" -o --output-format= -h --help"
+		;;
+        "luns")
+		opts+=" -o --output-format= -h --help"
+		;;
+        "log-sense")
+		opts+=" -p --page= -s --subpage= -o --output-format= -h --help"
 		;;
         "read")
 		opts+=" -s --start-block= -c --block-count= -b --block-size= \

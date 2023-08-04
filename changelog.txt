@@ -6,10 +6,16 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.2.6
+Version 0.2.6(Not Released)
   * Fixed some bugs
-  * Add more command to pydiskcmd:
+  * Add more NVMe command to pydiskcmd:
       * TelemetryControllerInitiatedLog, TelemetryHostInitiatedLog
+      * sanitize, sanitize_log
+  * Add more SCSI command to pydiskcmd:
+      * Read capacity10
+      * Report Luns
+      * Log Sense
+  * sort the device in pynvme&pysata list
 
 Version 0.2.5
   * Begin to support nvme for Windows

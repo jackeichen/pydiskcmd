@@ -34,14 +34,14 @@ def get_block_devs(print_detail=True) -> List[str]:
             if not dev.startswith(excluded_block_devices)]
     if print_detail:
         print (f'{len(devs)} devices detected')
-    return devs 
+    return sorted(devs)
 
 def get_nvme_dev_info():
     """
     Return: a list that contain ctrl_id, like ["nvme0", "nvme1"]
     """
     if os.path.exists('/sys/class/nvme'):
-        return [dev for dev in os.listdir('/sys/class/nvme') if dev.startswith("nvme")]
+        return sorted([dev for dev in os.listdir('/sys/class/nvme') if dev.startswith("nvme")])
     return []
 
 

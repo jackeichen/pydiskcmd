@@ -35,6 +35,9 @@ def print_help():
         print ("The following are all implemented sub-commands:")
         print ("  inq                         Send scsi inquiry command")
         print ("  getlbastatus                Get LBA Status from target SCSI device")
+        print ("  readcap                     Read capacity from target SCSI device")
+        print ("  luns                        Send Report Luns commandc to target SCSI device")
+        print ("  log-sense                   Send Log Sense command to target SCSI device")
         print ("  read                        Send a read command to disk")
         print ("  write                       Send a write command to disk")
         print ("  version                     Shows the program version")
@@ -85,7 +88,7 @@ def _inquiry_standard(s, options):
                                                                                  errors="strict"))
         print('Product revision level:', i['product_revision_level'].decode(encoding="utf-8",
                                                                             errors="strict"))
-    elif options.output_format == 'binary':
+    elif options.output_format == 'hex':
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
@@ -101,7 +104,7 @@ def _inquiry_supported_vpd_pages(s, options):
         print('  Supported VPD pages:')
         for pg in i['vpd_pages']:
             print('    0x%02x: %s' % (pg, cmd.VPD[pg]))
-    elif options.output_format == 'binary':
+    elif options.output_format == 'hex':
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
@@ -122,7 +125,7 @@ def _inquiry_block_limits(s, options):
         print('  Optimal unmap granularity:', i['opt_unmap_gran'])
         print('  Unmap granularity alignment valid:', i['ugavalid'])
         print('  Unmap granularity alignment:', i['unmap_gran_alignment'])
-    elif options.output_format == 'binary':
+    elif options.output_format == 'hex':
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
@@ -140,7 +143,7 @@ def _inquiry_block_dev_char(s, options):
         print('  Nominal form factor %s inches' % (
             cmd.NOMINAL_FORM_FACTOR[i['nominal_form_factor']]))
         print('  VBULS=%d' % (i['vbuls']))
-    elif options.output_format == 'binary':
+    elif options.output_format == 'hex':
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
@@ -163,7 +166,7 @@ def _inquiry_logical_block_prov(s, options):
                                                                                 i['dp']))
         print('  Provisioning Type=%d  [%s]' % (i['provisioning_type'],
                                                 cmd.PROVISIONING_TYPE[i['provisioning_type']]))
-    elif options.output_format == 'binary':
+    elif options.output_format == 'hex':
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
@@ -175,7 +178,7 @@ def _inquiry_unit_serial_number(s, options):
         print('Unit Serial Number, page_code=0x80')
         print('==================================')
         print('  Unit serial number: %s' % (i['unit_serial_number']))
-    elif options.output_format == 'binary':
+    elif options.output_format == 'hex':
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
@@ -199,7 +202,7 @@ def _inquiry_device_identification(s, options):
                                                cmd.ASSOCIATION[_d[idx]['association']]))
             for k, v in _d[idx]['designator'].items():
                 print('      %s: %s' % (k, v))
-    elif options.output_format == 'binary':
+    elif options.output_format == 'hex':
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
@@ -251,7 +254,7 @@ def _inquiry_ata_information(s, options):
                                                                          errors="replace"))
             print('    Model Number:', ident['model_number'].decode(encoding="utf-8",
                                                                     errors="replace"))
-    elif options.output_format == 'binary':
+    elif options.output_format == 'hex':
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
@@ -261,8 +264,8 @@ def inq():
     parser = optparse.OptionParser(usage)
     parser.add_option("-p", "--page", type="int", dest="page_code", action="store", default=-1,
         help="Vital Product Data (VPD) page number or abbreviation")
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"],default="normal",
+        help="Output format: normal|hex|raw, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -332,8 +335,8 @@ def getlbastatus():
     parser = optparse.OptionParser(usage)
     parser.add_option("-l", "--lba", type="int", dest="lba", action="store", default=0,
         help="the lba to get status")
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "binary", "raw"],default="normal",
-        help="Output format: normal|binary|raw, default normal")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"],default="normal",
+        help="Output format: normal|hex|raw, default normal")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -352,14 +355,115 @@ def getlbastatus():
                 return
             ##
             r = d.getlbastatus(options.lba).result
-            for i in range(len(r['lbas'])):
-                print('LBA:%d-%d %s' % (
-                    r['lbas'][i]['lba'],
-                    r['lbas'][i]['lba'] + r['lbas'][i]['num_blocks'] - 1,
-                    P_STATUS[r['lbas'][i]['p_status']]
-                ))
+            if options.output_format == "normal":
+                for i in range(len(r['lbas'])):
+                    print('LBA:%d-%d %s' % (
+                        r['lbas'][i]['lba'],
+                        r['lbas'][i]['lba'] + r['lbas'][i]['num_blocks'] - 1,
+                        P_STATUS[r['lbas'][i]['p_status']]
+                    ))
+            else:
+                print ("output format Not Implement")
+    else:
+        parser.print_help()
 ############################
+def readcap():
+    usage="usage: %prog readcap <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"],default="normal",
+        help="Output format: normal|hex|raw, default normal")
 
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        ##
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+            print ('issuing readcap command')
+            print ("%s:" % d.device._file_name)
+            print ("")
+            ##
+            r = d.readcapacity16().result
+            if not r['lbpme']:
+                print('LUN is fully provisioned.')
+                print ("")
+            ##
+            if options.output_format == "normal":
+                print ("Read Capacity results:")
+                print ("  Last LBA=%d (%#x), Number of logical blocks=%d" % (r["returned_lba"], r["returned_lba"], r["returned_lba"]+1))
+            else:
+                print ("output format Not Implement")
+    else:
+        parser.print_help()
+
+def luns():
+    usage="usage: %prog luns <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-s", "--select", type="int", dest="SR", action="store", default=0,
+        help="select report field value")
+    parser.add_option("", "--data_len", type="int", dest="data_len", action="store", default=96,
+        help="the max number of bytes allocated for the data_in buffer")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"],default="normal",
+        help="Output format: normal|hex|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        ##
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+            print ('issuing report luns command')
+            print ("%s:" % d.device._file_name)
+            print ("")
+            ##
+            r = d.reportluns(report=options.SR, alloclen=options.data_len).result
+        ##
+        if options.output_format == "normal":
+            print ("Report luns [select_report=%#x]:" % options.SR)
+            for i in r["luns"]:
+                for k,v in i.items():
+                    print ("  %-6s%x" % (k,v))
+                print ('-'*20)
+        else:
+            print ("output format Not Implement")
+    else:
+        parser.print_help()
+
+def log_sense():
+    usage="usage: %prog log-sense <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-p", "--page", type="int", dest="page", action="store", default=0,
+        help="select report field value")
+    parser.add_option("-s", "--subpage", type="int", dest="subpage", action="store", default=0,
+        help="select report field value")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"], default="raw",
+        help="Output format: normal|hex|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        ##
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+            print ('issuing mode sense command')
+            print ("%s:" % d.device._file_name)
+            print ("")
+            ##
+            r = d.logsense(options.page, sub_page_code=options.subpage, sp=0, pc=0, parameter=0, alloclen=512, control=0)
+        ##
+        if options.output_format == "raw":
+            print (r.datain)
+        else:
+            print ("output format Not Implement")
+    else:
+        parser.print_help()
+############################
 def read16():
     usage="usage: %prog read16 <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -384,6 +488,8 @@ def read16():
             print ("Data Length: %s" % len(data))
             print ("")
             print (data)
+    else:
+        parser.print_help()
 
 def write16():
     usage="usage: %prog write16 <device> [OPTIONS]"
@@ -430,12 +536,16 @@ def write16():
             print ('issuing write16 command')
             print ("%s:" % d.device._file_name)
             cmd = d.write16(options.slba, options.nlba, options.data)
-
+    else:
+        parser.print_help()
 ############################
 ############################
 
 commands_dict = {"inq": inq,
+                 "readcap": readcap,
                  "getlbastatus": getlbastatus,
+                 "luns": luns,
+                 "log-sense": log_sense,
                  "version": version,
                  "read": read16,
                  "write":write16,
