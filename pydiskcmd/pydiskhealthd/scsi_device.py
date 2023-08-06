@@ -32,7 +32,7 @@ class SCSIFeatureStatus(object):
 
 class SCSIDeviceBase(object):
     """
-    dev_path: the nvme controller device path(ex. /dev/nvme0)
+    dev_path: the nvme controller device path(ex. /dev/sdb)
     
     """
     def __init__(self, dev_path):
@@ -42,12 +42,13 @@ class SCSIDeviceBase(object):
         self.scsi_feature_status = SCSIFeatureStatus()
         self.check_feature_support = {}
         ## init device
-        self.__model = "dummy value"
+        self.__model = None
         self.__serial = None
         #
         with SCSI(init_device(dev_path, open_t="scsi"), blocksize=512) as d:
             cmd = d.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER)
             serial_info = cmd.result
+            inq_info = d.inquiry().result
         #
         if 'unit_serial_number' in serial_info:
             id_string = bytearray2string(serial_info['unit_serial_number']).strip()
@@ -61,6 +62,14 @@ class SCSIDeviceBase(object):
                         pass
                     else:
                         break
+        if 'product_identification' in inq_info:
+            for encode_t in ("UTF-8", "GBK", "GB2312"):
+                try:
+                    self.__model = inq_info['product_identification'].decode(encoding=encode_t, errors="strict")
+                except:
+                    pass
+                else:
+                    break
 
     @property
     def device_type(self):

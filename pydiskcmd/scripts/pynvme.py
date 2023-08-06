@@ -67,7 +67,7 @@ def print_help():
     return 0
 
 def _list():
-    usage="usage: %prog smart-log <device> [OPTIONS]"
+    usage="usage: %prog list <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal",],default="normal",
         help="Output format: normal, default normal")

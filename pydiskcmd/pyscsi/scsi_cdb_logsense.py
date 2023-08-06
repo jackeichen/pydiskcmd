@@ -1,8 +1,5 @@
 # coding: utf-8
-
-# Copyright (C) 2015 by Markus Rosjat<markus.rosjat@gmail.com>
-# Copyright (C) 2015 by Ronnie Sahlberg<ronniesahlberg@gmail.com>
-# SPDX-FileCopyrightText: 2014 The python-scsi Authors
+# SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 

@@ -13,7 +13,8 @@ _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commi
           nvme-attach-ns nvme-detach-ns commands-se-log pcie flush read write get-lba-status \
           version help"
 
-_pyscsi_cmds="inq getlbastatus readcap luns log-sense read write version help"
+_pyscsi_cmds="list inq getlbastatus readcap luns mode-sense log-sense read write \
+          version help"
 
 
 pysata_list_opts () {
@@ -35,7 +36,7 @@ pysata_list_opts () {
 
     case "$1" in
         "list")
-		opts+=" -h --help"
+		opts+=" -o --output-format= -h --help"
 		;;
 		"check-PowerMode")
 		opts+=" --show_status -h --help"
@@ -114,6 +115,9 @@ pyscsi_list_opts () {
 	opts+=" "
 
     case "$1" in
+        "list")
+		opts+=" -o --output-format= -h --help"
+		;;
         "inq")
 		opts+=" -p --page= -o --output-format= -h --help"
 		;;
@@ -125,6 +129,9 @@ pyscsi_list_opts () {
 		;;
         "luns")
 		opts+=" -o --output-format= -h --help"
+        ;;
+        "mode-sense")
+		opts+=" -p --page= -s --subpage= -o --output-format= -h --help"
 		;;
         "log-sense")
 		opts+=" -p --page= -s --subpage= -o --output-format= -h --help"

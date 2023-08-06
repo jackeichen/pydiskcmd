@@ -4,15 +4,16 @@
 import sys,os
 import optparse
 from pydiskcmd.pyscsi.scsi import SCSI
+from pydiskcmd.pyscsi.scsi_spec import LogSenseAttr
 from pydiskcmd.utils import init_device
-from pydiskcmd.utils.format_print import format_dump_bytes
+from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.system.os_tool import check_device_exist
 # import from python-scsi
 from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 from pyscsi.pyscsi.scsi_enum_getlbastatus import P_STATUS
-from pyscsi.pyscsi import scsi_enum_modesense as MODESENSE6
-from pyscsi.pyscsi import scsi_enum_readelementstatus as READELEMENTSTATUS
+#from pyscsi.pyscsi import scsi_enum_modesense as MODESENSE6
+#from pyscsi.pyscsi import scsi_enum_readelementstatus as READELEMENTSTATUS
 
 
 
@@ -33,11 +34,14 @@ def print_help():
         print ("The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).")
         print ("")
         print ("The following are all implemented sub-commands:")
+        print ("  list                        List all ATA devices on machine")
         print ("  inq                         Send scsi inquiry command")
         print ("  getlbastatus                Get LBA Status from target SCSI device")
         print ("  readcap                     Read capacity from target SCSI device")
         print ("  luns                        Send Report Luns commandc to target SCSI device")
+        print ("  mode-sense                  Send Mode Sense command to target SCSI device")
         print ("  log-sense                   Send Log Sense command to target SCSI device")
+        print ("  sync                        Synchronize cache to non-volatile cache, as known as flush")
         print ("  read                        Send a read command to disk")
         print ("  write                       Send a write command to disk")
         print ("  version                     Shows the program version")
@@ -328,7 +332,38 @@ def inq():
                 print(ex)
     else:
         parser.print_help()
-############################
+############################ .decode(encoding="utf-8", errors="strict")
+def _list():
+    usage="usage: %prog list <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal",],default="normal",
+        help="Output format: normal, default normal")
+
+    (options, args) = parser.parse_args()
+    ##
+    print_format = "%-20s %-10s %-20s %-40s %-26s %-16s %-8s"
+    print (print_format % ("Node", "Protocal", "SN", "Model", "Capacity", "Format(L/P)", "FW Rev"))
+    print (print_format % ("-"*20, "-"*10, "-"*20, "-"*40, "-"*26, "-"*16, "-"*8))
+    from pydiskcmd.pydiskhealthd.all_device import scan_device
+    for dev_context in scan_device(debug=False):
+        ## check ATA device
+        if dev_context.device_type == "scsi" or dev_context.device_type == "ata":
+            sn = dev_context.Serial.strip()
+            mn = dev_context.Model.strip()
+            with SCSI(init_device(dev_context.dev_path, open_t='scsi'), 512) as d:
+                inq_res = d.inquiry().result
+                cap = d.readcapacity16().result
+            fw = inq_res["product_revision_level"].decode(encoding="utf-8", errors="strict")
+            logical_sector_num = cap["returned_lba"]
+            logical_sector_size = cap["block_length"]
+            if cap["lbppbe"] > 0:
+                physical_sector_size = (2 ** cap["lbppbe"]) * logical_sector_size
+            else:
+                physical_sector_size = 'Unknown'
+            disk_format = "%s / %s" % (logical_sector_size, physical_sector_size)
+            disk_cap = human_read_capacity(logical_sector_size * logical_sector_num)
+            if options.output_format == "normal":
+                print (print_format % (dev_context.dev_path, dev_context.device_type,sn, mn, disk_cap, disk_format, fw))
 
 def getlbastatus():
     usage="usage: %prog getlbastatus <device> [OPTIONS]"
@@ -353,17 +388,20 @@ def getlbastatus():
             if not r['lbpme']:
                 print('LUN is fully provisioned.')
                 return
-            ##
-            r = d.getlbastatus(options.lba).result
-            if options.output_format == "normal":
-                for i in range(len(r['lbas'])):
-                    print('LBA:%d-%d %s' % (
-                        r['lbas'][i]['lba'],
-                        r['lbas'][i]['lba'] + r['lbas'][i]['num_blocks'] - 1,
-                        P_STATUS[r['lbas'][i]['p_status']]
-                    ))
-            else:
-                print ("output format Not Implement")
+            cmd = d.getlbastatus(options.lba)
+        ##
+        if options.output_format == "normal":
+            r = cmd.result
+            for i in range(len(r['lbas'])):
+                print('LBA:%d-%d %s' % (
+                    r['lbas'][i]['lba'],
+                    r['lbas'][i]['lba'] + r['lbas'][i]['num_blocks'] - 1,
+                    P_STATUS[r['lbas'][i]['p_status']]
+                ))
+        elif options.output_format == "hex":
+            format_dump_bytes(cmd.datain)
+        else:
+            print (bytes(cmd.datain))
     else:
         parser.print_help()
 ############################
@@ -385,16 +423,24 @@ def readcap():
             print ("%s:" % d.device._file_name)
             print ("")
             ##
-            r = d.readcapacity16().result
+            cmd = d.readcapacity16()
+            r = cmd.result
             if not r['lbpme']:
                 print('LUN is fully provisioned.')
                 print ("")
             ##
-            if options.output_format == "normal":
-                print ("Read Capacity results:")
-                print ("  Last LBA=%d (%#x), Number of logical blocks=%d" % (r["returned_lba"], r["returned_lba"], r["returned_lba"]+1))
+        if options.output_format == "normal":
+            print ("Read Capacity results:")
+            print ("  Last LBA=%d (%#x), Number of logical blocks=%d" % (r["returned_lba"], r["returned_lba"], r["returned_lba"]+1))
+            print ("  Logical block length=%d bytes" % r["block_length"])
+            if r["lbppbe"] == 0:
+                print ("  Physical block length is One or more physical blocks per logical block")
             else:
-                print ("output format Not Implement")
+                print ("  Physical block length=%d bytes" % (2 ** r["lbppbe"] * r["block_length"]))
+        elif options.output_format == "hex":
+            format_dump_bytes(cmd.datain)
+        else:
+            print (bytes(cmd.datain))
     else:
         parser.print_help()
 
@@ -420,27 +466,31 @@ def luns():
             print ("%s:" % d.device._file_name)
             print ("")
             ##
+            cmd = d.reportluns(report=options.SR, alloclen=options.data_len)
             r = d.reportluns(report=options.SR, alloclen=options.data_len).result
         ##
         if options.output_format == "normal":
+            r = cmd.result
             print ("Report luns [select_report=%#x]:" % options.SR)
             for i in r["luns"]:
                 for k,v in i.items():
                     print ("  %-6s%x" % (k,v))
                 print ('-'*20)
+        elif options.output_format == "hex":
+            format_dump_bytes(cmd.datain)
         else:
-            print ("output format Not Implement")
+            print (bytes(cmd.datain))
     else:
         parser.print_help()
 
-def log_sense():
-    usage="usage: %prog log-sense <device> [OPTIONS]"
+def mode_sense():
+    usage="usage: %prog mode-sense <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-p", "--page", type="int", dest="page", action="store", default=0,
         help="select report field value")
     parser.add_option("-s", "--subpage", type="int", dest="subpage", action="store", default=0,
         help="select report field value")
-    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"], default="raw",
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"], default="normal",
         help="Output format: normal|hex|raw, default normal")
 
     if len(sys.argv) > 2:
@@ -455,15 +505,133 @@ def log_sense():
             print ("%s:" % d.device._file_name)
             print ("")
             ##
-            r = d.logsense(options.page, sub_page_code=options.subpage, sp=0, pc=0, parameter=0, alloclen=512, control=0)
+            cmd = d.modesense10(options.page, sub_page_code=options.subpage)
         ##
-        if options.output_format == "raw":
-            print (r.datain)
+        if options.output_format == "normal":
+            for k,v in cmd.result.items():
+                if k != "mode_pages":
+                    print ("%-25s:%s" % (k,v))
+                else:
+                    print ("mode_pages:")
+                    for i in range(len(v)):
+                        temp = []
+                        for _k,_v in v[i].items():
+                            temp.append("%s=%s" % (_k,_v))
+                        if i > 0:
+                            print ('-'*30)
+                        print ("  L%-3s  %s" % (i, ','.join(temp)))
+        elif options.output_format == "hex":
+            format_dump_bytes(cmd.datain)
         else:
-            print ("output format Not Implement")
+            print (bytes(cmd.datain))
+    else:
+        parser.print_help()
+
+def log_sense():
+    usage="usage: %prog log-sense <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-p", "--page", type="int", dest="page", action="store", default=0,
+        help="Select report field value")
+    parser.add_option("-s", "--subpage", type="int", dest="subpage", action="store", default=0,
+        help="Select report field value")
+    parser.add_option("-a", "--alloclen", type="int", dest="alloclen", action="store", default=0,
+        help="Transfer data length, default 0 means auto fix the length")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"], default="normal",
+        help="Output format: normal|hex|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        # 
+        if options.alloclen == 0:
+            log_len = 96 # set a 96 length to get
+        elif options.alloclen < 5:
+            parser.error("alloclen need > 4") 
+        ##
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+            print ('issuing log sense command')
+            print ("%s:" % d.device._file_name)
+            print ("")
+            ##
+            cmd = d.logsense(options.page, sub_page_code=options.subpage, sp=0, pc=0, parameter=0, alloclen=log_len, control=0)
+            if options.alloclen == 0: # auot fix 
+                log_len = cmd.datain[3] + (cmd.datain[2] << 8) + 4
+                if log_len > options.alloclen:
+                    # Fixed the length to 
+                    # print ("Fixed alloclen %s->%s" % (options.alloclen, log_len))
+                    cmd = d.logsense(options.page, sub_page_code=options.subpage, sp=0, pc=0, parameter=0, alloclen=log_len, control=0)
+        ##
+        if options.output_format == "normal":
+            log_page = LogSenseAttr.get((options.page, options.subpage))
+            if not log_page:
+                log_page = LogSenseAttr.get("Unkonwn")
+            log_page_decode = log_page.decode_value(cmd.datain)
+            print ("%-14s: %s" % ("Log Page Name", log_page.log_page_name))
+            for i in ("page_code", "subpage_code", "spf", "ds", "page_length"):
+                print ("%-14s: %s" % (i, log_page_decode[i]))
+            print ("%-14s:" % "Log Parameters")
+            print ("")
+            if options.page == 0:
+                if options.subpage == 0:
+                    print ("Supported log pages  [0x0]:")
+                    subpage_code = 0
+                    for page_code in log_page_decode["log_parameters"]:
+                        temp = LogSenseAttr.get((page_code,subpage_code))
+                        if not temp:
+                            temp = LogSenseAttr.get("Unkonwn")
+                        print ("  %-16s: %s" % ("%#x" % page_code, temp.log_page_name))
+                elif options.subpage == 0xFF:
+                    print ("Supported log pages and subpages  [0x0, 0xff]:")
+                    for page_code,subpage_code in log_page_decode["log_parameters"]:
+                        temp = LogSenseAttr.get((page_code,subpage_code))
+                        if not temp:
+                            temp = LogSenseAttr.get("Unkonwn")
+                        print ("  %-16s: %s" % ("%#x,%#x" % (page_code,subpage_code), temp.log_page_name))
+                else:
+                    pass
+            else:
+                for i in log_page_decode["log_parameters"]:
+                    for k in ("parameter_code", "ctrl_bit", "parameter_length", "parameter_value"):
+                        print ("  %-16s: %s" % (k, i.get(k)))
+                    print ("  %s" % ("-"*50))
+        elif options.output_format == "hex":
+            format_dump_bytes(cmd.datain)
+        else:
+            print (bytes(cmd.datain))
     else:
         parser.print_help()
 ############################
+def sync():
+    usage="usage: %prog sync <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-s", "--start-lba", type="int", dest="start_lba", action="store", default=0,
+        help="The start LBA address to sync cache")
+    parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
+        help="The number of LBAs to sync cache")
+    parser.add_option("-i", "--immed", type="int", dest="immed", action="store", default=0,
+        help="Whether wait the command finish or not, default 0: wait")
+    parser.add_option("-g", "--group-number", type="int", dest="group_number", action="store", default=0,
+        help="The group into which attributes associated with the command")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        ##
+        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+            print ('issuing SynchronizeCache16 command')
+            print ("%s:" % d.device._file_name)
+            print ("")
+            ##
+            cmd = d.synchronizecache16(options.start_lba, options.block_count, immed=options.immed, group_number=options.group_number)
+    else:
+        parser.print_help()
+
 def read16():
     usage="usage: %prog read16 <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -541,12 +709,15 @@ def write16():
 ############################
 ############################
 
-commands_dict = {"inq": inq,
+commands_dict = {"list": _list, 
+                 "inq": inq,
                  "readcap": readcap,
                  "getlbastatus": getlbastatus,
                  "luns": luns,
+                 "mode-sense": mode_sense,
                  "log-sense": log_sense,
                  "version": version,
+                 "sync": sync,
                  "read": read16,
                  "write":write16,
                  "help": print_help}

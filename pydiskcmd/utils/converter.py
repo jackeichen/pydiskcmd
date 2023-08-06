@@ -109,14 +109,22 @@ def decode_bits(data,
                 value >>= 1
             value &= bitmask
         elif val[0] == 'b':
-            offset, length = val[1:]
+            offset, length = val[1:3]
             value = data[offset:offset + length]
         elif val[0] == 'w':
-            offset, length = val[1:]
+            offset, length = val[1:3]
             value = data[offset:offset + length * 2]
         elif val[0] == 'dw':
-            offset, length = val[1:]
+            offset, length = val[1:3]
             value = data[offset:offset + length * 4]
+        ##
+        if len(val) > 3:
+            if val[3] == 'int_l':
+                value = scsi_ba_to_int(value, 'little')
+            elif val[3] == 'int_b':
+                value = scsi_ba_to_int(value, 'big')
+            elif val[3] == 'str_ascii':
+                value = ba_to_ascii_string(value)
         result_dict.update({key: value})
 
 

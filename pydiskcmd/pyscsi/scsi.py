@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pyscsi.pyscsi.scsi import SCSI as _SCSI
 from pydiskcmd.pyscsi.scsi_cdb_logsense import LogSense
+from pydiskcmd.pyscsi.scsi_cdb_synchronizecache import SynchronizeCache10,SynchronizeCache16
 ###
 code_version = "0.0.1"
 ###
@@ -36,4 +37,34 @@ class SCSI(_SCSI):
         cmd = LogSense(opcode, page_code, **kwargs)
         self.execute(cmd)
         cmd.unmarshall()
+        return cmd
+
+    def synchronizecache10(self, lba, block_number, **kwargs):
+        """
+        Returns a LogSense Instance
+
+        :param lba:  The target LBA address
+        :param block_number:  LBA length to sync cache
+        :param kwargs: a dict with key/value pairs
+                       passthrough to scsi_cdb_synchronizecache.SynchronizeCache10
+        :return: a synchronizecache10 instance
+        """
+        opcode = self.device.opcodes.SYNCHRONIZE_CACHE_10
+        cmd = SynchronizeCache10(opcode, lba, block_number, **kwargs)
+        self.execute(cmd)
+        return cmd
+
+    def synchronizecache16(self, lba, block_number, **kwargs):
+        """
+        Returns a LogSense Instance
+
+        :param lba:  The target LBA address
+        :param block_number:  LBA length to sync cache
+        :param kwargs: a dict with key/value pairs
+                       passthrough to scsi_cdb_synchronizecache.SynchronizeCache16
+        :return: a synchronizecache10 instance
+        """
+        opcode = self.device.opcodes.SYNCHRONIZE_CACHE_16
+        cmd = SynchronizeCache16(opcode, lba, block_number, **kwargs)
+        self.execute(cmd)
         return cmd

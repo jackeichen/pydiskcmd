@@ -34,7 +34,7 @@ def print_help():
         print ("The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).")
         print ("")
         print ("The following are all implemented sub-commands:")
-        print ("  list                        List all ATA devices on machine")
+        print ("  list                        List all SCSI devices on machine")
         print ("  check-PowerMode             Check Disk Power Mode")
         print ("  accessible-MaxAddress       Send Accessible Max Address command")
         print ("  identify                    Get identify information")
@@ -55,7 +55,7 @@ def print_help():
     return 0
 
 def _list():
-    usage="usage: %prog smart-log <device> [OPTIONS]"
+    usage="usage: %prog list <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal",],default="normal",
         help="Output format: normal, default normal")
@@ -70,9 +70,9 @@ def _list():
     for dev_context in scan_device(debug=False):
         ## check ATA device
         if dev_context.device_type == "ata":
-            sn = bytearray2string(translocate_bytearray(dev_context.id_info[20:40]))
+            sn = bytearray2string(translocate_bytearray(dev_context.id_info[20:40])).strip()
             fw = bytearray2string(translocate_bytearray(dev_context.id_info[46:54]))
-            mn = bytearray2string(translocate_bytearray(dev_context.id_info[54:94]))
+            mn = bytearray2string(translocate_bytearray(dev_context.id_info[54:94])).strip()
             logical_sector_num = int(binascii.hexlify(translocate_bytearray(dev_context.id_info[200:208], 2)),16)
             if dev_context.id_info[213] & 0xC0 == 0x40: # word 106 valid
                 if dev_context.id_info[213] & 0x10:
