@@ -98,6 +98,8 @@ def pydiskutils():
         info = get_disk_temperature_history(target_dev_id=options.device_id)
         if options.ouput_format == "console":
             for dev_id,value in info.items():
+                if (not dev_id) or (not value):  # validity check
+                    continue
                 print ("Device ID: ", dev_id)
                 for t,temperature in value:
                     positive_v = [" ",] * 70

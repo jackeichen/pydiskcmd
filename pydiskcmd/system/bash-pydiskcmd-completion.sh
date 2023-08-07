@@ -14,7 +14,7 @@ _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commi
           version help"
 
 _pyscsi_cmds="list inq getlbastatus readcap luns mode-sense log-sense read write \
-          version help"
+          sync version help"
 
 
 pysata_list_opts () {
@@ -135,6 +135,10 @@ pyscsi_list_opts () {
 		;;
         "log-sense")
 		opts+=" -p --page= -s --subpage= -o --output-format= -h --help"
+		;;
+        "sync")
+		opts+=" -s --start-block= -c --block-count= -i --immed= \
+            -g --group-number= -h --help"
 		;;
         "read")
 		opts+=" -s --start-block= -c --block-count= -b --block-size= \

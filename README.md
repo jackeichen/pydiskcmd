@@ -230,8 +230,14 @@ usage: pyscsi <command> [<device>] [<args>]
 The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
 
 The following are all implemented sub-commands:
+  list                        List all ATA devices on machine
   inq                         Send scsi inquiry command
   getlbastatus                Get LBA Status from target SCSI device
+  readcap                     Read capacity from target SCSI device
+  luns                        Send Report Luns commandc to target SCSI device
+  mode-sense                  Send Mode Sense command to target SCSI device
+  log-sense                   Send Log Sense command to target SCSI device
+  sync                        Synchronize cache to non-volatile cache, as known as flush
   read                        Send a read command to disk
   write                       Send a write command to disk
   version                     Shows the program version
