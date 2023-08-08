@@ -550,6 +550,8 @@ def log_sense():
             log_len = 96 # set a 96 length to get
         elif options.alloclen < 5:
             parser.error("alloclen need > 4") 
+        else:
+            log_len = options.alloclen
         ##
         with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing log sense command')

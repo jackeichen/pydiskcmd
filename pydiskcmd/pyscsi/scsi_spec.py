@@ -92,6 +92,6 @@ LogSenseAttr = {(0x0F,0x00): LogPageAttr(0x0F, 0x00, 'Application Client'),
                 (0x00,0x00): LogPageAttr(0x00, 0x00, 'Supported Log Pages', decode_logpageformat_supportlogpage),
                 (0x00,0xFF): LogPageAttr(0x00, 0xFF, 'Supported Log Pages and Subpages', decode_logpageformat_supportsublogpage),
                 (0x0D,0x00): LogPageAttr(0x0D, 0x00, 'Temperature'),
-                (0x0D,0x00): LogPageAttr(0x0D, 0x00, 'Utilization'),
+                (0x0E,0x01): LogPageAttr(0x0E, 0x01, 'Utilization'),
                 "Unkonwn": LogPageAttr(None, None, 'Unkonwn Log Page'),
             }
