@@ -95,6 +95,20 @@ class CmdStructure(LittleEndianStructure):
             self.metadata = metadata
         self.metadata_len = metadata_len
 
+    def dump_element(self):
+        info = {}
+        # check by _fields_
+        for k, v in self._fields_:
+            av = getattr(self, k)
+            if type(v) == type(Structure):
+                av = av.dump_dict()
+            elif type(v) == type(Array):
+                av = cast(av, c_char_p).value.decode()
+            else:
+                pass
+            info[k] = av
+        return info
+
 
 class DataBuffer(LittleEndianStructure):
     def __init__(self, length):

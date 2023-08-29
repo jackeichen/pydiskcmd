@@ -13,6 +13,51 @@ if os_type == "Linux":
     ## linux command
     IOCTL_REQ = LinCommand.linux_req.get("NVME_IOCTL_ADMIN_CMD")
     ##
+    class GetLogPage(LinCommand):
+        def __init__(self,
+                     nsid,    # Namespace ID
+                     lid,     # CDW10: Log Page Identifier
+                     lsp,     # CDW10: Log Specific Parameter
+                     rae,     # CDW10: Retain Asynchronous Event
+                     numdl,   # CDW10: Number of Dwords Lower
+                     numdu,   # CDW11: Number of Dwords
+                     lsi,     # CDW11: Log Specific Identifier
+                     lpol,    # CDW12: Log Page Offset Lower
+                     lpou,    # CDW13: Log Page Offset Upper
+                     uuid,    # CDW14: UUID Index
+                     ot,      # CDW14: Offset Type
+                     csi,     # CDW14: Command Set Identifier 
+                     data_length=None
+                     ):
+            ### build command
+            cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, lid),
+                                         "lsp": (0x7F, 1, lsp),
+                                         "rae": (0x80, 1, rae),
+                                         "numdl": (0xFFFF, 2, numdl),
+                                         }) 
+            cdw11 = build_int_by_bitmap({"numdu": (0xFFFF, 0, numdu),
+                                         "lsi": (0xFFFF, 2, lsi),
+                                         })
+            cdw12 = build_int_by_bitmap({"lpol": (0xFFFFFFFF, 0, lpol)})
+            cdw13 = build_int_by_bitmap({"lpou": (0xFFFFFFFF, 0, lpou)})
+            cdw14 = build_int_by_bitmap({"uuid": (0x7F, 0, uuid),
+                                         "ot": (0x80, 2, ot),
+                                         "csi": (0xFF, 3, csi),
+                                         })
+            if data_length is None:
+                data_length = (numdl + (numdu << 16) + 1) * 4
+            ##
+            super(GetLogPage, self).__init__(IOCTL_REQ)
+            self.build_command(opcode=CmdOPCode,
+                               nsid=nsid,
+                               data_len=data_length,
+                               cdw10=cdw10,
+                               cdw11=cdw11,
+                               cdw12=cdw12,
+                               cdw13=cdw13,
+                               cdw14=cdw14,
+                               )
+
     class FWSlotInfo(LinCommand):
         def __init__(self):
             ### build command
@@ -186,6 +231,49 @@ elif os_type == "Windows":
     )
     IOCTL_REQ = WinCommand.win_req.get("IOCTL_STORAGE_QUERY_PROPERTY")
     ##
+    class GetLogPage(WinCommand):
+        def __init__(self,
+                     nsid,    # Namespace ID
+                     lid,     # CDW10: Log Page Identifier
+                     lsp,     # CDW10: Log Specific Parameter
+                     rae,     # CDW10: Retain Asynchronous Event
+                     numdl,   # CDW10: Number of Dwords Lower
+                     numdu,   # CDW11: Number of Dwords
+                     lsi,     # CDW11: Log Specific Identifier
+                     lpol,    # CDW12: Log Page Offset Lower
+                     lpou,    # CDW13: Log Page Offset Upper
+                     uuid,    # CDW14: UUID Index
+                     ot,      # CDW14: Offset Type
+                     csi,     # CDW14: Command Set Identifier 
+                     data_length=None
+                     ):
+            ### build command
+            request_sub_value4 = build_int_by_bitmap({"RetainAsynEvent": [0x01, 0, rae],
+                                                      "LogSpecificField": [0x1E, 0, lsp],
+                                                      #"Reserved": [0xFFFFFFE0, 0, 0],
+                                                      }
+                                                    )
+            if data_length is None:
+                self.__data_len = (numdl + (numdu << 16) + 1) * 4
+            else:
+                self.__data_len = data_length
+            ##
+            super(GetLogPage, self).__init__(IOCTL_REQ)
+            self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
+                               DataType=2,       # NVMeDataTypeLogPage
+                               RequestValue=lid,      # log id
+                               RequestSubValue=lpol,  # lower 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue2=lpou, # the upper 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue3=lsi,    # the log-specific identifier that is required for a particular log page.
+                               RequestSubValue4=request_sub_value4,    # allows additional information to be specified when getting the log page.
+                               ProtocolDataLength=self.__data_len,    # data len
+                               )
+
+        def build_command(self, **kwargs):
+            temp = get_NVMeStorageQueryPropertyWithBuffer(self.__data_len)
+            self.cdb = temp(**kwargs)
+            return self.cdb
+
     class FWSlotInfo(WinCommand):
         def __init__(self, *args, **kwargs):
             super(FWSlotInfo, self).__init__(IOCTL_REQ)
@@ -208,8 +296,8 @@ elif os_type == "Windows":
             self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
                                DataType=2,       # NVMeDataTypeLogPage
                                RequestValue=1,   # log id
-                               RequestSubValue=loge_page_offset&0xFF, #  lower 32-bit value of the offset within a log page from which to start returning data.
-                               RequestSubValue2=(loge_page_offset>>32)&0xFF, # the upper 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue=loge_page_offset&0xFFFFFFFF, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue2=(loge_page_offset>>32)&0xFFFFFFFF, # the upper 32-bit value of the offset within a log page from which to start returning data.
                                ProtocolDataLength=self.__data_len,    # data len
                                )
 
@@ -224,7 +312,7 @@ elif os_type == "Windows":
             self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
                                DataType=2,       # NVMeDataTypeLogPage
                                RequestValue=2,   # log id
-                               RequestSubValue=0, #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               RequestSubValue=0, # lower 32-bit value of the offset within a log page from which to start returning data.
                                ProtocolDataLength=512,    # data len
                                )
 
@@ -238,8 +326,8 @@ elif os_type == "Windows":
             self.build_command(PropertyId=50,    # StorageDeviceProtocolSpecificProperty
                                DataType=2,       # NVMeDataTypeLogPage
                                RequestValue=0x06,   # log id
-                               RequestSubValue=0, #  lower 32-bit value of the offset within a log page from which to start returning data.
-                               ProtocolDataLength=564,    # data len
+                               RequestSubValue=0,        #  lower 32-bit value of the offset within a log page from which to start returning data.
+                               ProtocolDataLength=564,   # data len
                                )
 
         def build_command(self, **kwargs):

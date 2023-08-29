@@ -16,11 +16,13 @@ class PM9A3(DiskInfo):
     def __init__(self):
         super(PM9A3, self).__init__('Samsung',
                                     'PM9A3',
-                                    r'MZQL2.*-00B7C')
-        self.add_model('MZQL2960HCJR-00B7C',
-                       'MZQL21T9HCJR-00B7C',
-                       'MZQL23T8HCLS-00B7C',
-                       'MZQL27T6HBLA-00B7C')
+                                    r'MZQL2.*',
+                                    'nvme',
+                                    models=('MZQL2960HCJR-00B7C',
+                                            'MZQL21T9HCJR-00B7C',
+                                            'MZQL23T8HCLS-00B7C',
+                                            'MZQL27T6HBLA-00B7C'),
+                                    )
         self.add_vs_log_page('Extended SMART Information Log',
                              0xCA,
                              512,

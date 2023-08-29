@@ -162,6 +162,20 @@ class NVMeStorageQueryPropertyHeader(Structure):
         self.ProtocolDataRequestSubValue3 = RequestSubValue3
         self.ProtocolDataRequestSubValue4 = RequestSubValue4
 
+    def dump_element(self):
+        info = {}
+        # check by _fields_
+        for k, v in self._fields_:
+            av = getattr(self, k)
+            if type(v) == type(Structure):
+                av = av.dump_dict()
+            elif type(v) == type(Array):
+                av = cast(av, c_char_p).value.decode()
+            else:
+                pass
+            info[k] = av
+        return info
+
 
 class IOCTLSTORAGESETPROPERTY(Structure):
     _fields_ = [
@@ -213,6 +227,20 @@ class IOCTLSTORAGESETPROPERTY(Structure):
         self.ProtocolDataSubValue4 = CDW14
         self.ProtocolDataSubValue5 = CDW15
 
+    def dump_element(self):
+        info = {}
+        # check by _fields_
+        for k, v in self._fields_:
+            av = getattr(self, k)
+            if type(v) == type(Structure):
+                av = av.dump_dict()
+            elif type(v) == type(Array):
+                av = cast(av, c_char_p).value.decode()
+            else:
+                pass
+            info[k] = av
+        return info
+
 
 class NVMeStorageQueryPropertyWithoutBuffer(Structure):
     _fields_ = [
@@ -235,6 +263,9 @@ class NVMeStorageQueryPropertyWithoutBuffer(Structure):
     @property
     def result(self):
         return self.nsqp.FixedProtocolReturnData
+
+    def dump_element(self):
+        return self.nsqp.dump_element()
 
 
 def get_NVMeStorageQueryPropertyWithBuffer(data_len):
@@ -259,6 +290,9 @@ def get_NVMeStorageQueryPropertyWithBuffer(data_len):
         @property
         def result(self):
             return self.nsqp.FixedProtocolReturnData
+
+        def dump_element(self):
+            return self.nsqp.dump_element()
     return NVMeStorageQueryPropertyWithBuffer
 
 
@@ -285,6 +319,9 @@ class NVMeStorageQueryPropertyWithBuffer512(Structure):
     def result(self):
         return self.nsqp.FixedProtocolReturnData
 
+    def dump_element(self):
+        return self.nsqp.dump_element()
+
 
 class NVMeStorageQueryPropertyWithBuffer564(Structure):
     _fields_ = [
@@ -308,6 +345,9 @@ class NVMeStorageQueryPropertyWithBuffer564(Structure):
     @property
     def result(self):
         return self.nsqp.FixedProtocolReturnData
+
+    def dump_element(self):
+        return self.nsqp.dump_element()
 
 
 class NVMeStorageQueryPropertyWithBuffer4096(Structure):
@@ -333,6 +373,9 @@ class NVMeStorageQueryPropertyWithBuffer4096(Structure):
     def result(self):
         return self.nsqp.FixedProtocolReturnData
 
+    def dump_element(self):
+        return self.nsqp.dump_element()
+
 
 class StorageProtocolCommandHeader(Structure):
     _fields_ = [
@@ -356,6 +399,20 @@ class StorageProtocolCommandHeader(Structure):
         ("Reserved1", c_uint32*3),
     ]
     _pack_ = 1
+
+    def dump_element(self):
+        info = {}
+        # check by _fields_
+        for k, v in self._fields_:
+            av = getattr(self, k)
+            if type(v) == type(Structure):
+                av = av.dump_dict()
+            elif type(v) == type(Array):
+                av = cast(av, c_char_p).value.decode()
+            else:
+                pass
+            info[k] = av
+        return info
 
 
 class NVMECommand(Structure):
@@ -412,6 +469,20 @@ class NVMECommand(Structure):
         self.cdw14 = c_uint32(cdw14)
         self.cdw15 = c_uint32(cdw15)
 
+    def dump_element(self):
+        info = {}
+        # check by _fields_
+        for k, v in self._fields_:
+            av = getattr(self, k)
+            if type(v) == type(Structure):
+                av = av.dump_dict()
+            elif type(v) == type(Array):
+                av = cast(av, c_char_p).value.decode()
+            else:
+                pass
+            info[k] = av
+        return info
+
 
 class StorageProtocolCommand(Structure):
     _fields_ = [
@@ -467,6 +538,11 @@ class StorageProtocolCommand(Structure):
     def result(self):
         return self.spch.FixedProtocolReturnData
 
+    def dump_element(self):
+        info = self.spch.dump_element()
+        info["nvme_command"] = self.nvme_command.dump_element()
+        return info
+
 
 class STORAGE_HW_FIRMWARE_DOWNLOAD(Structure):
     _fields_ = [
@@ -502,6 +578,20 @@ class STORAGE_HW_FIRMWARE_DOWNLOAD(Structure):
         self.BufferSize = len(value)
         self.Size = self.Version + self.BufferSize
 
+    def dump_element(self):
+        info = {}
+        # check by _fields_
+        for k, v in self._fields_:
+            av = getattr(self, k)
+            if type(v) == type(Structure):
+                av = av.dump_dict()
+            elif type(v) == type(Array):
+                av = cast(av, c_char_p).value.decode()
+            else:
+                pass
+            info[k] = av
+        return info
+
 
 class STORAGE_HW_FIRMWARE_ACTIVATE(Structure):
     _fields_ = [
@@ -521,3 +611,16 @@ class STORAGE_HW_FIRMWARE_ACTIVATE(Structure):
         self.Flags = Flags # The flags associated with the activation request. The following are valid flags that can be set in this member.
         self.Slot = Slot   # The slot with the firmware image that is to be activated.
 
+    def dump_element(self):
+        info = {}
+        # check by _fields_
+        for k, v in self._fields_:
+            av = getattr(self, k)
+            if type(v) == type(Structure):
+                av = av.dump_dict()
+            elif type(v) == type(Array):
+                av = cast(av, c_char_p).value.decode()
+            else:
+                pass
+            info[k] = av
+        return info

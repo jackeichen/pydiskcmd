@@ -40,6 +40,7 @@ def print_help():
         print ("  nvme-delete-ns        Deletes a namespace from the controller")
         print ("  nvme-attach-ns        Attaches a namespace to requested controller(s)")
         print ("  nvme-detach-ns        Detaches a namespace from requested controller(s)")
+        print ("  get-log               Generic NVMe get log, returns log in raw format")
         print ("  error-log             Retrieve Error Log, show it")
         print ("  commands-se-log       Retrieve Commands Supported and Effects Log, and show it")
         print ("  fw-log                Retrieve FW Log, show it")
@@ -1086,6 +1087,71 @@ def get_lba_status():
     else:
         parser.print_help()
 
+def get_log():
+    usage="usage: %prog get-lba-status <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="desired namespace")
+    parser.add_option("-i", "--log-id", type="int", dest="log_id", action="store", default=-1,
+        help="identifier of log to retrieve")
+    parser.add_option("-l", "--log-len", type="int", dest="log_len", action="store", default=4096,
+        help="how many bytes to retrieve,default 4096")
+    parser.add_option("-o", "--lpo", type="int", dest="lpo", action="store", default=0,
+        help="log page offset specifies the location within a log page from where to start returning data")
+    parser.add_option("-s", "--lsp", type="int", dest="lsp", action="store", default=0,
+        help="log specific field")
+    parser.add_option("-S", "--lsi", type="int", dest="lsi", action="store", default=0,
+        help="log specific identifier specifies an identifier that is required for a particular log page")
+    parser.add_option("-r", "--rae", type="int", dest="rae", action="store", default=0,
+        help="retain an asynchronous event")
+    parser.add_option("-U", "--uuid-index", type="int", dest="uuid_index", action="store", default=0,
+        help="UUID index")
+    parser.add_option("-y", "--csi", type="int", dest="csi", action="store", default=0,
+        help="command set identifier")
+    parser.add_option("-O", "--ot", type="int", dest="ot", action="store", default=0,
+        help="command set identifier")
+    parser.add_option("", "--output-format", type="choice", dest="output_format", action="store", choices=["hex", "raw"],default="hex",
+        help="Output format: hex|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        #
+        if options.log_id < 0:
+            parser.error("You need a log id")
+        log_dw = int(options.log_len / 4) - 1
+        numdl = log_dw & 0xFFFF
+        numdu = (log_dw >> 16) & 0xFFFF
+        log_dw = int(options.lpo)
+        lpol = log_dw & 0xFFFFFFFF
+        lpou = (log_dw >> 32) & 0xFFFFFFFF
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.get_log_page(options.namespace_id, # ns_id
+                                 options.log_id,       # log id
+                                 options.lsp,          # lsp
+                                 options.rae,
+                                 numdl,
+                                 numdu,
+                                 options.lsi,
+                                 lpol,
+                                 lpou,
+                                 options.uuid_index,
+                                 options.ot,
+                                 options.csi,
+                                 )
+            
+        if options.output_format == "hex":
+            format_dump_bytes(cmd.data)
+        else:
+            print(bytes(cmd.data))
+    else:
+        parser.print_help()
+
+
 def pcie():
     usage="usage: %prog pcie <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -1186,6 +1252,7 @@ commands_dict = {"list": _list,
                  "smart-log": smart_log,
                  "id-ctrl": id_ctrl,
                  "id-ns": id_ns,
+                 "get-log": get_log,
                  "error-log": error_log,
                  "fw-log": fw_log,
                  "telemetry-log": telemetry_log,

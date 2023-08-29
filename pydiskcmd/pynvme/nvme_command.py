@@ -21,6 +21,16 @@ class CommandBase(object):
         '''Methmod to build command'''
 
     @property
+    def cdb_raw(self):
+        if self.cdb:
+            return bytes(self.cdb)
+
+    @property
+    def cdb_struc(self):
+        if self.cdb:
+            return print(self.cdb.dump_element())
+
+    @property
     def cq_status(self):
         return self._cq_status_field
 

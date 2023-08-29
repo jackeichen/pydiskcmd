@@ -9,7 +9,7 @@ from pydiskcmd.pynvme.cdb_identify import IDCtrl,IDNS,IDActiveNS,IDAllocatedNS,I
 from pydiskcmd.pynvme.cdb_set_feature import SetFeature
 from pydiskcmd.pynvme.cdb_get_feature import GetFeature
 from pydiskcmd.pynvme.cdb_get_feature import GetFeature
-from pydiskcmd.pynvme.cdb_get_log_page import FWSlotInfo,ErrorLog,SmartLog,SelfTestLog,PersistentEventLog,TelemetryHostInitiatedLog,TelemetryControllerInitiatedLog,SanitizeStatus
+from pydiskcmd.pynvme.cdb_get_log_page import GetLogPage,FWSlotInfo,ErrorLog,SmartLog,SelfTestLog,PersistentEventLog,TelemetryHostInitiatedLog,TelemetryControllerInitiatedLog,SanitizeStatus
 from pydiskcmd.pynvme.cdb_get_log_page import CommandsSupportedAndEffectsLog
 from pydiskcmd.pynvme.cdb_fw_download import FWImageDownload
 from pydiskcmd.pynvme.cdb_fw_commit import FWCommit
@@ -123,6 +123,11 @@ class NVMe(object):
 
     def get_feature(self, feature_id, **kwargs):
         cmd = GetFeature(feature_id, **kwargs)
+        self.execute(cmd)
+        return cmd
+
+    def get_log_page(self, *args, **kwargs):
+        cmd = GetLogPage(*args, **kwargs)
         self.execute(cmd)
         return cmd
 

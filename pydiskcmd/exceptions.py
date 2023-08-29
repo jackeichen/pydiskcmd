@@ -19,3 +19,6 @@ class CommandDataStrucError(Exception):
 
 class BuildNVMeCommandError(Exception):
     pass
+
+class ProtocolSettingError(Exception):
+    pass
