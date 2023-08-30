@@ -48,6 +48,7 @@ def print_help():
         print ("  self-test-log         Retrieve the SELF-TEST Log, show it")
         print ("  telemetry-log         Retrieve the Telemetry Log, show it")
         print ("  persistent_event_log  Get persistent event log from device")
+        print ("  reset                 Resets the controller")
         print ("  fw-download           Download new firmware")
         print ("  fw-commit             Verify and commit firmware to a specific slot")
         print ("  get-feature           Get feature and show the resulting value")
@@ -1244,6 +1245,22 @@ def pcie():
     else:
         parser.print_help()
 
+def reset():
+    usage="usage: %prog reset <device>"
+    parser = optparse.OptionParser(usage)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.reset_ctrl()
+    else:
+        parser.print_help()
+
 ###########################
 ###########################
 commands_dict = {"list": _list,
@@ -1257,6 +1274,7 @@ commands_dict = {"list": _list,
                  "fw-log": fw_log,
                  "telemetry-log": telemetry_log,
                  "sanitize-log": sanitize_log,
+                 "reset": reset,
                  "fw-download": fw_download, 
                  "fw-commit": fw_commit, 
                  "nvme-create-ns": nvme_create_ns,

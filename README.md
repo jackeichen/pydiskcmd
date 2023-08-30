@@ -164,6 +164,7 @@ The following are all implemented sub-commands:
   self-test-log         Retrieve the SELF-TEST Log, show it
   telemetry-log         Retrieve the Telemetry Log, show it
   persistent_event_log  Get persistent event log from device
+  reset                 Resets the controller
   fw-download           Download new firmware
   fw-commit             Verify and commit firmware to a specific slot
   get-feature           Get feature and show the resulting value
@@ -510,6 +511,10 @@ model, serial number, disk health, temperature, etc...
 Communicate with NVMe SSD using Windows' inbox device driver
 
 * nvmetool-win: https://github.com/ken-yossy/nvmetool-win
+
+NVMe management command line interface.
+
+* nvme-cli: https://github.com/linux-nvme/nvme-cli
 
 
 Reference

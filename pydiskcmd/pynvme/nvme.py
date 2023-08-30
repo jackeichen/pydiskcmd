@@ -23,6 +23,7 @@ from pydiskcmd.pynvme.cdb_nvme_verify import Verify
 from pydiskcmd.pynvme.cdb_nvme_write import Write
 from pydiskcmd.pynvme.cdb_nvme_flush import Flush
 from pydiskcmd.pynvme.cdb_nvme_get_lba_status import GetLBAStatus
+from pydiskcmd.pynvme.cdb_nvme_reset import Reset
 from pydiskcmd.exceptions import *
 
 code_version = "0.1.2"
@@ -84,6 +85,11 @@ class NVMe(object):
                 cmd.check_return_status()
         except Exception as e:
             raise e
+        return cmd
+
+    def reset_ctrl(self):
+        cmd = Reset()
+        self.execute(cmd, check_return_status=False)
         return cmd
 
     def id_ctrl(self):

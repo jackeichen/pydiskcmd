@@ -11,6 +11,7 @@ Version 0.2.6(Not Released)
   * Add more NVMe commands to pydiskcmd:
       * TelemetryControllerInitiatedLog, TelemetryHostInitiatedLog
       * sanitize, sanitize_log
+  * Add NVMe reset controller to pynvme
   * Add more SCSI commands to pydiskcmd:
       * Read capacity10, SynchronizeCache10, SynchronizeCache16
       * Report Luns, Log Sense, Mode Sense

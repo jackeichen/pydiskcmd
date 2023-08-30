@@ -11,7 +11,7 @@ _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commi
           format sanitize persistent_event_log device-self-test self-test-log telemetry-log \
           sanitize-log get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns \
           nvme-attach-ns nvme-detach-ns commands-se-log pcie flush read write get-lba-status \
-          get-log version help"
+          get-log reset version help"
 
 _pyscsi_cmds="list inq getlbastatus readcap luns mode-sense log-sense read write \
           sync version help"
@@ -214,6 +214,9 @@ pynvme_list_opts () {
 		;;
         "sanitize-log")
 		opts+=" -o --output-format= -h --help"
+		;;
+        "reset")
+		opts+=" -h --help"
 		;;
         "fw-download")
 		opts+=" -f --fw= -x --xfer= -o --offset= -h --help"

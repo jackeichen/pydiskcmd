@@ -12,7 +12,7 @@ class CommandBase(object):
     '''
     def __init__(self, req_id):
         self.req_id = req_id 
-        self.cdb = None
+        self.cdb = 0  # it's a 0 default value
         ##
         self._cq_status_field = None
 
@@ -72,7 +72,9 @@ class CommandBase(object):
 
 class LinCommand(CommandBase):
     linux_req = {"NVME_IOCTL_ADMIN_CMD": 0xC0484E41,
-                 "NVME_IOCTL_IO_CMD": 0xC0484E43}
+                 "NVME_IOCTL_IO_CMD": 0xC0484E43,
+                 "NVME_IOCTL_RESET": 20036,
+                 }
 
     def __init__(self, req_id):
         super(LinCommand, self).__init__(req_id)
