@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 # bash tab completion for the nvme command line utility
 
-_pysata_cmds="list check-PowerMode accessible-MaxAddress identify self-test \
+_pysata_cmds="list check-PowerMode accessible-MaxAddress identify self-test set-feature \
           read-log smart-read-log smart standby read write flush trim download_fw \
           version help"
 
@@ -49,6 +49,10 @@ pysata_list_opts () {
 		;;
         "self-test")
 		opts+=" -t --test= --show_status -h --help"
+        ;;
+        "set-feature")
+		opts+=" -f --feature= -c --count= -l --lba= --show_status --guideline \
+            -h --help"
 		;;
         "smart")
 		opts+=" --show_status -h --help"

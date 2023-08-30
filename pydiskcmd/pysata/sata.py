@@ -44,6 +44,7 @@ from pyscsi.pyscsi.scsi_cdb_inquiry import Inquiry
 #
 from pydiskcmd.pysata.ata_cdb_smart import SmartReadLog16
 from pydiskcmd.pysata.ata_cdb_readlog import ReadLogExt
+from pydiskcmd.pysata.ata_cdb_setFeature import SetFeature
 ##
 
 code_version = "0.1.0"
@@ -180,6 +181,11 @@ class SATA(object):
     def getAccessibleMaxAddress(self):
         cmd = AccessibleMaxAddressCfg(0)
         self.execute(cmd)   # information need be reported in sense data
+        return cmd
+
+    def set_feature(self, feature, count, lba):
+        cmd = SetFeature(feature, count, lba)
+        self.execute(cmd)
         return cmd
 
     def smart_read_data(self, smart_key=None):

@@ -8,13 +8,15 @@ versions of pydiskcmd and detailed changes.
 
 Version 0.2.6(Not Released)
   * Fixed some bugs
-  * Add more NVMe command to pydiskcmd:
+  * Add more NVMe commands to pydiskcmd:
       * TelemetryControllerInitiatedLog, TelemetryHostInitiatedLog
       * sanitize, sanitize_log
-  * Add more SCSI command to pydiskcmd:
+  * Add more SCSI commands to pydiskcmd:
       * Read capacity10, SynchronizeCache10, SynchronizeCache16
       * Report Luns, Log Sense, Mode Sense
       * pyscsi list
+  * Add more ATA commands to pydiskcmd:
+      * set-feature command
   * sort the device in pynvme&pysata list
 
 Version 0.2.5

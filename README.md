@@ -149,27 +149,28 @@ The following are all implemented sub-commands:
   list                  List all NVMe devices and namespaces on machine
   list-ns               Send NVMe Identify List, display structure
   list-ctrl             Send NVMe Identify Controller List, display structure
-  smart-log             Retrieve SMART Log, show it
   id-ctrl               Send NVMe Identify Controller
   id-ns                 Send NVMe Identify Namespace, display structure
   nvme-create-ns        Creates a namespace with the provided parameters
   nvme-delete-ns        Deletes a namespace from the controller
   nvme-attach-ns        Attaches a namespace to requested controller(s)
   nvme-detach-ns        Detaches a namespace from requested controller(s)
+  get-log               Generic NVMe get log, returns log in raw format
+  smart-log             Retrieve SMART Log, show it
   error-log             Retrieve Error Log, show it
   commands-se-log       Retrieve Commands Supported and Effects Log, and show it
   fw-log                Retrieve FW Log, show it
   sanitize-log          Retrieve Sanitize Log, show it
+  self-test-log         Retrieve the SELF-TEST Log, show it
+  telemetry-log         Retrieve the Telemetry Log, show it
+  persistent_event_log  Get persistent event log from device
   fw-download           Download new firmware
   fw-commit             Verify and commit firmware to a specific slot
   get-feature           Get feature and show the resulting value
   set-feature           Set a feature and show the resulting value
   format                Format namespace with new block format
   sanitize              Submit a sanitize command
-  persistent_event_log  Get persistent event log from device
   device-self-test      Perform the necessary tests to observe the performance
-  self-test-log         Retrieve the SELF-TEST Log, show it
-  telemetry-log         Retrieve the Telemetry Log, show it
   pcie                  Get device PCIe status, show it
   flush                 Submit a flush command, return results
   read                  Submit a read command, return results
@@ -196,11 +197,12 @@ usage: pysata <command> [<device>] [<args>]
 The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
 
 The following are all implemented sub-commands:
-  list                        List all ATA devices on machine
+  list                        List all SCSI devices on machine
   check-PowerMode             Check Disk Power Mode
   accessible-MaxAddress       Send Accessible Max Address command
   identify                    Get identify information
   self-test                   Start a disk self test
+  set-feature                 Send set feature to device
   smart                       Get smart information
   read-log                    Get the GPL Log and show it
   smart-read-log              Get the smart Log and show it

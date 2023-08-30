@@ -7,11 +7,13 @@ import binascii
 from pydiskcmd.pysata.sata import SATA
 from pydiskcmd.utils.ata_format_print import (
     _print_return_status,
+    print_ata_cmd_status,
     read_log_format_print_set,
     smart_read_log_format_print_set,
     read_log_decode_set,
     format_print_identify,
     format_print_smart,
+    format_print_set_feature_guide,
     )
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
@@ -39,6 +41,7 @@ def print_help():
         print ("  accessible-MaxAddress       Send Accessible Max Address command")
         print ("  identify                    Get identify information")
         print ("  self-test                   Start a disk self test")
+        print ("  set-feature                 Send set feature to device")
         print ("  smart                       Get smart information")
         print ("  read-log                    Get the GPL Log and show it")
         print ("  smart-read-log              Get the smart Log and show it")
@@ -421,6 +424,41 @@ def read_log():
     else:
         parser.print_help()
 
+def set_feature():
+    usage="usage: %prog set-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-f", "--feature", type="int", dest="feature", action="store", default=0,
+        help="Set feature subcommand field")
+    parser.add_option("-c", "--count", type="int", dest="count", action="store", default=0,
+        help="Subcommand specific in count field")
+    parser.add_option("-l", "--lba", type="int", dest="lba", action="store", default=0,
+        help="Subcommand specific in LBA field")
+    parser.add_option("", "--guideline", dest="guideline", action="store_true", default=False,
+        help="The guideline for set feature command")
+    parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
+        help="Show status return value")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        if options.guideline:
+            format_print_set_feature_guide()
+            return 0
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not exist!")
+        ##
+        print ('issuing set-feature command')
+        print ('Device: %s' % dev)
+        print ('')
+        with SATA(init_device(dev, open_t='ata'), 512) as d:
+            cmd = d.set_feature(options.feature, options.count, options.lba)
+        ##
+        if options.show_status:
+            print_ata_cmd_status(cmd)
+    else:
+        parser.print_help()
+
 def smart_read_log():
     usage="usage: %prog smart-read-log <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -599,6 +637,7 @@ commands_dict = {"list": _list,
                  "accessible-MaxAddress": accessible_max_address,
                  "identify": identify, 
                  "self-test": self_test, 
+                 "set-feature": set_feature,
                  "smart": smart, 
                  "standby": standby_imm, 
                  "read-log": read_log,
