@@ -736,7 +736,22 @@ def pydiskhealthd():
                         else:
                             message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
                             logger.info(message)
-            else:  # SCSI(SAS) Disk
+            elif dev_context.device_type == 'scsi':  # SCSI(SAS) Disk
+                ## Record and check Current Tempeture
+                temperature = dev_context.temperature()
+                if temperature is not None:
+                    if temperature >= DiskCriticalTemp:
+                        message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskCriticalTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskCriticalTemp)
+                        logger.warning(message)
+                        syslog.info(message)
+                    elif temperature >= DiskWarningTemp:
+                        message = "Device: %s(ID: %s), Temperature(%s C) rise up to DiskWarningTemp(%s C)" % (dev_context.dev_path, dev_context.device_id, temperature, DiskWarningTemp)
+                        logger.warning(message)
+                        syslog.info(message)
+                    else:
+                        message = "Device: %s(ID: %s), Temperature is: %s." % (dev_context.dev_path, dev_context.device_id, temperature)
+                        logger.info(message)
+            else:  # unknown device
                 pass
         ### store all the disk info
         all_disk_info.store_last_disks_id(list(dev_pool.keys()))

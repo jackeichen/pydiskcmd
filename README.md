@@ -233,7 +233,7 @@ usage: pyscsi <command> [<device>] [<args>]
 The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
 
 The following are all implemented sub-commands:
-  list                        List all ATA devices on machine
+  list                        List all SCSI devices on machine
   inq                         Send scsi inquiry command
   getlbastatus                Get LBA Status from target SCSI device
   readcap                     Read capacity from target SCSI device

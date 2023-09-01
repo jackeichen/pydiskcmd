@@ -20,5 +20,8 @@ class CommandDataStrucError(Exception):
 class BuildNVMeCommandError(Exception):
     pass
 
+class BuildSCSICommandError(Exception):
+    pass
+
 class ProtocolSettingError(Exception):
     pass

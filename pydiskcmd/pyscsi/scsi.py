@@ -4,6 +4,7 @@
 from pyscsi.pyscsi.scsi import SCSI as _SCSI
 from pydiskcmd.pyscsi.scsi_cdb_logsense import LogSense
 from pydiskcmd.pyscsi.scsi_cdb_synchronizecache import SynchronizeCache10,SynchronizeCache16
+from pydiskcmd.pyscsi.scsi_cdb_passthru import CDBPassthru
 ###
 code_version = "0.0.1"
 ###
@@ -18,6 +19,18 @@ class SCSI(_SCSI):
     def __del__(self):
         if self.device:
             self.device.close()
+
+    def cdb_passthru(self, raw_cdb, dataout=b'', datain_alloclen=0):
+        """
+        Returns a CDBPassthru Instance
+        
+        :param raw_cdb: a CDB Format bytes
+        :param dataout_alloclen: the data_out buffer
+        :param datain_alloclen: integer representing the size of the data_in buffer
+        """
+        cmd = CDBPassthru(raw_cdb, dataout=dataout, datain_alloclen=datain_alloclen)
+        self.execute(cmd)
+        return cmd
 
     def logsense(self, page_code, **kwargs):
         """

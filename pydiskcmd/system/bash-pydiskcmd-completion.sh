@@ -14,7 +14,7 @@ _pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commi
           get-log reset version help"
 
 _pyscsi_cmds="list inq getlbastatus readcap luns mode-sense log-sense read write \
-          sync version help"
+          sync cdb-passthru version help"
 
 
 pysata_list_opts () {
@@ -124,6 +124,10 @@ pyscsi_list_opts () {
 		;;
         "inq")
 		opts+=" -p --page= -o --output-format= -h --help"
+		;;
+        "cdb-passthru")
+		opts+=" -r --raw-cdb= -l ---data-len= -f --data-file= -d --direction= \
+            -b --block-size= -o --output-format= -h --help"
 		;;
         "getlbastatus")
 		opts+=" -l --lba= -o --output-format= -h --help"

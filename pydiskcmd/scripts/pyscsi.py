@@ -34,13 +34,14 @@ def print_help():
         print ("The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).")
         print ("")
         print ("The following are all implemented sub-commands:")
-        print ("  list                        List all ATA devices on machine")
+        print ("  list                        List all SCSI devices on machine")
         print ("  inq                         Send scsi inquiry command")
         print ("  getlbastatus                Get LBA Status from target SCSI device")
         print ("  readcap                     Read capacity from target SCSI device")
         print ("  luns                        Send Report Luns commandc to target SCSI device")
         print ("  mode-sense                  Send Mode Sense command to target SCSI device")
         print ("  log-sense                   Send Log Sense command to target SCSI device")
+        print ("  cdb-passthru                Submit an arbitrary SCSI command, return results")
         print ("  sync                        Synchronize cache to non-volatile cache, as known as flush")
         print ("  read                        Send a read command to disk")
         print ("  write                       Send a write command to disk")
@@ -708,11 +709,103 @@ def write16():
             cmd = d.write16(options.slba, options.nlba, options.data)
     else:
         parser.print_help()
+
+def cdb_passthru():
+    def get_raw_cdb(option, opt_str, value, parser):
+        assert value is None
+        value = []
+
+        def floatable(str):
+            try:
+                float(str)
+                return True
+            except ValueError:
+                return False
+
+        for arg in parser.rargs:
+            # stop on --foo like options
+            if arg[:2] == "--" and len(arg) > 2:
+                break
+            # stop on -a, but not on -3 or -3.0
+            if arg[:1] == "-" and len(arg) > 1 and not floatable(arg):
+                break
+            if arg.startswith('0x') or arg.endswith('h'):
+                arg = arg.rstrip('h')
+                # hexadecimal
+                arg = int(arg, 16)
+            elif arg.isdigit():
+                arg = int(arg)
+            else:
+                raise RuntimeError("Invalid value in -r/--raw-cdb")
+            value.append(arg)
+
+        del parser.rargs[:len(value)]
+        setattr(parser.values, option.dest, value)
+    ##
+    usage="usage: %prog cdb-passthru <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-r", "--raw-cdb", dest="raw_cdb", action="callback", callback=get_raw_cdb,
+        help="The Raw CDB you want to send")
+    parser.add_option("-l", "--data-len", type="int", dest="data_len", action="store", default=0,
+        help="Data length read or write from device, default 0 means no data transfer")
+    parser.add_option("-f", "--data-file", type="str", dest="dfile", action="store", default='',
+        help="File containing data that will send to device")
+    parser.add_option("-d", "--direction", type="int", dest="direction", action="store", default=0,
+        help="data transfer direction, 0: no data transfer, 1: data from device, 2: data to device")
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=512,
+        help="To fix the block size of the device. Default 512")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["hex", "raw"], default="hex",
+        help="Output format: hex|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device %s not exist!" % dev)
+        #
+        if options.raw_cdb:
+            raw_cdb = bytes(bytearray(options.raw_cdb))
+        else:
+            parser.error("Need raw CDB input")
+        #
+        if options.direction == 0:
+            dataout = b''
+            datain_alloclen = 0
+        elif options.direction == 1:
+            dataout = b''
+            datain_alloclen = options.data_len
+            if not datain_alloclen:
+                parser.error("Need give -l/--data-len, when read data from device")
+        else:
+            if options.dfile and os.path.isfile(options.dfile):
+                data_len = options.data_len if options.data_len > 0 else -1
+                with open(options.dfile, 'rb') as f:
+                    dataout = f.read(data_len)
+                datain_alloclen = 0
+            else:
+                parser.error("Need give -f/--data-file, when write data to device")
+        with SCSI(init_device(dev, open_t='scsi'), options.bs) as d:
+            print ('issuing cdb-passthru command')
+            print ("%s:" % d.device._file_name)
+            cmd = d.cdb_passthru(raw_cdb, dataout=dataout, datain_alloclen=datain_alloclen)
+        if options.direction == 1:
+            if options.dfile:
+                with open(options.dfile, 'wb') as f:
+                    f.write(cmd.datain)
+            else:
+                if options.output_format == "hex":
+                    format_dump_bytes(cmd.datain)
+                else:
+                    print (bytes(cmd.datain))
+    else:
+        parser.print_help()
 ############################
 ############################
 
 commands_dict = {"list": _list, 
                  "inq": inq,
+                 "cdb-passthru": cdb_passthru,
                  "readcap": readcap,
                  "getlbastatus": getlbastatus,
                  "luns": luns,

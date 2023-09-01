@@ -46,8 +46,10 @@ class LinDevice(DeviceBase):
         self._ino = get_inode(self._file_name)
 
     def close(self):
-        self._file.close()
-        self._ino = None
+        if self._file:
+            self._file.close()
+            self._file = None
+            self._ino = None
 
     def execute(self, op, cdb):
         """

@@ -19,6 +19,9 @@ class DeviceBase(object):
         # The devcie type
         self._devicetype = None
 
+    def __del__(self):
+        self.close() 
+
     def __enter__(self):
         """
 

@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-import pyscsi.pyscsi.scsi_enum_modesense as modesense_enums
 from pyscsi.pyscsi.scsi_command import SCSICommand
 from pyscsi.utils.converter import (
     decode_bits,
