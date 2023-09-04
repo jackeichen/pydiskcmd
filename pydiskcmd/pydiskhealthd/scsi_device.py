@@ -38,7 +38,6 @@ class SCSIDeviceBase(object):
     def __init__(self, dev_path):
         self.__device_type = 'scsi'
         self.dev_path = dev_path
-        self.__scsi_obj = SCSI(init_device(dev_path, open_t="scsi"), blocksize=512)
         ##
         self.scsi_feature_status = SCSIFeatureStatus()
         self.check_feature_support = {}
@@ -46,9 +45,10 @@ class SCSIDeviceBase(object):
         self.__model = None
         self.__serial = None
         #
-        cmd = self.__scsi_obj.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER)
-        serial_info = cmd.result
-        inq_info = self.__scsi_obj.inquiry().result
+        with SCSI(init_device(self.dev_path, open_t="scsi"), blocksize=512) as d:
+            cmd = d.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER)
+            serial_info = cmd.result
+            inq_info = d.inquiry().result
         #
         if 'unit_serial_number' in serial_info:
             id_string = bytearray2string(serial_info['unit_serial_number']).strip()
@@ -88,8 +88,9 @@ class SCSIDeviceBase(object):
         return self.__serial
 
     def inquiry(self, page_code):
-        cmd = self.__scsi_obj.inquiry(evpd=1, page_code=page_code)
-        i = cmd.result
+        with SCSI(init_device(dev_path, open_t="scsi"), blocksize=512) as d:
+            cmd = d.inquiry(evpd=1, page_code=page_code)
+            i = cmd.result
         return i
 
     def temperature(self):
@@ -98,24 +99,25 @@ class SCSIDeviceBase(object):
         '''
         from pydiskcmd.pyscsi.scsi_spec import LogSenseAttr
         t = None
-        cmd = self.__scsi_obj.logsense(0x0D)
-        log_page = LogSenseAttr.get((0x0D,0x00))
-        log_page_decode = log_page.decode_value(cmd.datain)
-        if log_page_decode['page_code'] == 0x0D and log_page_decode['subpage_code'] == 0:
-            for i in log_page_decode["log_parameters"]:
-                if i.get("parameter_code") == 0:
-                    t = i.get("parameter_value")[1]
-                    break
-        if t is None:
-            # try 0x2f
-            cmd = self.__scsi_obj.logsense(0x2F)
-            log_page = LogSenseAttr.get((0x2F,0x00))
+        with SCSI(init_device(self.dev_path, open_t="scsi"), blocksize=512) as d:
+            cmd = d.logsense(0x0D)
+            log_page = LogSenseAttr.get((0x0D,0x00))
             log_page_decode = log_page.decode_value(cmd.datain)
-            if log_page_decode['page_code'] == 0x2F and log_page_decode['subpage_code'] == 0:
+            if log_page_decode['page_code'] == 0x0D and log_page_decode['subpage_code'] == 0:
                 for i in log_page_decode["log_parameters"]:
                     if i.get("parameter_code") == 0:
-                        t = i.get("parameter_value")[3]
+                        t = i.get("parameter_value")[1]
                         break
+            if t is None:
+                # try 0x2f
+                cmd = d.logsense(0x2F)
+                log_page = LogSenseAttr.get((0x2F,0x00))
+                log_page_decode = log_page.decode_value(cmd.datain)
+                if log_page_decode['page_code'] == 0x2F and log_page_decode['subpage_code'] == 0:
+                    for i in log_page_decode["log_parameters"]:
+                        if i.get("parameter_code") == 0:
+                            t = i.get("parameter_value")[3]
+                            break
         ##
         return t
 

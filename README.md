@@ -240,6 +240,7 @@ The following are all implemented sub-commands:
   luns                        Send Report Luns commandc to target SCSI device
   mode-sense                  Send Mode Sense command to target SCSI device
   log-sense                   Send Log Sense command to target SCSI device
+  cdb-passthru                Submit an arbitrary SCSI command, return results
   sync                        Synchronize cache to non-volatile cache, as known as flush
   read                        Send a read command to disk
   write                       Send a write command to disk
