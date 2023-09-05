@@ -88,7 +88,7 @@ class SCSIDeviceBase(object):
         return self.__serial
 
     def inquiry(self, page_code):
-        with SCSI(init_device(dev_path, open_t="scsi"), blocksize=512) as d:
+        with SCSI(init_device(self.dev_path, open_t="scsi"), blocksize=512) as d:
             cmd = d.inquiry(evpd=1, page_code=page_code)
             i = cmd.result
         return i
