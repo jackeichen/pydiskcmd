@@ -6,7 +6,7 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.2.6(Not Released)
+Version 0.2.6
   * Fixed some bugs
   * Add more NVMe commands to pydiskcmd:
       * TelemetryControllerInitiatedLog, TelemetryHostInitiatedLog
