@@ -5,6 +5,7 @@ import sys,os
 import optparse
 from pydiskcmd.utils import init_device
 from pydiskcmd.pynvme.nvme import NVMe
+from pydiskcmd.plugins import ocp_plugin
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.pynvme.nvme_command import DataBuffer
 ##
@@ -12,7 +13,7 @@ from pydiskcmd.utils import nvme_format_print
 from pydiskcmd.system.env_var import os_type
 from pydiskcmd.system.os_tool import check_device_exist
 
-Version = '0.1.0'
+Version = '0.1.1'
 
 def version():
     print ("pynvme version %s" % Version)
@@ -49,6 +50,7 @@ def print_help():
         print ("  telemetry-log         Retrieve the Telemetry Log, show it")
         print ("  persistent_event_log  Get persistent event log from device")
         print ("  reset                 Resets the controller")
+        print ("  subsystem-reset       Resets the subsystem")
         print ("  fw-download           Download new firmware")
         print ("  fw-commit             Verify and commit firmware to a specific slot")
         print ("  get-feature           Get feature and show the resulting value")
@@ -66,6 +68,11 @@ def print_help():
         print ("  help                  Display this help")
         print ("")
         print ("See 'pynvme help <command>' or 'pynvme <command> --help' for more information on a sub-command")
+        print ("")
+        print ("The following are all installed plugin extensions:")
+        print ("  ocp             OCP cloud SSD extensions")
+        print ("")
+        print ("See 'pynvme <plugin> help' for more information on a plugin")
     return 0
 
 def _list():
@@ -334,7 +341,6 @@ def telemetry_log():
     else:
         parser.print_help()
 
-
 def fw_download():
     usage="usage: %prog fw-download <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -358,6 +364,7 @@ def fw_download():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             rc = d.nvme_fw_download(options.fw_path, xfer=options.xfer, offset=options.offset)
+        cmd.check_return_status(True)
     else:
         parser.print_help()
 
@@ -420,7 +427,7 @@ def nvme_format():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.nvme_format(options.lbaf, nsid=options.namespace_id, mset=options.ms, pi=options.pi, pil=options.pil, ses=options.ses)
-        cmd.check_return_status()
+        cmd.check_return_status(True)
     else:
         parser.print_help()
 
@@ -510,6 +517,7 @@ self-test command:                                     \
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.self_test(options.test_code, ns_id=options.namespace_id)
+        cmd.check_return_status()
         if cmd.cq_status == 0x1D:
             print ("The controller or NVM subsystem already has a device self-test operation in process.")
         else:
@@ -1025,6 +1033,7 @@ def write():
             print ("%s:" % d.device._file_name)
             print ('')
             cmd = d.write(options.namespace_id, options.start_block, options.block_count, data_buffer)
+        cmd.check_return_status(True)
     else:
         parser.print_help()
 
@@ -1261,6 +1270,110 @@ def reset():
     else:
         parser.print_help()
 
+def subsystem_reset():
+    usage="usage: %prog subsystem-reset <device>"
+    parser = optparse.OptionParser(usage)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.subsystem_reset()
+    else:
+        parser.print_help()
+
+#################################################
+# Bellow is OCP NVMe SSD SPEC Command
+# Spec can be download in https://www.opencompute.org/
+#################################################
+def _ocp_print_help():
+    if len(sys.argv) > 3 and sys.argv[3] in plugin_ocp_commands_dict:
+        func_name,sys.argv[3] = sys.argv[3],"--help"
+        plugin_ocp_commands_dict[func_name]()
+    else:
+        print ("pynvme-%s" % Version)
+        print ("usage: pynvme ocp <command> [<device>] [<args>]")
+        print ("")
+        print ("The '<device>' may be either an NVMe character device (ex: /dev/nvme0) or an")
+        print ("nvme block device (ex: /dev/nvme0n1) in Linux, while PhysicalDrive<X> in Windows.")
+        print ("")
+        print ("OCP cloud SSD extensions")
+        print ("")
+        print ("The following are all implemented sub-commands:")
+        print ("")
+        print ("  ocp-check                     OCP support and version check")
+        print ("  smart-add-log                 Retrieve extended SMART Information")
+        print ("  cloud-SSD-plugin-version      Shows cloud SSD plugin version")
+        print ("  Help                          Display this help")
+        print ("")
+        print ("See 'pynvme ocp help <command>' for more information on a specific command")
+
+def _ocp_print_ver():
+    print ("Cloud SSD Plugin Version: %s" % "1.0")
+    print ("")
+    return 0
+
+def _ocp_info_check():
+    usage="usage: %prog ocp ocp-check <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "json"],default="normal",
+        help="Output format: normal|json, default normal")
+
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ## check device
+        dev = sys.argv[3]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            decode_data = {"device": {"dev_path": d.device._file_name},
+                           "ocp_info": {"support": d.ocp_support, "version": d.ocp_ver}
+                           }
+        ##
+        nvme_format_print.format_print_ocp_info_check(decode_data, options.output_format)
+    else:
+        parser.print_help()
+
+def _ocp_smart_extended_log():
+    usage="usage: %prog ocp smart-extended-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
+
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ## check device
+        dev = sys.argv[3]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = ocp_plugin["SmartExtendedLog"]()
+            d.execute(cmd)
+        ##
+        nvme_format_print.format_print_ocp_smart_extended_log(cmd, options.output_format)
+    else:
+        parser.print_help()
+
+plugin_ocp_commands_dict = {"ocp-check": _ocp_info_check,
+                            "smart-add-log": _ocp_smart_extended_log,
+                            "cloud-SSD-plugin-version": _ocp_print_ver,
+                            "Help": _ocp_print_help,}
+
+def ocp():
+    if len(sys.argv) > 2:
+        plugin_command = sys.argv[2]
+        if plugin_command in plugin_ocp_commands_dict:
+            plugin_ocp_commands_dict[plugin_command]()
+            return
+    _ocp_print_help()
+    return 0
+
 ###########################
 ###########################
 commands_dict = {"list": _list,
@@ -1275,6 +1388,7 @@ commands_dict = {"list": _list,
                  "telemetry-log": telemetry_log,
                  "sanitize-log": sanitize_log,
                  "reset": reset,
+                 "subsystem-reset": subsystem_reset,
                  "fw-download": fw_download, 
                  "fw-commit": fw_commit, 
                  "nvme-create-ns": nvme_create_ns,
@@ -1296,7 +1410,8 @@ commands_dict = {"list": _list,
                  "write": write,
                  "get-lba-status":get_lba_status,
                  "version": version,
-                 "help": print_help}
+                 "help": print_help,
+                 "ocp": ocp,}
 
 def pynvme():
     if len(sys.argv) > 1:

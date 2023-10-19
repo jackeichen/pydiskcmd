@@ -17,6 +17,9 @@ from pydiskcmd.pynvme.nvme_spec import (
     nvme_power_management_cq_decode,
     decode_sanitize_log,
     )
+from pydiskcmd.plugins.ocp.DSSD_spec import (
+    ocp_smart_extended_decode,
+    )
 from pydiskcmd.utils.format_print import format_dump_bytes,json_print
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 
@@ -448,3 +451,36 @@ def format_print_sanitize_log(raw_data, dev='', print_type='normal'):
         json_print(result)
     else:
         raise NotImplementedError("Not Support type: %s" % print_type)
+
+##
+def format_print_ocp_smart_extended_log(cmd, print_type='normal'):
+    raw_data = cmd.data
+    if print_type == 'normal' or print_type == 'json':
+        decoded_data = ocp_smart_extended_decode(raw_data)
+        for k in list(decoded_data.keys()):
+            decoded_data[k] = scsi_ba_to_int(decoded_data[k], 'little')
+        if print_type == 'normal':
+            print ("SMART Cloud Attributes -")
+            for k,v in decoded_data.items():
+                if k in ("Thermal Throttling Status and Count", "Log Page Version", "Log Page GUID",):
+                    print ("  %-40s: %#x" % (k, v))
+                else:
+                    print ("  %-40s: %s" % (k, v))
+        else:
+            json_print(decoded_data)
+    elif print_type == 'hex':
+        format_dump_bytes(raw_data, end=511)
+    elif print_type == 'raw':
+        print (raw_data)
+    else:
+        raise NotImplementedError("Not Support type: %s" % print_type)
+
+def format_print_ocp_info_check(decoded_data, print_type='normal'):
+    if print_type == 'normal':
+        if decoded_data["ocp_info"]["support"]:
+            print ("Device %s support OCP(spec ver %s) command" % (decoded_data["device"]["dev_path"],'.'.join(["%d" % i for i in decoded_data["ocp_info"]["version"]])))
+        else:
+            print ("Device %s seems that Not support OCP command" % decoded_data["device"]["dev_path"])
+        print ("")
+    else:
+        json_print(decoded_data)

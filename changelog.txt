@@ -6,6 +6,12 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
+Version 0.2.7(Not Release)
+  * change nvme code base to '0.1.3', pynvme version to '0.1.1'. As OCP support:
+  * Begin to support OCP Spec command in pynvme
+    * commands: cloud-SSD-plugin-version, Help, ocp-check
+    * commands: smart-add-log,
+
 Version 0.2.6
   * Fixed some bugs
   * Add more NVMe commands to pydiskcmd:

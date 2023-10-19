@@ -24,9 +24,10 @@ from pydiskcmd.pynvme.cdb_nvme_write import Write
 from pydiskcmd.pynvme.cdb_nvme_flush import Flush
 from pydiskcmd.pynvme.cdb_nvme_get_lba_status import GetLBAStatus
 from pydiskcmd.pynvme.cdb_nvme_reset import Reset
+from pydiskcmd.pynvme.cdb_nvme_subsys_reset import SubsysReset
 from pydiskcmd.exceptions import *
 
-code_version = "0.1.2"
+code_version = '0.1.3'
 
 class NVMe(object):
     def __init__(self, dev):
@@ -37,6 +38,9 @@ class NVMe(object):
             raise ExecuteCmdErr("Identify Command failed!")
         self.__ctrl_identify_info = ret.data
         # self.__id_ns_info = {}
+        ## OCP info here
+        self.__ocp_support = None
+        self.__ocp_version = []
     
     def __call__(self,
                  dev):
@@ -64,6 +68,33 @@ class NVMe(object):
     def ctrl_identify_info(self):
         return self.__ctrl_identify_info
 
+    def _ocp_info_check(self):
+        cmd = self.get_log_page(0, 0xC0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0)
+        smart_extend = bytes(cmd.data)
+        if smart_extend[496:512] == b'\xc5\xaf\x10(\xea\xbf\xf2\xa4\x9cOo|\xc9\x14\xd5\xaf':
+            self.__ocp_support = True
+            Major = smart_extend[103]
+            Minor = None
+            if Major == 0:
+                Major = 1
+            else:
+                Minor = smart_extend[101] + (smart_extend[102] << 8)
+            self.__ocp_version = [Major, Minor]
+        else:
+            self.__ocp_support = False
+
+    @property
+    def ocp_support(self):
+        if self.__ocp_support is None:
+            self._ocp_info_check()
+        return self.__ocp_support
+
+    @property
+    def ocp_ver(self):
+        if self.__ocp_support is None:
+            self._ocp_info_check()
+        return self.__ocp_version
+
     def get_nvme_ver(self):
         '''
         Get the device support nvme version
@@ -72,7 +103,7 @@ class NVMe(object):
         '''
         return self.__ctrl_identify_info[82],self.__ctrl_identify_info[81],self.__ctrl_identify_info[80]
 
-    def execute(self, cmd, check_return_status=True):
+    def execute(self, cmd, check_return_status=False):
         """
         wrapper method to call the NVMeDevice.execute method
 
@@ -89,6 +120,11 @@ class NVMe(object):
 
     def reset_ctrl(self):
         cmd = Reset()
+        self.execute(cmd, check_return_status=False)
+        return cmd
+
+    def subsystem_reset(self):
+        cmd = SubsysReset()
         self.execute(cmd, check_return_status=False)
         return cmd
 

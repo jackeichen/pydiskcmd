@@ -1,8 +1,4 @@
 # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
-
-version = "0.2.7"
-
-## version format
-version_format = [int(i) for i in version.split(".")]
+from .ocp import ocp_plugin
