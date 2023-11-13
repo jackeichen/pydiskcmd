@@ -5,16 +5,16 @@
 
 _pysata_cmds="list check-PowerMode accessible-MaxAddress identify self-test set-feature \
           read-log smart-read-log smart standby read write flush trim download_fw \
-          version help"
+          trusted-receive version help"
 
-_pynvme_cmds="list smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
+_pynvme_cmds="list list-subsys smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
           format sanitize persistent_event_log device-self-test self-test-log telemetry-log \
           sanitize-log get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns \
           nvme-attach-ns nvme-detach-ns commands-se-log pcie flush read write get-lba-status \
-          get-log reset version help"
+          get-log reset subsystem-reset version help"
 
 _pyscsi_cmds="list inq getlbastatus readcap luns mode-sense log-sense read write \
-          sync cdb-passthru version help"
+          sync cdb-passthru se-protocol-in version help"
 
 
 pysata_list_opts () {
@@ -53,6 +53,10 @@ pysata_list_opts () {
         "set-feature")
 		opts+=" -f --feature= -c --count= -l --lba= --show_status --guideline \
             -h --help"
+		;;
+        "trusted-receive")
+		opts+=" -p --protocol= -s --sp= -i --INC_512= -l --alloclen= \
+            -o --output-format= -h --help"
 		;;
         "smart")
 		opts+=" --show_status -h --help"
@@ -123,7 +127,8 @@ pyscsi_list_opts () {
 		opts+=" -o --output-format= -h --help"
 		;;
         "inq")
-		opts+=" -p --page= -o --output-format= -h --help"
+		opts+=" -p --page= -o --output-format= -l --alloclen= \
+            -h --help"
 		;;
         "cdb-passthru")
 		opts+=" -r --raw-cdb= -l ---data-len= -f --data-file= -d --direction= \
@@ -138,11 +143,17 @@ pyscsi_list_opts () {
         "luns")
 		opts+=" -o --output-format= -h --help"
         ;;
+        "se-protocol-in")
+		opts+=" -p --protocol= -s --sp= -i --INC_512= -l --alloclen= \
+            -o --output-format= -h --help"
+		;;
         "mode-sense")
-		opts+=" -p --page= -s --subpage= -o --output-format= -h --help"
+		opts+=" -p --page= -s --subpage= -o --output-format= -l --alloclen= \
+            -h --help"
 		;;
         "log-sense")
-		opts+=" -p --page= -s --subpage= -o --output-format= -h --help"
+		opts+=" -p --page= -l --alloclen= -s --subpage= -o --output-format= \
+            -h --help"
 		;;
         "sync")
 		opts+=" -s --start-block= -c --block-count= -i --immed= \
@@ -192,7 +203,7 @@ pynvme_list_opts () {
     case "$1" in
         "list")
 		opts+=" -o --output-format= -h --help"
-		;;
+        ;;
         "smart-log")
 		opts+=" -o --output-format= -h --help"
 		;;
@@ -220,6 +231,9 @@ pynvme_list_opts () {
 		opts+=" -o --output-format= -h --help"
 		;;
         "reset")
+		opts+=" -h --help"
+        ;;
+        "subsystem-reset")
 		opts+=" -h --help"
 		;;
         "fw-download")

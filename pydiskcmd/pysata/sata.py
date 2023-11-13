@@ -45,6 +45,7 @@ from pyscsi.pyscsi.scsi_cdb_inquiry import Inquiry
 from pydiskcmd.pysata.ata_cdb_smart import SmartReadLog16
 from pydiskcmd.pysata.ata_cdb_readlog import ReadLogExt
 from pydiskcmd.pysata.ata_cdb_setFeature import SetFeature
+from pydiskcmd.pysata.ata_cdb_TrustedReceive import TrustedReceiveDMA
 ##
 
 code_version = "0.1.0"
@@ -361,6 +362,15 @@ class SATA(object):
 
     def execute_device_diagnostic(self):
         cmd = ExecuteDeviceDiagnostic()
+        self.execute(cmd)
+        return cmd
+
+    def trusted_receive(self, 
+                        security_protocol,
+                        transfer_length,
+                        SP,
+                        **kwargs):
+        cmd = TrustedReceiveDMA(security_protocol, transfer_length, SP, **kwargs)
         self.execute(cmd)
         return cmd
 

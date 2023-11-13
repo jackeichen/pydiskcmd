@@ -18,6 +18,7 @@ from pydiskcmd.utils.ata_format_print import (
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.system.os_tool import check_device_exist
+from pydiskcmd.exceptions import ExecuteCmdErr
 
 Version = '0.2.0'
 
@@ -36,12 +37,13 @@ def print_help():
         print ("The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).")
         print ("")
         print ("The following are all implemented sub-commands:")
-        print ("  list                        List all SCSI devices on machine")
+        print ("  list                        List all SATA devices on machine")
         print ("  check-PowerMode             Check Disk Power Mode")
         print ("  accessible-MaxAddress       Send Accessible Max Address command")
         print ("  identify                    Get identify information")
         print ("  self-test                   Start a disk self test")
         print ("  set-feature                 Send set feature to device")
+        print ("  trusted-receive             Send trusted receive to device")
         print ("  smart                       Get smart information")
         print ("  read-log                    Get the GPL Log and show it")
         print ("  smart-read-log              Get the smart Log and show it")
@@ -631,6 +633,49 @@ def download_fw():
     else:
         parser.print_help()
 
+def trusted_receive():
+    usage='''usage: %prog trusted-receive <device> [OPTIONS]
+
+Note: This will be a limitted function, for only 255 blocks can be transferred,
+      while blocks will be 1 byte or 512 bytes
+Important: To use this command, libata.allow_tpm must be set to 1 in linux.
+    '''
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-p", "--protocol", type="int", dest="protocol", action="store", default=0,
+        help="Specifies which security protocol to use")
+    parser.add_option("-s", "--sp", type="int", dest="sp", action="store", default=0,
+        help="Specific field in security protocol")
+    parser.add_option("-i", "--INC_512", type="int", dest="INC_512", action="store", default=1,
+        help="Set transfer size block size in step of 512 bytes")
+    parser.add_option("-l", "--alloclen", type="int", dest="alloclen", action="store", default=1,
+        help="Set transfer size block number")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["hex", "raw"], default="hex",
+        help="Output format: hex|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device %s not exist!" % dev)
+        ##
+        with SATA(init_device(dev, open_t='ata')) as d:
+            print ('issuing trusted receive command')
+            print ("%s:" % d.device._file_name)
+            try:
+                cmd = d.trusted_receive(options.protocol, options.alloclen, options.sp, INC_512=options.INC_512)
+            except ExecuteCmdErr as e:
+                print (e)
+                if 'Check Condition: Illegal Request(0x05) ASC+Q:Invalid Field In CDB(0x2400)' in str(e):
+                    print ("Important: You may need set libata.allow_tpm=1 when use this function.")
+            else:
+                if options.output_format == "hex":
+                    format_dump_bytes(cmd.datain)
+                else:
+                    print (bytes(cmd.datain))
+    else:
+        parser.print_help()
+
 
 commands_dict = {"list": _list, 
                  "check-PowerMode": check_power_mode,
@@ -638,6 +683,7 @@ commands_dict = {"list": _list,
                  "identify": identify, 
                  "self-test": self_test, 
                  "set-feature": set_feature,
+                 "trusted-receive": trusted_receive,
                  "smart": smart, 
                  "standby": standby_imm, 
                  "read-log": read_log,

@@ -54,8 +54,8 @@ Support List
 | Debian 10             | x64 | Y    | Y   | Y    |
 | Windows 10 Pro        | x64 | Y    | Y   | Y    |
 | Windows 11            | x64 | Y    | Y   | Y    |
-| Windows Server 2019   | x64 | Y    | Y   | T    |
-| Windows Server 2022   | x64 | Y    | Y   | T    |
+| Windows Server 2019   | x64 | Y    | Y   | Y    |
+| Windows Server 2022   | x64 | Y    | Y   | Y    |
 
 Y: support, N: Non-support, D: Developing, T: Under Testing
 
@@ -63,6 +63,7 @@ Note:
 
     * Only some of the commands are tested, Do Not guarantee all the other commands work;
     * This tool should work in Linux&Windows, but may be incompatible in OS other than this Support List;
+    * Windows only support some of the get-feature/get-log/idenfity commands;
     * Support Direct-Connection/HBA Mode/JBOD Mode, RAID Mode is not support.
 
 
@@ -139,7 +140,7 @@ command to get help:
     $ pynvme help
 
 ```
-pynvme-0.1.0
+pynvme-0.1.1
 usage: pynvme <command> [<device>] [<args>]
 
 The '<device>' may be either an NVMe character device (ex: /dev/nvme0) or an
@@ -147,6 +148,7 @@ nvme block device (ex: /dev/nvme0n1) in Linux, while PhysicalDrive<X> in Windows
 
 The following are all implemented sub-commands:
   list                  List all NVMe devices and namespaces on machine
+  list-subsys           List nvme subsystems
   list-ns               Send NVMe Identify List, display structure
   list-ctrl             Send NVMe Identify Controller List, display structure
   id-ctrl               Send NVMe Identify Controller
@@ -165,6 +167,7 @@ The following are all implemented sub-commands:
   telemetry-log         Retrieve the Telemetry Log, show it
   persistent_event_log  Get persistent event log from device
   reset                 Resets the controller
+  subsystem-reset       Resets the subsystem
   fw-download           Download new firmware
   fw-commit             Verify and commit firmware to a specific slot
   get-feature           Get feature and show the resulting value
@@ -182,6 +185,11 @@ The following are all implemented sub-commands:
   help                  Display this help
 
 See 'pynvme help <command>' or 'pynvme <command> --help' for more information on a sub-command
+
+The following are all installed plugin extensions:
+  ocp             OCP cloud SSD extensions
+
+See 'pynvme <plugin> help' for more information on a plugin
 ```
 
 pysata
@@ -198,12 +206,13 @@ usage: pysata <command> [<device>] [<args>]
 The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
 
 The following are all implemented sub-commands:
-  list                        List all SCSI devices on machine
+  list                        List all SATA devices on machine
   check-PowerMode             Check Disk Power Mode
   accessible-MaxAddress       Send Accessible Max Address command
   identify                    Get identify information
   self-test                   Start a disk self test
   set-feature                 Send set feature to device
+  trusted-receive             Send trusted receive to device
   smart                       Get smart information
   read-log                    Get the GPL Log and show it
   smart-read-log              Get the smart Log and show it
@@ -241,13 +250,12 @@ The following are all implemented sub-commands:
   mode-sense                  Send Mode Sense command to target SCSI device
   log-sense                   Send Log Sense command to target SCSI device
   cdb-passthru                Submit an arbitrary SCSI command, return results
+  se-protocol-in              Submit an arbitrary SECURITY PROTOCOL IN command, return results
   sync                        Synchronize cache to non-volatile cache, as known as flush
   read                        Send a read command to disk
   write                       Send a write command to disk
   version                     Shows the program version
   help                        Display this help
-
-See 'pyscsi help <command>' or 'pyscsi <command> --help' for more information on a sub-command
 ```
 
 pydiskhealthd

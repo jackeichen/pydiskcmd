@@ -4,6 +4,7 @@
 from ctypes import *
 from pydiskcmd.exceptions import *
 from pydiskcmd.utils.converter import scsi_int_to_ba
+from pydiskcmd.utils.number_h import build_int_by_bitmap
 
 
 class CmdStructure(LittleEndianStructure):
@@ -174,30 +175,3 @@ def encode_data_buffer(data_dict,
                 result[bytepos + i] = (ord(result[bytepos + i]) + v[i])
         else:
             pass
-
-def build_int_by_bitmap(bitmap):
-    '''
-    bitmap: {name_0: bitmap_struc_0,
-             name_1: bitmap_struc_1, 
-             ..., 
-             name_n: bitmap_struc_n} 
-        name:         is not a valid parameters, just a identifier
-        bitmap_struc: [bit_mask, byte_offset, value], example: [0xFFF, 0, 10]
-    
-    return: int
-    '''
-    target_value = 0
-    for name,struc in bitmap.items():
-        bit_mask,byte_offset,value = struc
-        ## find bit offset
-        suboffset = 0
-        while True:
-            if ((bit_mask >> suboffset) & 0x01):
-                break
-            suboffset += 1
-        ## check value
-        if value > (bit_mask >> suboffset):
-            raise BuildNVMeCommandError("Value to big to set: %s" % str(value))
-        ##
-        target_value += (value << (byte_offset*8+suboffset))
-    return target_value

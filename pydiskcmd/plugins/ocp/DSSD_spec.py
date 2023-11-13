@@ -33,7 +33,29 @@ ocp_smart_extended_bit_mask = {"Physical Media Units Written": ('b', 0, 16),
                                "Log Page GUID": ('b', 496, 16),
                                }
 
+ocp_error_recovery_bit_mask = {"Panic Reset Wait Time": ('b', 0, 2),
+                               "Panic Reset Action": ('b', 2, 1),
+                               "Device Recovery Action_1": ('b', 3, 1),
+                               "Panic ID": ('b', 4, 8),
+                               "Device Capabilities": ('b', 12, 4),
+                               "VS Recovery OPcode": ('b', 16, 1),
+                               "VS Command CDW12": ('b', 20, 4),
+                               "VS Command CDW13": ('b', 24, 4),
+                               "VS Command Timeout": ('b', 28, 1),
+                               "Device Recovery Action_2": ('b', 29, 1),
+                               "Device Recovery Action_2 Timeout": ('b', 30, 1),
+                               "Log Page Version": ('b', 494, 2),
+                               "Log Page GUID": ('b', 496, 16),
+                               }
+
+
+
 def ocp_smart_extended_decode(data):
     result = {}
     decode_bits(data, ocp_smart_extended_bit_mask, result)
+    return result
+
+def ocp_error_recovery_decode(data):
+    result = {}
+    decode_bits(data, ocp_error_recovery_bit_mask, result)
     return result

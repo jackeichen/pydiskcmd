@@ -71,13 +71,18 @@ def get_nvme_block_dev_by_ctrl_id(ctrl_id):
 
 
 class NVMeNS(object):
-    def __init__(self, nvme_ctrl, ns_name):
-        self.nvme_ctrl = nvme_ctrl
+    base_dir_path = '/sys/class/block/'
+    def __init__(self, ns_name, nvme_ctrl=None):
+        self.__nvme_ctrl = nvme_ctrl
         self.ns_name = ns_name
-        self._blk_path = os.path.join('/sys/class/nvme', self.nvme_ctrl.ctrl_name, self.ns_name)
+        self._blk_path = os.path.join(NVMeNS.base_dir_path, self.ns_name)
 
     def _init(self):
         pass
+
+    @property
+    def nvme_ctrl(self):
+        return self.__nvme_ctrl
 
     @property
     def dev_path(self):
@@ -92,30 +97,50 @@ class NVMeNS(object):
 
 
 class NVMeController(object):
-    def __init__(self, ctrl_name):
+    base_dir_path = '/sys/class/nvme'
+    def __init__(self, ctrl_name, subsystem=None):
         self.ctrl_name = ctrl_name
+        self.__subsystem = subsystem
         #
-        self._ctrl_path = os.path.join('/sys/class/nvme', self.ctrl_name)
+        self._ctrl_path = os.path.join(NVMeController.base_dir_path, self.ctrl_name)
         ## init information
 
     def _init(self):
         pass
 
     @property
+    def subsystem(self):
+        return self.__subsystem
+
+    @property
     def dev_path(self):
         return "/dev/%s" % self.ctrl_name
 
+    def _get_str_by_file(self, file_name):
+        with open(os.path.join(self._ctrl_path, file_name), 'r') as f:
+            temp = f.read()
+        return temp.strip()
+
     @property
     def cntlid(self):
-        cntlid = None
-        with open(os.path.join(self._ctrl_path, 'cntlid'), 'r') as f:
-            cntlid = int(f.read().strip())
-        return cntlid
+        return int(self._get_str_by_file('cntlid'))
+
+    @property
+    def address(self):
+        return self._get_str_by_file('address')
+
+    @property
+    def state(self):
+        return self._get_str_by_file('state')
+
+    @property
+    def transport(self):
+        return self._get_str_by_file('transport')
 
     def retrieve_ns(self):
         for dir_name in os.listdir(self._ctrl_path):
             if dir_name.startswith("nvme"):
-                yield NVMeNS(self, dir_name)
+                yield NVMeNS(dir_name, nvme_ctrl=self)
 
 
 def scan_nvme_system():
@@ -124,3 +149,56 @@ def scan_nvme_system():
     for i in ctrl_names:
         all_info[i] = NVMeController(i)
     return all_info
+
+
+class NVMeSubsystem(object):
+    base_dir_path = '/sys/devices/virtual/nvme-subsystem/'
+    def __init__(self, subsystem_name):
+        self.__subsystem_name = subsystem_name
+        self._current_dir_path = os.path.join(NVMeSubsystem.base_dir_path, self.__subsystem_name)
+
+    @property
+    def subsystem_name(self):
+        return self.__subsystem_name
+
+    def retrieve_ctrl(self):
+        for dir_name in os.listdir(self._current_dir_path):
+            if dir_name.startswith("nvme"):
+                yield NVMeController(dir_name,subsystem=self)
+
+    def get_ctrls(self):
+        return {i.ctrl_name: i for i in self.retrieve_ctrl()}
+
+    def _get_str_by_file(self, file_name):
+        with open(os.path.join(self._current_dir_path, file_name), 'r') as f:
+            temp = f.read()
+        return temp.strip()
+
+    @property
+    def nqn(self):
+        return self._get_str_by_file('subsysnqn')
+
+    @property
+    def model(self):
+        return self._get_str_by_file('model')
+
+    @property
+    def firmware(self):
+        return self._get_str_by_file('firmware_rev')
+
+    @property
+    def iopolicy(self):
+        return self._get_str_by_file('iopolicy')
+
+    @property
+    def serial(self):
+        return self._get_str_by_file('serial')
+
+
+def scan_nvme_subsystem():
+    all_info = {}
+    for dir_name in os.listdir(NVMeSubsystem.base_dir_path):
+        if dir_name.startswith("nvme-subsys"):
+            all_info[dir_name] = NVMeSubsystem(dir_name)
+    return all_info
+

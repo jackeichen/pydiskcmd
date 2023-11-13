@@ -10,7 +10,14 @@ Version 0.2.7(Not Release)
   * change nvme code base to '0.1.3', pynvme version to '0.1.1'. As OCP support:
   * Begin to support OCP Spec command in pynvme
     * commands: cloud-SSD-plugin-version, Help, ocp-check
-    * commands: smart-add-log,
+    * commands: smart-add-log, error-recovery-log
+  * Add NVMe subsystem-reset,list-subsys controller to pynvme for Linux
+  * Change to pyscsi:
+    * Add an option 'alloclen' to some commands, user can specify the buffer length 
+      for command log-sense and inquiry
+    * Add command SECURITY PROTOCOL IN
+  * Change to pysata:
+    * Add command trusted-receive
 
 Version 0.2.6
   * Fixed some bugs

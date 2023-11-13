@@ -19,6 +19,7 @@ from pydiskcmd.pynvme.nvme_spec import (
     )
 from pydiskcmd.plugins.ocp.DSSD_spec import (
     ocp_smart_extended_decode,
+    ocp_error_recovery_decode,
     )
 from pydiskcmd.utils.format_print import format_dump_bytes,json_print
 from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
@@ -462,7 +463,7 @@ def format_print_ocp_smart_extended_log(cmd, print_type='normal'):
         if print_type == 'normal':
             print ("SMART Cloud Attributes -")
             for k,v in decoded_data.items():
-                if k in ("Thermal Throttling Status and Count", "Log Page Version", "Log Page GUID",):
+                if k in ("Thermal Throttling Status and Count", "Bad User NAND Blocks", "Bad System NAND Blocks", "User Data Erase Counts", "Log Page Version", "Log Page GUID",):
                     print ("  %-40s: %#x" % (k, v))
                 else:
                     print ("  %-40s: %s" % (k, v))
@@ -484,3 +485,27 @@ def format_print_ocp_info_check(decoded_data, print_type='normal'):
         print ("")
     else:
         json_print(decoded_data)
+
+def format_print_ocp_error_recovery_log(cmd, print_type='normal'):
+    raw_data = cmd.data
+    if print_type == 'normal' or print_type == 'json':
+        decoded_data = ocp_error_recovery_decode(raw_data)
+        for k in list(decoded_data.keys()):
+            decoded_data[k] = scsi_ba_to_int(decoded_data[k], 'little')
+        if print_type == 'normal':
+            print ("OCP Error Recovery -")
+            for k,v in decoded_data.items():
+                if k in ("Panic Reset Action", "Device Recovery Action_1", "Device Recovery Action_2",):
+                    print ("  %-40s: %sb" % (k, bin(v).replace("0b", "").rjust(8, "0")))
+                elif k in ("Panic ID", "Device Capabilities", "VS Command CDW12", "VS Command CDW13", "Log Page Version", "Log Page GUID",):
+                    print ("  %-40s: %#x" % (k, v))
+                else:
+                    print ("  %-40s: %s" % (k, v))
+        else:
+            json_print(decoded_data)
+    elif print_type == 'hex':
+        format_dump_bytes(raw_data, end=511)
+    elif print_type == 'raw':
+        print (raw_data)
+    else:
+        raise NotImplementedError("Not Support type: %s" % print_type)

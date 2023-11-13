@@ -4,6 +4,7 @@
 from pyscsi.pyscsi.scsi import SCSI as _SCSI
 from pydiskcmd.pyscsi.scsi_cdb_logsense import LogSense
 from pydiskcmd.pyscsi.scsi_cdb_synchronizecache import SynchronizeCache10,SynchronizeCache16
+from pydiskcmd.pyscsi.scsi_cdb_SecurityProtocolIn import SecurityProtocolIn
 from pydiskcmd.pyscsi.scsi_cdb_passthru import CDBPassthru
 ###
 code_version = "0.0.1"
@@ -54,7 +55,7 @@ class SCSI(_SCSI):
 
     def synchronizecache10(self, lba, block_number, **kwargs):
         """
-        Returns a LogSense Instance
+        Returns a synchronizecache10 Instance
 
         :param lba:  The target LBA address
         :param block_number:  LBA length to sync cache
@@ -69,7 +70,7 @@ class SCSI(_SCSI):
 
     def synchronizecache16(self, lba, block_number, **kwargs):
         """
-        Returns a LogSense Instance
+        Returns a synchronizecache16 Instance
 
         :param lba:  The target LBA address
         :param block_number:  LBA length to sync cache
@@ -79,5 +80,21 @@ class SCSI(_SCSI):
         """
         opcode = self.device.opcodes.SYNCHRONIZE_CACHE_16
         cmd = SynchronizeCache16(opcode, lba, block_number, **kwargs)
+        self.execute(cmd)
+        return cmd
+
+    def security_protocol_in(self, security_protocol, security_protocol_sp, alloc, **kwargs):
+        """
+        Returns a LogSense Instance
+
+        :param security_protocol: a blocksize
+        :param security_protocol_sp: Logical Block Address
+        :param alloc: number of block
+        :param kwargs: a dict with key/value pairs
+                       passthrough to scsi_cdb_SecurityProtocolIn.SecurityProtocolIn
+        :return: a security_protocol_in instance
+        """
+        opcode = self.device.opcodes.SECURITY_PROTOCOL_IN
+        cmd = SecurityProtocolIn(opcode, security_protocol, security_protocol_sp, alloc, **kwargs)
         self.execute(cmd)
         return cmd

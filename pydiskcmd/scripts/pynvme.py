@@ -32,6 +32,7 @@ def print_help():
         print ("")
         print ("The following are all implemented sub-commands:")
         print ("  list                  List all NVMe devices and namespaces on machine")
+        print ("  list-subsys           List nvme subsystems")
         print ("  list-ns               Send NVMe Identify List, display structure")
         print ("  list-ctrl             Send NVMe Identify Controller List, display structure")
         print ("  id-ctrl               Send NVMe Identify Controller")
@@ -76,7 +77,7 @@ def print_help():
     return 0
 
 def _list():
-    usage="usage: %prog list <device> [OPTIONS]"
+    usage="usage: %prog list"
     parser = optparse.OptionParser(usage)
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal",],default="normal",
         help="Output format: normal, default normal")
@@ -141,6 +142,26 @@ def _list():
                     print (print_format % (node, sn, mn, ns_id, usage, _format, fw))
             else:
                 raise RuntimeError("OS %s Not support" % os_type)
+
+def _list_subsys():
+    usage="usage: %prog list-subsys"
+    parser = optparse.OptionParser(usage)
+
+    if os_type == 'Linux':
+        from pydiskcmd.system.lin_os_tool import scan_nvme_subsystem
+        all_subsys = scan_nvme_subsystem()
+        temp = scan_nvme_subsystem()
+        for name in sorted(temp):
+            value = temp[name]
+            print ("%s - %s" % (name, value.nqn))
+            print ("\\")
+            ctrls = value.get_ctrls()
+            for i in sorted(ctrls):
+                ctrl = ctrls[i]
+                ## Get ctrl info
+                print (" +- %s %s %s %s" % (ctrl.ctrl_name, ctrl.transport, ctrl.address, ctrl.state))
+    else:
+        raise RuntimeError("OS %s Not support" % os_type)
 
 def smart_log():
     usage="usage: %prog smart-log <device> [OPTIONS]"
@@ -1307,6 +1328,7 @@ def _ocp_print_help():
         print ("")
         print ("  ocp-check                     OCP support and version check")
         print ("  smart-add-log                 Retrieve extended SMART Information")
+        print ("  error-recovery-log            Retrieve error recovery Information")
         print ("  cloud-SSD-plugin-version      Shows cloud SSD plugin version")
         print ("  Help                          Display this help")
         print ("")
@@ -1360,8 +1382,30 @@ def _ocp_smart_extended_log():
     else:
         parser.print_help()
 
+def _ocp_error_recovery_log():
+    usage="usage: %prog ocp error-recovery-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
+
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ## check device
+        dev = sys.argv[3]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = ocp_plugin["ErrorRecoveryLog"]()
+            d.execute(cmd)
+        ##
+        nvme_format_print.format_print_ocp_error_recovery_log(cmd, options.output_format)
+    else:
+        parser.print_help()
+
 plugin_ocp_commands_dict = {"ocp-check": _ocp_info_check,
                             "smart-add-log": _ocp_smart_extended_log,
+                            "error-recovery-log": _ocp_error_recovery_log,
                             "cloud-SSD-plugin-version": _ocp_print_ver,
                             "Help": _ocp_print_help,}
 
@@ -1377,6 +1421,7 @@ def ocp():
 ###########################
 ###########################
 commands_dict = {"list": _list,
+                 "list-subsys": _list_subsys,
                  "list-ctrl": list_ctrl,
                  "list-ns": list_ns,
                  "smart-log": smart_log,

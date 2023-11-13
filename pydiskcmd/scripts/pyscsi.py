@@ -8,14 +8,9 @@ from pydiskcmd.pyscsi.scsi_spec import LogSenseAttr
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmd.system.os_tool import check_device_exist
-# import from python-scsi
 from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 from pyscsi.pyscsi.scsi_enum_getlbastatus import P_STATUS
-#from pyscsi.pyscsi import scsi_enum_modesense as MODESENSE6
-#from pyscsi.pyscsi import scsi_enum_readelementstatus as READELEMENTSTATUS
-
-
 
 Version = '0.2.0'
 
@@ -42,6 +37,7 @@ def print_help():
         print ("  mode-sense                  Send Mode Sense command to target SCSI device")
         print ("  log-sense                   Send Log Sense command to target SCSI device")
         print ("  cdb-passthru                Submit an arbitrary SCSI command, return results")
+        print ("  se-protocol-in              Submit an arbitrary SECURITY PROTOCOL IN command, return results")
         print ("  sync                        Synchronize cache to non-volatile cache, as known as flush")
         print ("  read                        Send a read command to disk")
         print ("  write                       Send a write command to disk")
@@ -52,7 +48,7 @@ def print_help():
     return 0
 
 def _inquiry_standard(s, options):
-    cmd = s.inquiry()
+    cmd = s.inquiry(alloclen=options.alloclen)
     if options.output_format == 'normal':
         i = cmd.result
         print('Standard INQUIRY')
@@ -99,7 +95,7 @@ def _inquiry_standard(s, options):
         print (cmd.datain)
 
 def _inquiry_supported_vpd_pages(s, options):
-    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.SUPPORTED_VPD_PAGES)
+    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.SUPPORTED_VPD_PAGES, alloclen=options.alloclen)
     if options.output_format == 'normal':
         i = cmd.result
         print('Supported VPD Pages, page_code=0x00')
@@ -115,7 +111,7 @@ def _inquiry_supported_vpd_pages(s, options):
         print (cmd.datain)
 
 def _inquiry_block_limits(s, options):
-    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_LIMITS)
+    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_LIMITS, alloclen=options.alloclen)
     if options.output_format == 'normal':
         i = cmd.result
         print('Block Limits, page_code=0xb0 (SBC)')
@@ -136,7 +132,7 @@ def _inquiry_block_limits(s, options):
         print (cmd.datain)
 
 def _inquiry_block_dev_char(s, options):
-    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS)
+    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS, alloclen=options.alloclen)
     if options.output_format == 'normal':
         i = cmd.result
         print('Block Device Characteristics, page_code=0xb1 (SBC)')
@@ -154,7 +150,7 @@ def _inquiry_block_dev_char(s, options):
         print (cmd.datain)
 
 def _inquiry_logical_block_prov(s, options):
-    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.LOGICAL_BLOCK_PROVISIONING)
+    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.LOGICAL_BLOCK_PROVISIONING, alloclen=options.alloclen)
     if options.output_format == 'normal':
         i = cmd.result
         print('Logical Block Provisioning, page_code=0xb2 (SBC)')
@@ -177,7 +173,7 @@ def _inquiry_logical_block_prov(s, options):
         print (cmd.datain)
 
 def _inquiry_unit_serial_number(s, options):
-    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER)
+    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER, alloclen=options.alloclen)
     if options.output_format == 'normal':
         i = cmd.result
         print('Unit Serial Number, page_code=0x80')
@@ -225,7 +221,7 @@ def _inquiry_ata_information(s, options):
     }
     print('ATA Information, page_code=0x89')
     print('=============================================\n')
-    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.ATA_INFORMATION)
+    cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.ATA_INFORMATION, alloclen=options.alloclen)
     if options.output_format == 'normal':
         i = cmd.result
         print('SAT Vendor Identification:', i['sat_vendor_identification'].decode(encoding="utf-8",
@@ -263,12 +259,27 @@ def _inquiry_ata_information(s, options):
         format_dump_bytes(cmd.datain)
     else:
         print (cmd.datain)
+
+def _no_match_inq(s, options):
+    print('No pretty print( for this page, page_code=0x%02x' % options.page_code)
+    print('=============================================\n')
+    cmd = s.inquiry(evpd=1, page_code=options.page_code, alloclen=options.alloclen)
+    if options.output_format == 'normal':
+        i = cmd.result
+        for k, v in i.items():
+            print('%s - %s' % (k, v))
+    elif options.output_format == 'hex':
+        format_dump_bytes(cmd.datain)
+    else:
+        print (cmd.datain)
 ###################
 def inq():
     usage="usage: %prog inq <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-p", "--page", type="int", dest="page_code", action="store", default=-1,
         help="Vital Product Data (VPD) page number or abbreviation")
+    parser.add_option("-l", "--alloclen", type="int", dest="alloclen", action="store", default=96,
+        help="Transfer data length, default 96")
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"],default="normal",
         help="Output format: normal|hex|raw, default normal")
 
@@ -321,12 +332,7 @@ def inq():
                     _inquiry_ata_information(d, options)
                     return
 
-                print('No pretty print( for this page, page_code=0x%02x' % options.page_code)
-                print('=============================================\n')
-                cmd = d.inquiry(evpd=1, page_code=options.page_code)
-                i = cmd.result
-                for k, v in i.items():
-                    print('%s - %s' % (k, v))
+                _no_match_inq(d, options)
             except SCSICheckCondition as ex:
                 # if you want a print out of the sense data dict uncomment the next line
                 #ex.show_data = True
@@ -491,6 +497,8 @@ def mode_sense():
         help="select report field value")
     parser.add_option("-s", "--subpage", type="int", dest="subpage", action="store", default=0,
         help="select report field value")
+    parser.add_option("-l", "--alloclen", type="int", dest="alloclen", action="store", default=96,
+        help="Transfer data length, default 96")
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"], default="normal",
         help="Output format: normal|hex|raw, default normal")
 
@@ -506,7 +514,7 @@ def mode_sense():
             print ("%s:" % d.device._file_name)
             print ("")
             ##
-            cmd = d.modesense10(options.page, sub_page_code=options.subpage)
+            cmd = d.modesense10(options.page, sub_page_code=options.subpage, alloclen=options.alloclen)
         ##
         if options.output_format == "normal":
             for k,v in cmd.result.items():
@@ -535,7 +543,7 @@ def log_sense():
         help="Select report field value")
     parser.add_option("-s", "--subpage", type="int", dest="subpage", action="store", default=0,
         help="Select report field value")
-    parser.add_option("-a", "--alloclen", type="int", dest="alloclen", action="store", default=0,
+    parser.add_option("-l", "--alloclen", type="int", dest="alloclen", action="store", default=0,
         help="Transfer data length, default 0 means auto fix the length")
     parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw"], default="normal",
         help="Output format: normal|hex|raw, default normal")
@@ -800,6 +808,38 @@ def cdb_passthru():
                     print (bytes(cmd.datain))
     else:
         parser.print_help()
+
+def security_protocol_in():
+    usage="usage: %prog se-protocol-in <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-p", "--protocol", type="int", dest="protocol", action="store", default=0,
+        help="Specifies which security protocol to use")
+    parser.add_option("-s", "--sp", type="int", dest="sp", action="store", default=0,
+        help="Specific field in security protocol")
+    parser.add_option("-i", "--INC_512", type="int", dest="INC_512", action="store", default=1,
+        help="Set transfer size block size in step of 512 bytes")
+    parser.add_option("-l", "--alloclen", type="int", dest="alloclen", action="store", default=1,
+        help="Set transfer size block number")
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["hex", "raw"], default="hex",
+        help="Output format: hex|raw, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device %s not exist!" % dev)
+        ##
+        with SCSI(init_device(dev, open_t='scsi')) as d:
+            print ('issuing security protocol in command')
+            print ("%s:" % d.device._file_name)
+            cmd = d.security_protocol_in(options.protocol, options.sp, options.alloclen, INC_512=options.INC_512)
+        if options.output_format == "hex":
+            format_dump_bytes(cmd.datain)
+        else:
+            print (bytes(cmd.datain))
+    else:
+        parser.print_help()
 ############################
 ############################
 
@@ -811,6 +851,7 @@ commands_dict = {"list": _list,
                  "luns": luns,
                  "mode-sense": mode_sense,
                  "log-sense": log_sense,
+                 "se-protocol-in": security_protocol_in,
                  "version": version,
                  "sync": sync,
                  "read": read16,
