@@ -372,15 +372,14 @@ class NVMe(object):
         self.execute(cmd)
         return cmd
 
-    def nvme_format(self, lbaf, nsid=0xFFFFFFFF, **kwargs):
+    def nvme_format(self, lbaf, nsid=0xFFFFFFFF, mset=0, pi=0, pil=1, ses=0, timeout=600000):
         ### Check parameters
-        
         if (not self.__ctrl_identify_info[524] & 0x01) and nsid == 0xFFFFFFFF:
             print ("The controller supports format on a per namespace basis.")
         if (not self.__ctrl_identify_info[524] & 0x02) and ses and nsid == 0xFFFFFFFF:
             print ("Any secure erase performed as part of a format results in a secure erase of the particular namespace specified")
         ###
-        cmd = Format(lbaf, nsid=nsid, **kwargs)
+        cmd = Format(lbaf, nsid=0xFFFFFFFF, mset=0, pi=0, pil=1, ses=0, timeout=600000)
         self.execute(cmd)
         return cmd
 
