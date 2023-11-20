@@ -16,6 +16,7 @@ from pydiskcmd.pynvme.nvme_spec import (
     decode_ctrl_list_format,
     nvme_power_management_cq_decode,
     decode_sanitize_log,
+    decode_ctrl_register,
     )
 from pydiskcmd.plugins.ocp.DSSD_spec import (
     ocp_smart_extended_decode,
@@ -450,6 +451,22 @@ def format_print_sanitize_log(raw_data, dev='', print_type='normal'):
     elif print_type == 'json':
         result = decode_sanitize_log(raw_data)
         json_print(result)
+    else:
+        raise NotImplementedError("Not Support type: %s" % print_type)
+
+##
+def format_print_ctrl_register(raw_data, print_type='normal'):
+    if print_type == 'normal' or print_type == 'json':
+        decoded_data = decode_ctrl_register(raw_data)
+        if print_type == 'normal':
+            for k,v in decoded_data.items():
+                print ("%-8s: %x" % (k, v))
+        else:
+            json_print(decoded_data)
+    elif print_type == 'hex':
+        format_dump_bytes(raw_data)
+    elif print_type == 'raw':
+        print (raw_data)
     else:
         raise NotImplementedError("Not Support type: %s" % print_type)
 

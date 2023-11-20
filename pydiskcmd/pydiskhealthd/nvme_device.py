@@ -264,10 +264,10 @@ class NVMeDevice(NVMeDeviceBase):
                                       "persistent_event_log": self.nvme_feature_support.persistent_event_log and self.os_feature_status.persistent_event_check,
                                       "nvme_aer": self.nvme_feature_support.nvme_aer and self.os_feature_status.nvme_aer_check}
         ##
+        self.pcie_context = None
         if self.check_feature_support.get("pcie"):
-            from pydiskcmd.pypci.pci_lib import map_pci_device
-            bus_address = self._get_bus_addr_by_controller(dev_path)
-            self.pcie_context = map_pci_device(bus_address)
+            from pydiskcmd.pynvme.nvme_pcie_lib import NVMePCIe
+            self.pcie_context = NVMePCIe(dev_path)
             self.__pcie_trace = PCIeTrace()
         # init smart attr
         self.__smart_trace = SmartTrace()
@@ -369,6 +369,9 @@ class NVMeDevice(NVMeDeviceBase):
             ##
             if smart_data or current_trace_event_begin:
                 self.__device_info_db.update_dev_info(current_t, smart_data, current_trace_event_begin)
+        ## 
+        if self.check_feature_support.get("pcie"):
+            self.pcie_context.re_init_config_data()  # Re-Read pcie info
         return self.__smart_trace,self.__persistent_event_log
 
     def update_pcie_trace(self):

@@ -35,7 +35,7 @@ def init_scsi_device(dev_path):
     except:
         logger.error(traceback.format_exc())
     else:
-        logger.info("Find new %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
+        logger.info("Find %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
         dev_context.init_db()
         # check if device info 
         if dev_context.MediaType == "HDD":
@@ -80,7 +80,7 @@ def init_ata_device(dev_path):
         logger.error(traceback.format_exc())
     else:
         ##
-        logger.info("Find new %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
+        logger.info("Find %s device %s, ID: %s" % (dev_context.device_type, dev_context.dev_path, dev_context.device_id))
         dev_context.init_db()
         # check if device info 
         if dev_context.MediaType == "HDD":
@@ -122,7 +122,7 @@ def init_nvme_device(dev_path):
     except:
         logger.error(traceback.format_exc())
     else:
-        logger.info("Find new nvme device %s, ID: %s" % (dev_context.dev_path, dev_context.device_id))
+        logger.info("Find nvme device %s, ID: %s" % (dev_context.dev_path, dev_context.device_id))
         dev_context.init_db()
         ##
         if dev_context.MediaType == "HDD":
@@ -258,19 +258,18 @@ def pydiskhealthd():
     check_dev_pool(dev_pool)
     # check if lost disks
     dev_id_list = all_disk_info.get_last_store_disks_id()
+    for k,v in dev_pool.items():
+        if k in dev_id_list:
+            dev_id_list.remove(k)
+        else:
+            message = "Found new Disk ID: %s, compared to the last time to run" % k
+            syslog.info(message)
+            logger.info(message)
     if dev_id_list:
-        for k,v in dev_pool.items():
-            if k in dev_id_list:
-                dev_id_list.remove(k)
-            else:
-                message = "Found new Disk ID: %s, compared to the last time to run" % k
-                syslog.info(message)
-                logger.info(message)
-        if dev_id_list:
-            for i in dev_id_list:
-                message = "Lost the Disk ID: %s, compared to the last time to run" % i
-                syslog.info(message)
-                logger.warning(message)
+        for i in dev_id_list:
+            message = "Lost the Disk ID: %s, compared to the last time to run" % i
+            syslog.info(message)
+            logger.warning(message)
     ## init aer
     aer_trace = None
     if check_aer_support() and options.nvme_aer_type == 'loop':
@@ -589,6 +588,7 @@ def pydiskhealthd():
                         message = "Device: %s(ID: %s), link status is None." % (dev_context.dev_path, dev_context.device_id)
                         logger.debug(message)
                     ## check AER
+                    dev_context.pcie_context.re_init_config_data()  # Re-Read pcie info
                     link_aer = dev_context.pcie_context.express_aer
                     last_link_aer = dev_context.pcie_trace.pcie_aer_status
                     if last_link_aer and link_aer:

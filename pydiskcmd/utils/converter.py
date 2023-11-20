@@ -111,6 +111,11 @@ def decode_bits(data,
         elif val[0] == 'b':
             offset, length = val[1:3]
             value = data[offset:offset + length]
+        elif val[0] == 'bb':
+            bit_offset, bit_length = val[1:3]
+            if isinstance(data, bytes):
+                _tmp = scsi_ba_to_int(data, 'little')
+            value = (_tmp >> bit_offset) & (2**bit_length-1)
         elif val[0] == 'w':
             offset, length = val[1:3]
             value = data[offset:offset + length * 2]

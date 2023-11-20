@@ -60,6 +60,7 @@ def print_help():
         print ("  sanitize              Submit a sanitize command")
         print ("  device-self-test      Perform the necessary tests to observe the performance")
         print ("  pcie                  Get device PCIe status, show it")
+        print ("  show-regs             Shows the controller registers or properties. Requires character device")
         print ("  flush                 Submit a flush command, return results")
         print ("  read                  Submit a read command, return results")
         print ("  verify                Submit a verify command, return results")
@@ -1223,55 +1224,44 @@ def pcie():
                 print ("")
             return
         ##
-        from pydiskcmd.pypci.pci_lib import map_pci_device
-        from pydiskcmd.system.lin_os_tool import map_pcie_addr_by_nvme_ctrl_path
+        from pydiskcmd.pynvme.nvme_pcie_lib import NVMePCIe
         ##
-        bus_address = map_pcie_addr_by_nvme_ctrl_path(dev)
-        if bus_address:
-            pcie_context = map_pci_device(bus_address)
-            if pcie_context:
-                print ("Device %s mapped to pcie address %s" % (dev, pcie_context.device_name))
-                print ('')
-                if options.power:
-                    pcie_parent = pcie_context.parent
-                    if pcie_parent and pcie_parent.express_slot:
-                        print ("Device Slot number is %s" % pcie_parent.express_slot.slot)
-                        power_file = PCIePowerPath % pcie_parent.express_slot.slot
-                        if os.path.isfile(power_file):
-                            if options.power == "status":
-                                with open(power_file, 'r') as f:
-                                    status = f.read().strip()
-                                print ("Current PCIe power status: %s" % ("on" if status == '1' else "off"))
-                            elif options.power == "off":
-                                print ("Powering off device")
-                                with open(power_file, 'w') as f:
-                                    f.write("0")
-                            else:
-                                print ("No need power on, device is online")
-                        else:
-                            parser.error("Cannot find power file, device %s: %s" % (dev, bus_address))
-                    else:
-                        print ("Cannot find upstream device slot information.")
-                elif options.detail_info:
-                    print ("Bus address: %s" % pcie_context.device_name)
-                    print ("Location:    %s" % pcie_context.location)
-                    print ("Device Type: %s" % pcie_context.express_type)
-                    print ("Class ID:    %#x" % pcie_context.class_id)
-                    print ("Device Name: %s" % pcie_context.name)
-                    print ("")
-                    print ("VID=%#x, DID=%#x, SSVID=%#x, SSDID=%#x" % (pcie_context.vendor_id, pcie_context.device_id,pcie_context.subsystem_vendor,pcie_context.subsystem_device))
-                    if pcie_context.express_link:
-                        print ("Speed is %s(capable %s), width is %s(capable %s)" % (pcie_context.express_link.cur_speed,
-                                                                                     pcie_context.express_link.capable_speed,
-                                                                                     pcie_context.express_link.cur_width,
-                                                                                     pcie_context.express_link.capable_width)
-                              )
-                else:
-                    pass
-            else:
-                parser.error("Cannot init pcie context, device %s: %s" % (dev, power_file))
+        try:
+            pcie_dev = NVMePCIe(dev)
+        except FileNotFoundError as e:
+            parser.error("Cannot init pcie context, device %s, %s \nYou may need a device controller path, like /dev/nvme1, but not /dev/nvme1n1" % (dev, str(e)))
+        except Exception as e:
+            print (str(e))
         else:
-            parser.error("You may need a device controller path, like /dev/nvme1")
+            bus_address = pcie_dev.address
+            print ("Device %s mapped to pcie address %s" % (dev, bus_address))
+            print ('')
+            ##
+            if options.power:
+                pcie_parent = pcie_dev.get_parent()
+                if pcie_parent and pcie_parent.pcie_cap:
+                    slot = pcie_parent.pcie_cap.slot_cap.decode_data["PhysicalSlotNumber"]
+                    print ("Device Slot number is %d" % slot)
+                    power_file = PCIePowerPath % slot
+                    if os.path.isfile(power_file):
+                        if options.power == "status":
+                            with open(power_file, 'r') as f:
+                                status = f.read().strip()
+                            print ("Current PCIe power status: %s" % ("on" if status == '1' else "off"))
+                        elif options.power == "off":
+                            print ("Powering off device")
+                            with open(power_file, 'w') as f:
+                                f.write("0")
+                        else:
+                            print ("No need power on, device is online")
+                    else:
+                        parser.error("Cannot find power file, device %s: %s" % (dev, bus_address))
+                else:
+                    print ("Cannot find upstream device slot information.")
+            elif options.detail_info:
+                pcie_dev.simple_info_print()
+            else:
+                pass
     else:
         parser.print_help()
 
@@ -1304,6 +1294,26 @@ def subsystem_reset():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.subsystem_reset()
+    else:
+        parser.print_help()
+
+def show_regs():
+    usage="usage: %prog show-regs <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--output-format", type="choice", dest="output_format", action="store", choices=["normal", "hex", "raw", "json"],default="normal",
+        help="Output format: normal|hex|raw|json, default normal")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        if not check_device_exist(dev):
+            raise RuntimeError("Device not support!")
+        ##
+        from pydiskcmd.pynvme.nvme_ctrl_register import PCIeNVMeBar
+        bar = PCIeNVMeBar(dev)
+        raw = bar.read(0, 3612)
+        nvme_format_print.format_print_ctrl_register(raw, print_type=options.output_format)
     else:
         parser.print_help()
 
@@ -1449,6 +1459,7 @@ commands_dict = {"list": _list,
                  "self-test-log": self_test_log,
                  "commands-se-log": commands_supported_and_effects,
                  "pcie": pcie,
+                 "show-regs": show_regs,
                  "flush": flush,
                  "read": read,
                  "verify": verify,

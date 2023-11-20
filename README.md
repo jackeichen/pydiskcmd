@@ -78,7 +78,6 @@ Python3 Module Requirements:
 Extra Python3 Module Requirements by Linux:
 
     * cython-sgio(Need by pyscsi, download latest version from github)
-    * pcicrawler
 
 Sofware Requirements:
 
@@ -176,6 +175,7 @@ The following are all implemented sub-commands:
   sanitize              Submit a sanitize command
   device-self-test      Perform the necessary tests to observe the performance
   pcie                  Get device PCIe status, show it
+  show-regs             Shows the controller registers or properties. Requires character device
   flush                 Submit a flush command, return results
   read                  Submit a read command, return results
   verify                Submit a verify command, return results
@@ -524,6 +524,10 @@ Communicate with NVMe SSD using Windows' inbox device driver
 NVMe management command line interface.
 
 * nvme-cli: https://github.com/linux-nvme/nvme-cli
+
+pyPCIe provides a quick way to read/write registers in PCIe Base Address Register (BAR) regions.
+
+* pyPCIe: https://github.com/heikoengel/pyPCIe
 
 
 Reference

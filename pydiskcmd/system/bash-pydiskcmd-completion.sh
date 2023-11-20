@@ -11,7 +11,7 @@ _pynvme_cmds="list list-subsys smart-log id-ctrl id-ns error-log fw-log fw-downl
           format sanitize persistent_event_log device-self-test self-test-log telemetry-log \
           sanitize-log get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns \
           nvme-attach-ns nvme-detach-ns commands-se-log pcie flush read write get-lba-status \
-          get-log reset subsystem-reset version help"
+          get-log reset subsystem-reset show-regs version help"
 
 _pyscsi_cmds="list inq getlbastatus readcap luns mode-sense log-sense read write \
           sync cdb-passthru se-protocol-in version help"
@@ -311,6 +311,9 @@ pynvme_list_opts () {
 		opts+=" -n --namespace-id= -s --start-block= -c --block-count= \
             -e --entry-count= -a --action-type= -o --output-format= \
             -t --timeout= -h --help"
+		;;
+        "show-regs")
+		opts+=" -o --output-format= -h --help"
 		;;
         "version")
 		opts+=""

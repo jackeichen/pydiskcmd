@@ -260,6 +260,32 @@ LBAStatusDescriptorEntry_bit_mask = {"DSLBA": ('b', 0, 8),       # Descriptor St
                                      "Status": ('b', 13, 1),     # This field contains additional status about this LBA range.
                                      }
 
+ctrl_register_bit_mask = {"cap": ('b', 0, 8),
+                          "version": ('b', 0x08, 4),
+                          "intms": ('b', 0x0C, 4),
+                          "intmc": ('b', 0x10, 4),
+                          "cc": ('b', 0x14, 4),
+                          "csts": ('b', 0x1C, 4),
+                          "nssr": ('b', 0x20, 4),
+                          "aqa": ('b', 0x24, 4),
+                          "asq": ('b', 0x28, 8),
+                          "acq": ('b', 0x30, 8),
+                          "cmbloc": ('b', 0x38, 4),
+                          "cmbsz": ('b', 0x3C, 4),
+                          "bpinfo": ('b', 0x40, 4),
+                          "bprsel": ('b', 0x44, 4),
+                          "bpmbl": ('b', 0x48, 8),
+                          "cmbmsc": ('b', 0x50, 8),
+                          "cmbsts": ('b', 0x58, 4),
+                          "pmrcap": ('b', 0xE00, 4),
+                          "pmrctl": ('b', 0xE04, 4),
+                          "pmrsts": ('b', 0xE08, 4),
+                          "pmrebs": ('b', 0xE0C, 4),
+                          "pmrswtp": ('b', 0xE10, 4),
+                          "pmrmscl": ('b', 0xE14, 4),
+                          "pmrmscu": ('b', 0xE18, 4),
+                          }
+
 
 class ErrorInfomationLogEntryUnit(object):
     def __init__(self, data):
@@ -453,6 +479,13 @@ def decode_LBA_Status_Descriptor_List(data):
 def decode_sanitize_log(data):
     result = {}
     decode_bits(data, nvme_sanitize_log_bit_mask, result)
+    for k,v in result.items():
+        result[k] = scsi_ba_to_int(v, 'little')
+    return result
+
+def decode_ctrl_register(data):
+    result = {}
+    decode_bits(data, ctrl_register_bit_mask, result)
     for k,v in result.items():
         result[k] = scsi_ba_to_int(v, 'little')
     return result

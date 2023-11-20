@@ -8,9 +8,11 @@ versions of pydiskcmd and detailed changes.
 
 Version 0.2.7(Not Release)
   * change nvme code base to '0.1.3', pynvme version to '0.1.1'. As OCP support:
-  * Begin to support OCP Spec command in pynvme
-    * commands: cloud-SSD-plugin-version, Help, ocp-check
-    * commands: smart-add-log, error-recovery-log
+  * Change to pynvme:
+    * Begin to support OCP Spec command in pynvme
+      * commands: cloud-SSD-plugin-version, Help, ocp-check
+      * commands: smart-add-log, error-recovery-log
+    * Add command show-regs, show controller registers
   * Add NVMe subsystem-reset,list-subsys controller to pynvme for Linux
   * Change to pyscsi:
     * Add an option 'alloclen' to some commands, user can specify the buffer length 
@@ -18,6 +20,7 @@ Version 0.2.7(Not Release)
     * Add command SECURITY PROTOCOL IN
   * Change to pysata:
     * Add command trusted-receive
+  * Remove python module dependency pcicrawler
 
 Version 0.2.6
   * Fixed some bugs
