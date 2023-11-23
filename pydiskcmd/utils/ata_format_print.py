@@ -115,17 +115,23 @@ def format_print_identify(cmd, dev='', print_type='normal', show_status=False):
         for k,v in cmd.result.items():
             if k in ("FirmwareRevision", "SerialNumber", "ModelNumber"):
                 value = bytearray2string(translocate_bytearray(v))
-            elif k in ("Capacity", "NormalEraseTime"):
+            elif k in ("WorldWideName"):
+                value = int(binascii.hexlify(translocate_bytearray(v)),16)
+            elif k in ("TotalUserLBA"):
                 value = int(binascii.hexlify(translocate_bytearray(v, 2)),16)
-                if k == "Capacity":
-                    value = value *512/1024/1024/1024  # byte --> GB
-                    value = "%.2f GB" % value
             else:
-                value = int(binascii.hexlify(translocate_bytearray(v, 2)),16)
+                value = int(binascii.hexlify(translocate_bytearray(v)),16)
             target["content"][k] = value
         if print_type == 'normal':
             for k,v in target["content"].items():
-                print ("%s: %s" % (k, v))
+                if isinstance(v, str):
+                    print ("%-24s: %s" % (k, v))
+                elif k in ("NormalEraseTime", "EnhancedEraseTime"):
+                    print ("%-24s: %d(minutes)" % (k, v*2))
+                elif k in ("DRQLBAMax", "CurrentAPMLevel", "TotalUserLBA"):
+                    print ("%-24s: %d" % (k, v))
+                else:
+                    print ("%-24s: %#x" % (k, v))
         else:
             json_print(target)
     elif print_type == 'hex':

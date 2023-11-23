@@ -5,7 +5,7 @@ import os
 from mmap import mmap, PROT_READ, PROT_WRITE, PAGESIZE
 from struct import pack, unpack
 ##
-from pydiskcmd.pypci.pci_decode import PCIConfigHeader,PCIeCap,PCIeExtendCap,scsi_ba_to_int,get_pci_descriptation
+from pydiskcmd.pypci.pci_decode import PCIConfigSpace,scsi_ba_to_int,get_pci_descriptation
 
 ################
 pci_ids_locations = [
@@ -80,43 +80,49 @@ def dump_pcie_aer(path):
 ################
 class PCIeConfig(object):
     def __init__(self, config_path):
-        self.__raw_value = b''
-        ##
         self.__config_path = config_path
-        ##
-        self.pci_header = None
-        self.pcie_cap = None
-        self.pcie_extend_cap = None
+        self._pcie_config_space = None
         ##
         self.init_data()
 
     def init_data(self):
         if os.path.isfile(self.__config_path):
             with open(self.__config_path, 'rb') as f:
-                self.__raw_value = f.read()
-            if self.size > 63:
-                self.pci_header = PCIConfigHeader(self.raw_value[0:64])
-            if self.size > 255:
-                self.pcie_cap = PCIeCap(self.raw_value[64:256])
-            if self.size > 256:
-                self.pcie_extend_cap = PCIeExtendCap(self.raw_value[256:])
+                raw_data = f.read()
+            self._pcie_config_space = PCIConfigSpace(raw_data)
         else:
             raise FileNotFoundError("%s Not Found" % self.__config_path)
 
     @property
-    def raw_value(self):
-        return self.__raw_value
-
-    @property
-    def size(self):
-        return len(self.__raw_value)
+    def raw_data(self):
+        return self._pcie_config_space.raw_data
 
     @property
     def config_path(self):
         return self.__config_path
 
+    @property
+    def size(self):
+        return len(self.raw_data)
+
+    @property
+    def pci_header(self):
+        return self._pcie_config_space.PCIConfigHeader
+
+    @property
+    def pci_cap(self):
+        return self._pcie_config_space.PCICap
+
+    @property
+    def pcie_cap(self):
+        return self._pcie_config_space.PCICap.pci_cap_deocde.get(0x10)
+
+    @property
+    def pcie_extend_cap(self):
+        return self._pcie_config_space.PCIeExtendCap
+
     def read(self, offset, data_len=2):
-        return self.raw_value[offset:offset+data_len]
+        return self.raw_data[offset:offset+data_len]
 
     def get_parent(self):
         temp = os.path.realpath(os.path.dirname(self.config_path))
@@ -185,7 +191,7 @@ class NVMePCIe(PCIeConfig):
         parent = self.get_parent()
         slot = "Unknown"
         up_dev_type = 'Unknown'
-        if parent:
+        if parent and parent.pcie_cap:
             slot = parent.pcie_cap.slot_cap.decode_data["PhysicalSlotNumber"]
             up_dev_type  = EXPRESS_TYPES.get(parent.pcie_cap.cap_reg.decode_data["DevOrPortType"])
         print ("%-11s: slot %d, %s" % ("Locate To", slot, up_dev_type))

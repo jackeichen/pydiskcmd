@@ -80,16 +80,16 @@ class PCIConfigHeader(object):
 
 
 class PCIeCapRegister(object):
-    CapRegisterBitMap = {"CapabilityVersion": ('bb', 0, 4),
-                         "DevOrPortType": ('bb', 4, 4),
-                         "SlotImplemented": ('bb', 8, 1),
-                         "InterruptMessageNumber": ('bb', 9, 5),
-                         # "Undefined": ('bb', 14, 1)  # Leave it, different in different version spec.
-                         }
+    BitMap = {"CapabilityVersion": ('bb', 0, 4),
+              "DevOrPortType": ('bb', 4, 4),
+              "SlotImplemented": ('bb', 8, 1),
+              "InterruptMessageNumber": ('bb', 9, 5),
+              # "Undefined": ('bb', 14, 1)  # Leave it, different in different version spec.
+              }
     def __init__(self, raw_data):
         self.__raw_data = raw_data
         self.__cap_reg = {}
-        decode_bits(raw_data, PCIeCapRegister.CapRegisterBitMap, self.__cap_reg)
+        decode_bits(raw_data, PCIeCapRegister.BitMap, self.__cap_reg)
 
     @property
     def raw_data(self):
@@ -101,22 +101,22 @@ class PCIeCapRegister(object):
 
 
 class PCIeLinkCap(object):
-    LinkCapBitMap = {"MaxLinkSpeed": ('bb', 0, 4),
-                     "MaxLinkWidth": ('bb', 4, 6),
-                     "ASPMSupport": ('bb', 10, 2),
-                     "L0sExitLat": ('bb', 12, 3),
-                     "L1ExitLat": ('bb', 15, 3),
-                     "ClockPowerManagement": ('bb', 18, 1),
-                     "SurpriseDownErrReportingCap": ('bb', 19, 1),
-                     "DataLinkLayerLinkActiveReportingCap": ('bb', 20, 1),
-                     "LinkBWNotificationCap": ('bb', 21, 1),
-                     "ASPMOptionalityCompliance": ('bb', 22, 1),
-                     "PortNumber": ('bb', 24, 8),
-                     }
+    BitMap = {"MaxLinkSpeed": ('bb', 0, 4),
+              "MaxLinkWidth": ('bb', 4, 6),
+              "ASPMSupport": ('bb', 10, 2),
+              "L0sExitLat": ('bb', 12, 3),
+              "L1ExitLat": ('bb', 15, 3),
+              "ClockPowerManagement": ('bb', 18, 1),
+              "SurpriseDownErrReportingCap": ('bb', 19, 1),
+              "DataLinkLayerLinkActiveReportingCap": ('bb', 20, 1),
+              "LinkBWNotificationCap": ('bb', 21, 1),
+              "ASPMOptionalityCompliance": ('bb', 22, 1),
+              "PortNumber": ('bb', 24, 8),
+               }
     def __init__(self, raw_data):
         self.__raw_data = raw_data
         self.__link_cap = {}
-        decode_bits(raw_data, PCIeLinkCap.LinkCapBitMap, self.__link_cap)
+        decode_bits(raw_data, PCIeLinkCap.BitMap, self.__link_cap)
 
     @property
     def raw_data(self):
@@ -128,18 +128,18 @@ class PCIeLinkCap(object):
 
 
 class PCIeLinkStatus(object):
-    LinkStatusBitMap = {"LinkSpeed": ('bb', 0, 4),
-                        "LinkWidth": ('bb', 4, 6),
-                        "LinkTraining": ('bb', 10, 1),
-                        "SlotClockConfig": ('bb', 11, 1),
-                        "DataLinkLayerLinkActive": ('bb', 12, 1),
-                        "LinkBWManagementStatus": ('bb', 13, 1),
-                        "LinkAutonomousBWStatus": ('bb', 14, 1),
-                        }
+    BitMap = {"LinkSpeed": ('bb', 0, 4),
+              "LinkWidth": ('bb', 4, 6),
+              "LinkTraining": ('bb', 10, 1),
+              "SlotClockConfig": ('bb', 11, 1),
+              "DataLinkLayerLinkActive": ('bb', 12, 1),
+              "LinkBWManagementStatus": ('bb', 13, 1),
+              "LinkAutonomousBWStatus": ('bb', 14, 1),
+              }
     def __init__(self, raw_data):
         self.__raw_data = raw_data
         self.__link_status = {}
-        decode_bits(raw_data, PCIeLinkStatus.LinkStatusBitMap, self.__link_status)
+        decode_bits(raw_data, PCIeLinkStatus.BitMap, self.__link_status)
 
     @property
     def raw_data(self):
@@ -151,23 +151,23 @@ class PCIeLinkStatus(object):
 
 
 class PCIeSlotCap(object):
-    SlotCapBitMap = {"AttentionButtonPresent": ('bb', 0, 1),
-                     "PowerCtrlPresent": ('bb', 1, 1),
-                     "MRLSensorPresent": ('bb', 2, 1),
-                     "AttentionIndicatorPresent": ('bb', 3, 1),
-                     "PowerIndicatorPresent": ('bb', 4, 1),
-                     "Hot-PlugSurprise": ('bb', 5, 1),
-                     "Hot-PlugCapable": ('bb', 6, 1),
-                     "SlotPowerLimitValue": ('bb', 7, 8),
-                     "SlotPowerLimitScale": ('bb', 15, 2),
-                     "ElectInterlockPresent": ('bb', 17, 1),
-                     "NoCommandCompletedSupport": ('bb', 18, 1),
-                     "PhysicalSlotNumber": ('bb', 19, 13),
-                     }
+    BitMap = {"AttentionButtonPresent": ('bb', 0, 1),
+              "PowerCtrlPresent": ('bb', 1, 1),
+              "MRLSensorPresent": ('bb', 2, 1),
+              "AttentionIndicatorPresent": ('bb', 3, 1),
+              "PowerIndicatorPresent": ('bb', 4, 1),
+              "Hot-PlugSurprise": ('bb', 5, 1),
+              "Hot-PlugCapable": ('bb', 6, 1),
+              "SlotPowerLimitValue": ('bb', 7, 8),
+              "SlotPowerLimitScale": ('bb', 15, 2),
+              "ElectInterlockPresent": ('bb', 17, 1),
+              "NoCommandCompletedSupport": ('bb', 18, 1),
+              "PhysicalSlotNumber": ('bb', 19, 13),
+              }
     def __init__(self, raw_data):
         self.__raw_data = raw_data
         self.__slot_cap = {}
-        decode_bits(raw_data, PCIeSlotCap.SlotCapBitMap, self.__slot_cap)
+        decode_bits(raw_data, PCIeSlotCap.BitMap, self.__slot_cap)
 
     @property
     def raw_data(self):
@@ -179,37 +179,39 @@ class PCIeSlotCap(object):
 
 
 class PCIeCap(object):
-    PCIeCapBitMap = {"PCIeCapID": ('b', 0, 1),
-                     "NextCapPointer": ('b', 1, 1),
-                     "PCIeCapRegister": ('b', 2, 2),
-                     "DeviceCap": ('b', 4, 4),
-                     "DeviceControl": ('b', 8, 2),
-                     "DeviceStatus": ('b', 10, 2),
-                     "LinkCap": ('b', 12, 4),
-                     "LinkControl": ('b', 16, 2),
-                     "LinkStatus": ('b', 18, 2),
-                     "SlotCap": ('b', 20, 4),
-                     "SlotControl": ('b', 24, 2),
-                     "SlotStatus": ('b', 26, 2),
-                     "RootControl": ('b', 28, 2),
-                     "RootCap": ('b', 30, 2),
-                     "RootStatus": ('b', 32, 4),
-                     "DeviceCap2": ('b', 36, 4),
-                     "DeviceControl2": ('b', 40, 2),
-                     "DeviceStatus2": ('b', 42, 2),
-                     "LinkCap2": ('b', 44, 4),
-                     "LinkControl2": ('b', 48, 2),
-                     "LinkStatus2": ('b', 50, 2),
-                     "SlotCap2": ('b', 52, 4),
-                     "SlotControl2": ('b', 56, 2),
-                     "SlotStatus2": ('b', 58, 2),
-                     }
+    BitMap = {"CapabilityID": ('b', 0, 1),
+              "NextCapabilityPointer": ('b', 1, 1),
+              "PCIeCapRegister": ('b', 2, 2),
+              "DeviceCap": ('b', 4, 4),
+              "DeviceControl": ('b', 8, 2),
+              "DeviceStatus": ('b', 10, 2),
+              "LinkCap": ('b', 12, 4),
+              "LinkControl": ('b', 16, 2),
+              "LinkStatus": ('b', 18, 2),
+              "SlotCap": ('b', 20, 4),
+              "SlotControl": ('b', 24, 2),
+              "SlotStatus": ('b', 26, 2),
+              "RootControl": ('b', 28, 2),
+              "RootCap": ('b', 30, 2),
+              "RootStatus": ('b', 32, 4),
+              "DeviceCap2": ('b', 36, 4),
+              "DeviceControl2": ('b', 40, 2),
+              "DeviceStatus2": ('b', 42, 2),
+              "LinkCap2": ('b', 44, 4),
+              "LinkControl2": ('b', 48, 2),
+              "LinkStatus2": ('b', 50, 2),
+              "SlotCap2": ('b', 52, 4),
+              "SlotControl2": ('b', 56, 2),
+              "SlotStatus2": ('b', 58, 2),
+              }
+    name = "PCIExpressCap"
+    cap_id = 0x10
+    length = 60
     def __init__(self, raw_data):
         self.__raw_data = raw_data
         self.__pcie_cap = {}
-        decode_bits(raw_data, PCIeCap.PCIeCapBitMap, self.__pcie_cap)
-        if self.__pcie_cap["NextCapPointer"][0] > 0: # TODO
-            pass
+        decode_bits(raw_data, PCIeCap.BitMap, self.__pcie_cap)
+
     @property
     def raw_data(self):
         return self.__raw_data
@@ -235,7 +237,90 @@ class PCIeCap(object):
         return PCIeCapRegister(self.__pcie_cap.get("PCIeCapRegister"))
 
 
+class PowerManagementCap(object):
+    length = 8
+    cap_id = 0x01
+    name = "PowerManagementCap"
+    def __init__(self, raw_data):
+        self.__raw_data = raw_data
+
+    @property
+    def raw_data(self):
+        return self.__raw_data
+
+
+class PCICapID(object):
+    BitMap = {"CapabilityID": ("b", 0, 1),
+              "NextCapabilityPointer": ("b", 1, 1),
+              }
+    length = 4
+    def __init__(self, raw_data):
+        self.__raw_data = raw_data
+        self.__pci_cap_id = {}
+        decode_bits(raw_data, PCICapID.BitMap, self.__pci_cap_id)
+
+    @property
+    def raw_data(self):
+        return self.__raw_data
+
+    @property
+    def pci_cap_id(self):
+        return self.__pci_cap_id
+
+    @property
+    def CapabilityID(self):
+        return scsi_ba_to_int(self.pci_cap_id.get("CapabilityID"), byteorder='little')
+
+    @property
+    def NextCapabilityPointer(self):
+        return scsi_ba_to_int(self.pci_cap_id.get("NextCapabilityPointer"), byteorder='little')
+
+
+class PCICap(object):
+    PCICapTable = {0x01: PowerManagementCap,
+                   0x10: PCIeCap,
+                   }
+    def __init__(self, raw_data):
+        self.__raw_data = raw_data
+        self.__pci_cap_decode = {}
+        self.read_config()
+
+    @property
+    def raw_data(self):
+        return self.__raw_data
+
+    @property
+    def pci_cap_deocde(self):
+        return self.__pci_cap_decode
+
+    def read_config(self):
+        offset = 0
+        cap_start = False
+        while (offset < 192):
+            pci_cap_id = PCICapID(self.__raw_data[offset:offset+PCICapID.length])
+            ##
+            if cap_start and pci_cap_id.CapabilityID > 0:
+                if pci_cap_id.CapabilityID in PCICap.PCICapTable:
+                    func = PCICap.PCICapTable.get(pci_cap_id.CapabilityID)
+                    self.__pci_cap_decode[pci_cap_id.CapabilityID] = func(self.__raw_data[offset:offset+func.length])
+                else:
+                    self.__pci_cap_decode[pci_cap_id.CapabilityID] = pci_cap_id  ## TODO
+                ## no other items
+                if pci_cap_id.NextCapabilityPointer == 0:
+                    break
+                ## Get next cap
+                offset = pci_cap_id.NextCapabilityPointer - 0x40
+            else:
+                ## find the first valid capacity
+                # TODO: The valid cap that find may not the first in PCI cap list  
+                if pci_cap_id.CapabilityID > 0:
+                    cap_start = True
+                else:
+                    offset += PCICapID.length
+
+
 class PCIeExtendCap(object):  # TODO
+    BitMap = {}
     def __init__(self, raw_data):
         self.__raw_data = raw_data
         self.__pcie_extend_cap = {}
@@ -247,6 +332,41 @@ class PCIeExtendCap(object):  # TODO
     @property
     def decode_data(self):
         return self.__pcie_extend_cap
+
+
+class PCIConfigSpace(object):
+    PCIBitMap = {"PCIConfigHeader": ("b", 0, 64),
+                 "PCICap": ("b", 64, 192),
+                 }
+    PCIeBitMap = {"PCIeExtendCap": ("b", 256, 3840)}
+    PCIeBitMap.update(PCIBitMap)
+    def __init__(self, raw_data):
+        self.__raw_data = raw_data
+        self.__pci_config = {}
+        if len(self.__raw_data) > 256:
+            decode_bits(raw_data, PCIConfigSpace.PCIeBitMap, self.__pci_config)
+        else:
+            decode_bits(raw_data, PCIConfigSpace.PCIBitMap, self.__pci_config)
+        
+    @property
+    def raw_data(self):
+        return self.__raw_data
+
+    @property
+    def decode_data(self):
+        return self.__pci_config  
+
+    @property
+    def PCIConfigHeader(self):
+        return PCIConfigHeader(self.__pci_config.get("PCIConfigHeader"))
+
+    @property
+    def PCICap(self):
+        return PCICap(self.__pci_config.get("PCICap"))
+
+    @property
+    def PCIeExtendCap(self):
+        return PCIeExtendCap(self.__pci_config.get("PCIeExtendCap"))
 
 
 def get_pci_descriptation(pci_ids_path, vendor_id, start=0, end=None, device_id=None, subvd_id=None):

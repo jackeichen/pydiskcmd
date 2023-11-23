@@ -420,9 +420,9 @@ class Identify16(ATACommand16):
                               2,         # t_length field
                               1)         # t_dir field 
 
-identify_cmd = Identify16()
+cmd = Identify16()
 with init_device("/dev/sdb", open_t='scsi') as d:
-    d.execute(identify_cmd, en_raw_sense=True)
+    d.execute(cmd, en_raw_sense=True)
 ## Get the Result
 # Handle the Command execute sense data
 #  SAT-5 to make out ata_return_descriptor
