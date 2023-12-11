@@ -2,4 +2,8 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-__all__ = []
+__all__ = [
+    "nvme",
+    "nvme_device",
+    "nvme_command",
+]

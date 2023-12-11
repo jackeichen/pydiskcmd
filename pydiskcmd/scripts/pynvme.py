@@ -111,7 +111,7 @@ def _list():
                     ## para data
                     result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
                     #
-                    lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little'))
+                    lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
                     meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
                     lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
                     _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
@@ -131,7 +131,7 @@ def _list():
                 ## para data
                 result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
                 #
-                lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little'))
+                lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
                 meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
                 lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
                 _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
@@ -147,20 +147,26 @@ def _list():
 def _list_subsys():
     usage="usage: %prog list-subsys"
     parser = optparse.OptionParser(usage)
-
+    ##
     if os_type == 'Linux':
         from pydiskcmd.system.lin_os_tool import scan_nvme_subsystem
-        all_subsys = scan_nvme_subsystem()
-        temp = scan_nvme_subsystem()
-        for name in sorted(temp):
-            value = temp[name]
-            print ("%s - %s" % (name, value.nqn))
-            print ("\\")
+        subsystem = scan_nvme_subsystem()
+        for name in sorted(subsystem):
+            value = subsystem[name]
+            print ("%s - NQN=%s" % (name, value.nqn))
             ctrls = value.get_ctrls()
-            for i in sorted(ctrls):
-                ctrl = ctrls[i]
-                ## Get ctrl info
-                print (" +- %s %s %s %s" % (ctrl.ctrl_name, ctrl.transport, ctrl.address, ctrl.state))
+            if ctrls:
+                print ("\\")
+                for i in sorted(ctrls):
+                    ctrl = ctrls[i]
+                    ## Get ctrl info
+                    print (" +- %s %s %s %s" % (ctrl.ctrl_name, ctrl.transport, ctrl.address, ctrl.state))
+                    nss = ctrl.get_namespaces()
+                    if nss:
+                        print (" \\")
+                        for name in sorted(nss):
+                            ns = nss[name]
+                            print ("  +- %s path=%s wwid=%s" % (name, ns.dev_path,ns.wwid))
     else:
         raise RuntimeError("OS %s Not support" % os_type)
 

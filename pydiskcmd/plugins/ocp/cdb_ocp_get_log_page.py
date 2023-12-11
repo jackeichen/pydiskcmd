@@ -5,6 +5,7 @@ from pydiskcmd.system.os_tool import os_type
 from pydiskcmd.exceptions import CommandNotSupport
 #####
 CmdOPCode = 0x02
+admin_timeout_ms = 10000
 #####
 
 if os_type == "Linux":
@@ -35,7 +36,8 @@ if os_type == "Linux":
                                addr=data_addr,
                                data_len=512,
                                cdw10=cdw10,
-                               cdw14=cdw14,)
+                               cdw14=cdw14,
+                               timeout_ms=admin_timeout_ms)
 
     class ErrorRecoveryLog(LinCommand):
         def __init__(self, uuid_index=0, data_buffer=None):
@@ -60,7 +62,8 @@ if os_type == "Linux":
                                addr=data_addr,
                                data_len=512,
                                cdw10=cdw10,
-                               cdw14=cdw14,)
+                               cdw14=cdw14,
+                               timeout_ms=admin_timeout_ms)
 
 elif os_type == "Windows":
     from pydiskcmd.pynvme.nvme_command import WinCommand,build_int_by_bitmap

@@ -363,10 +363,7 @@ def _list():
             fw = inq_res["product_revision_level"].decode(encoding="utf-8", errors="strict")
             logical_sector_num = cap["returned_lba"]
             logical_sector_size = cap["block_length"]
-            if cap["lbppbe"] > 0:
-                physical_sector_size = (2 ** cap["lbppbe"]) * logical_sector_size
-            else:
-                physical_sector_size = 'Unknown'
+            physical_sector_size = (2 ** cap["lbppbe"]) * logical_sector_size
             disk_format = "%s / %s" % (logical_sector_size, physical_sector_size)
             disk_cap = human_read_capacity(logical_sector_size * logical_sector_num)
             if options.output_format == "normal":

@@ -2,7 +2,13 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
-from mmap import mmap, PROT_READ, PROT_WRITE, PAGESIZE
+from mmap import mmap, PAGESIZE
+try:
+    from mmap import PROT_READ
+    from mmap import PROT_WRITE
+except ImportError:
+    from mmap import ACCESS_READ as PROT_READ
+    from mmap import ACCESS_WRITE as PROT_WRITE
 from struct import pack, unpack
 ##
 from pydiskcmd.pypci.pci_decode import PCIConfigSpace,scsi_ba_to_int,get_pci_descriptation

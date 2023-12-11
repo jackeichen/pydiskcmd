@@ -128,7 +128,7 @@ def format_print_id_ns(raw_data, print_type='normal'):
             if k in ("NSZE", "NCAP", "NUSE", "MC", "DPC"):
                 print ("%-10s: %#x" % (k,scsi_ba_to_int(v, 'little')))
             elif k in ("NGUID", "EUI64"):
-                print ("%-10s: %x" % (k,scsi_ba_to_int(v, 'big')))
+                print ("%-10s: %xh" % (k,scsi_ba_to_int(v, 'big')))
             elif k == "LBAF":
                 print ("%-10s:" % k)
                 for i,lbaf in decoded_data[k].items():
