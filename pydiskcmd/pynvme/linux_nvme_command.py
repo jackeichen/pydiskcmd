@@ -81,6 +81,7 @@ class CmdStructure(LittleEndianStructure):
         else:
             self._data_buf = None
             self.addr = addr
+            cast(self.addr, POINTER(c_int)) # This will active the memory data
         self.data_len = data_len
 
         if metadata is None:

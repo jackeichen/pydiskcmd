@@ -160,13 +160,13 @@ def _list_subsys():
                 for i in sorted(ctrls):
                     ctrl = ctrls[i]
                     ## Get ctrl info
-                    print (" +- %s %s %s %s" % (ctrl.ctrl_name, ctrl.transport, ctrl.address, ctrl.state))
+                    print (" +- %s %s %s %s - cntlid=%d" % (ctrl.ctrl_name, ctrl.transport, ctrl.address, ctrl.state, ctrl.cntlid))
                     nss = ctrl.get_namespaces()
                     if nss:
                         print (" \\")
                         for name in sorted(nss):
                             ns = nss[name]
-                            print ("  +- %s path=%s wwid=%s" % (name, ns.dev_path,ns.wwid))
+                            print ("  +- %s - path=%s nsid=%d wwid=%s" % (name, ns.dev_path, ns.ns_id, ns.wwid))
     else:
         raise RuntimeError("OS %s Not support" % os_type)
 
@@ -392,7 +392,11 @@ def fw_download():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             rc = d.nvme_fw_download(options.fw_path, xfer=options.xfer, offset=options.offset)
-        cmd.check_return_status(True)
+        if rc == 0:
+            print ("Firmware Download Success")
+        else:
+            print ("Return Code: %d" % rc)
+        #cmd.check_return_status(True)
     else:
         parser.print_help()
 

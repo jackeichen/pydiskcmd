@@ -363,8 +363,6 @@ class NVMe(object):
                 else:
                     break
                 offset += int(xfer/4)
-        if RC == 0:
-            print ("Firmware Download Success")
         return RC        
 
     def nvme_fw_commit(self, fw_slot, action, bpid=0):

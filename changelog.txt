@@ -23,6 +23,8 @@ Version 0.2.7(Not Release)
   * Remove python module dependency pcicrawler
   * fix bugs
     * pynvme list & pynvme list-subsys bugs in linux
+    * pynvme.linux_nvme_command.CmdStructure accept a memory address(.addr), but it 
+      cannot be activated. Workaround it by ctypes.cast.
 
 Version 0.2.6
   * Fixed some bugs

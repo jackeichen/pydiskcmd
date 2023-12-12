@@ -287,8 +287,8 @@ class NVMeSubsystem(object):
 
 def scan_nvme_subsystem():
     all_info = {}
-    for dir_name in os.listdir(NVMeSubsystem.base_dir_path):
-        if dir_name.startswith("nvme-subsys"):
-            all_info[dir_name] = NVMeSubsystem(dir_name)
+    if os.path.exists(NVMeSubsystem.base_dir_path):
+        for dir_name in os.listdir(NVMeSubsystem.base_dir_path):
+            if dir_name.startswith("nvme-subsys"):
+                all_info[dir_name] = NVMeSubsystem(dir_name)
     return all_info
-
