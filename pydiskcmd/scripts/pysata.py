@@ -4,6 +4,7 @@
 import sys,os
 import optparse
 import binascii
+import traceback
 from pydiskcmd.pysata.sata import SATA
 from pydiskcmd.utils.ata_format_print import (
     _print_return_status,
@@ -17,7 +18,6 @@ from pydiskcmd.utils.ata_format_print import (
     )
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
-from pydiskcmd.system.os_tool import check_device_exist
 from pydiskcmd.exceptions import ExecuteCmdErr
 
 Version = '0.2.0'
@@ -75,9 +75,10 @@ def _list():
     for dev_context in scan_device(debug=False):
         ## check ATA device
         if dev_context.device_type == "ata":
-            sn = bytearray2string(translocate_bytearray(dev_context.id_info[20:40])).strip()
+            invalid_symbol = b'\x00'.decode()
+            sn = bytearray2string(translocate_bytearray(dev_context.id_info[20:40])).strip().strip(invalid_symbol)
             fw = bytearray2string(translocate_bytearray(dev_context.id_info[46:54]))
-            mn = bytearray2string(translocate_bytearray(dev_context.id_info[54:94])).strip()
+            mn = bytearray2string(translocate_bytearray(dev_context.id_info[54:94])).strip().strip(invalid_symbol)
             logical_sector_num = int(binascii.hexlify(translocate_bytearray(dev_context.id_info[200:208], 2)),16)
             if dev_context.id_info[213] & 0xC0 == 0x40: # word 106 valid
                 if dev_context.id_info[213] & 0x10:
@@ -109,8 +110,6 @@ def check_power_mode():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise ("Device %s not exist!" % dev)
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing check power mode command')
@@ -162,8 +161,6 @@ def read_dma_ext():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device %s not exist!" % dev)
         ##
         print ('issuing read DMA EXT command.')
         with SATA(init_device(dev, open_t='ata'), 512) as d:
@@ -201,8 +198,6 @@ def write_dma_ext():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ## check data
         if options.data:
             options.data = bytearray(options.data, 'utf-8')
@@ -247,8 +242,6 @@ def flush():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing flush command')
@@ -272,8 +265,6 @@ def accessible_max_address():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing accessible max address command')
@@ -315,8 +306,6 @@ def identify():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         if options.output_format != 'json':
             print ('issuing identify command')
@@ -340,8 +329,6 @@ def self_test():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             if options.self_test == "short":
@@ -395,8 +382,6 @@ def read_log():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing read-log command')
@@ -447,8 +432,6 @@ def set_feature():
             return 0
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         print ('issuing set-feature command')
         print ('Device: %s' % dev)
@@ -477,8 +460,6 @@ def smart_read_log():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing smart-read-log command')
@@ -518,8 +499,6 @@ def smart():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         from pydiskcmd.pysata.sata_spec import SMART_KEY
         #
@@ -545,8 +524,6 @@ def standby_imm():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing standby immediate command')
@@ -572,8 +549,6 @@ def trim():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ## check LBA format
         LBA_list = options.block_range.split(',')
         if 0 < len(LBA_list) < 65:
@@ -617,8 +592,6 @@ def download_fw():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         if not os.path.isfile(options.fw_file):
             parser.error("Firmware file Not Exist.")
         ##
@@ -656,8 +629,6 @@ Important: To use this command, libata.allow_tpm must be set to 1 in linux.
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device %s not exist!" % dev)
         ##
         with SATA(init_device(dev, open_t='ata')) as d:
             print ('issuing trusted receive command')
@@ -700,7 +671,11 @@ def pysata():
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command in commands_dict:
-            commands_dict[command]()
+            try:
+                commands_dict[command]()
+            except Exception as e:
+                print (str(e))
+                #traceback.print_exc()
         else:
             print_help()
     else:

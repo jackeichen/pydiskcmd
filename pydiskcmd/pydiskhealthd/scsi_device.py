@@ -24,6 +24,11 @@ def get_dev_id(dev_path):
             device_id = bytes(i['unit_serial_number'])
     return device_id
 
+def _str_strip_invalid_symbol(string):
+    for symbol in (b'\x00'.decode(),):
+        string = string.strip(symbol)
+    return string.strip()
+
 
 class SCSIFeatureStatus(object):
     def __init__(self):
@@ -51,21 +56,22 @@ class SCSIDeviceBase(object):
             inq_info = d.inquiry().result
         #
         if 'unit_serial_number' in serial_info:
-            id_string = bytearray2string(serial_info['unit_serial_number']).strip()
+            id_string = bytearray2string(serial_info['unit_serial_number'])
             if id_string:
-                self.__serial = id_string
+                self.__serial = _str_strip_invalid_symbol(id_string)
             else:
                 for encode_t in ("UTF-8", "GBK", "GB2312"):
                     try:
-                        self.__serial = bytes(serial_info['unit_serial_number']).decode(encoding=encode_t)
+                        self.__serial = _str_strip_invalid_symbol(bytes(serial_info['unit_serial_number']).decode(encoding=encode_t))
                     except:
                         pass
                     else:
+                        ## invalid symbol
                         break
         if 'product_identification' in inq_info:
             for encode_t in ("UTF-8", "GBK", "GB2312"):
                 try:
-                    self.__model = inq_info['product_identification'].decode(encoding=encode_t, errors="strict")
+                    self.__model = _str_strip_invalid_symbol(inq_info['product_identification'].decode(encoding=encode_t, errors="strict"))
                 except:
                     pass
                 else:

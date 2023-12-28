@@ -12,6 +12,11 @@ from pydiskcmd.pydiskhealthd.disk_health_calculation import get_ata_diskhealth
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 
 
+def _str_strip_invalid_symbol(string):
+    for symbol in (b'\x00'.decode(),):
+        string = string.strip(symbol)
+    return string.strip()
+
 class SmartInfo(object):
     def __init__(self, vs_value, time_t, thresh_info):
         self.raw_vs_value = vs_value
@@ -160,8 +165,8 @@ class ATADeviceBase(object):
             cmd_identify = d.identify()
             identify_info = cmd_identify.result
         ##
-        self.__model = bytearray2string(translocate_bytearray(identify_info.get("ModelNumber")))
-        self.__serial = bytearray2string(translocate_bytearray(identify_info.get("SerialNumber")))
+        self.__model = _str_strip_invalid_symbol(bytearray2string(translocate_bytearray(identify_info.get("ModelNumber"))))
+        self.__serial = _str_strip_invalid_symbol(bytearray2string(translocate_bytearray(identify_info.get("SerialNumber"))))
 
     @property
     def device_id(self):

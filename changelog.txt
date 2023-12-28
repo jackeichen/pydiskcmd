@@ -24,7 +24,9 @@ Version 0.2.7(Not Release)
   * fix bugs
     * pynvme list & pynvme list-subsys bugs in linux
     * pynvme.linux_nvme_command.CmdStructure accept a memory address(.addr), but it 
-      cannot be activated. Workaround it by ctypes.cast.
+      cannot be activated. Workaround by ctypes.cast.
+    * In linux, need filter out invalid nvmeX directory in 
+      /sys/devices/virtual/nvme-subsystem/nvme-subsysY
 
 Version 0.2.6
   * Fixed some bugs

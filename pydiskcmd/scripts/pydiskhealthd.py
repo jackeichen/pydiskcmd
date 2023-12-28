@@ -243,7 +243,7 @@ def pydiskhealthd():
     ## check parameter
     if options.check_daemon_running:
         ##
-        if check_backaround_running(pydiskhealthd):
+        if check_backaround_running():
             return
     ## notify systemd here, only for linux
     if os_type == "Linux":

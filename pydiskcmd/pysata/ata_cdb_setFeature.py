@@ -34,5 +34,6 @@ class SetFeature(ATACommand16):
                               0xEF,      # command
                               0x03,      # protocal
                               0,         # t_length
-                              0)         # t_dir
+                              0,         # t_dir
+                              extend=0)  # 28 bit command
 

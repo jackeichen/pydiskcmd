@@ -135,7 +135,7 @@ class NVMeNS(object):
             ## Get nvme device type 1
             _id = self._get_ns_id(self.ns_name)
             for dev in os.listdir(NVMeNS.base_dir_path):
-                if get_nvme_device_type(dev) == 1:
+                if get_nvme_device_type(dev) == 1 and os.path.exists(os.path.join(NVMeNS.base_dir_path,dev)):
                     if self._get_ns_id(dev) == _id:
                         return "/dev/%s" % dev
 
@@ -156,7 +156,7 @@ class NVMeNS(object):
 def scan_nvme_namespaces():
     all_info = {}
     if os.path.exists(NVMeNS.base_dir_path):
-        for i in sorted([dev for dev in os.listdir(NVMeNS.base_dir_path) if get_nvme_device_type(dev) == 1]):
+        for i in sorted([dev for dev in os.listdir(NVMeNS.base_dir_path) if get_nvme_device_type(dev) == 1 and os.path.exists(os.path.join(NVMeNS.base_dir_path,dev))]):
             all_info[i] = NVMeNS(i)
     return all_info
 
@@ -218,7 +218,7 @@ class NVMeController(object):
 
     def retrieve_ns(self):
         for dir_name in os.listdir(self._ctrl_path):
-            if get_nvme_device_type(dir_name) in (1,3):
+            if get_nvme_device_type(dir_name) in (1,3) and os.path.exists(os.path.join(self._ctrl_path,dir_name)):
                 yield NVMeNS(dir_name, nvme_ctrl=self)
 
     def get_namespaces(self):
@@ -253,7 +253,7 @@ class NVMeSubsystem(object):
 
     def retrieve_ctrl(self):
         for dir_name in os.listdir(self._current_dir_path):
-            if get_nvme_device_type(dir_name) == 0:
+            if get_nvme_device_type(dir_name) == 0 and os.path.exists(os.path.join(self._current_dir_path,dir_name)):
                 yield NVMeController(dir_name,subsystem=self)
 
     def get_ctrls(self):
@@ -289,6 +289,6 @@ def scan_nvme_subsystem():
     all_info = {}
     if os.path.exists(NVMeSubsystem.base_dir_path):
         for dir_name in os.listdir(NVMeSubsystem.base_dir_path):
-            if dir_name.startswith("nvme-subsys"):
+            if dir_name.startswith("nvme-subsys") and os.path.exists(os.path.join(NVMeSubsystem.base_dir_path,dir_name)):
                 all_info[dir_name] = NVMeSubsystem(dir_name)
     return all_info

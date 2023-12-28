@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import sys,os
 import optparse
+import traceback
 from pydiskcmd.pyscsi.scsi import SCSI
 from pydiskcmd.pyscsi.scsi_spec import LogSenseAttr
 from pydiskcmd.utils import init_device
 from pydiskcmd.utils.format_print import format_dump_bytes,human_read_capacity
-from pydiskcmd.system.os_tool import check_device_exist
 from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 from pyscsi.pyscsi.scsi_enum_getlbastatus import P_STATUS
@@ -287,8 +287,6 @@ def inq():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         #
         evpd = 0
         if options.page_code >= 0:
@@ -348,15 +346,16 @@ def _list():
 
     (options, args) = parser.parse_args()
     ##
-    print_format = "%-20s %-10s %-20s %-40s %-26s %-16s %-8s"
+    print_format = "%-20s %-10s %-30s %-40s %-26s %-16s %-8s"
     print (print_format % ("Node", "Protocal", "SN", "Model", "Capacity", "Format(L/P)", "FW Rev"))
-    print (print_format % ("-"*20, "-"*10, "-"*20, "-"*40, "-"*26, "-"*16, "-"*8))
+    print (print_format % ("-"*20, "-"*10, "-"*30, "-"*40, "-"*26, "-"*16, "-"*8))
     from pydiskcmd.pydiskhealthd.all_device import scan_device
     for dev_context in scan_device(debug=False):
         ## check ATA device
         if dev_context.device_type == "scsi" or dev_context.device_type == "ata":
-            sn = dev_context.Serial.strip()
-            mn = dev_context.Model.strip()
+            invalid_symbol = b'\x00'.decode()
+            sn = dev_context.Serial.strip().strip(invalid_symbol)
+            mn = dev_context.Model.strip().strip(invalid_symbol)
             with SCSI(init_device(dev_context.dev_path, open_t='scsi'), 512) as d:
                 inq_res = d.inquiry().result
                 cap = d.readcapacity16().result
@@ -381,8 +380,6 @@ def getlbastatus():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing getlbastatus command')
@@ -419,8 +416,6 @@ def readcap():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing readcap command')
@@ -462,8 +457,6 @@ def luns():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing report luns command')
@@ -503,8 +496,6 @@ def mode_sense():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing mode sense command')
@@ -549,8 +540,6 @@ def log_sense():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         # 
         if options.alloclen == 0:
             log_len = 96 # set a 96 length to get
@@ -628,8 +617,6 @@ def sync():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device not exist!")
         ##
         with SCSI(init_device(dev, open_t='scsi'), 512) as d:
             print ('issuing SynchronizeCache16 command')
@@ -654,8 +641,6 @@ def read16():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device %s not exist!" % dev)
         ##
         with SCSI(init_device(dev, open_t='scsi'), options.bs) as d:
             print ('issuing read16 command')
@@ -685,8 +670,6 @@ def write16():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device %s not exist!" % dev)
         ## check data
         if options.data:
             options.data = bytearray(options.data, 'utf-8')
@@ -766,8 +749,6 @@ def cdb_passthru():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device %s not exist!" % dev)
         #
         if options.raw_cdb:
             raw_cdb = bytes(bytearray(options.raw_cdb))
@@ -824,8 +805,6 @@ def security_protocol_in():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        if not check_device_exist(dev):
-            raise RuntimeError("Device %s not exist!" % dev)
         ##
         with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing security protocol in command')
@@ -859,7 +838,11 @@ def pyscsi():
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command in commands_dict:
-            commands_dict[command]()
+            try:
+                commands_dict[command]()
+            except Exception as e:
+                print (str(e))
+                #traceback.print_exc()
         else:
             print_help()
     else:

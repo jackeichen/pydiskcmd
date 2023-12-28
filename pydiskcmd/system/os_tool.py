@@ -60,7 +60,7 @@ def read_kv_file(file_path, target_key_strip=(), target_value_strip=()):
                     target[key] = value
         return target
 
-def check_backaround_running(name):
+def check_backaround_running():
     if os_type == "Linux":
         ##
         proc = subprocess.Popen(["pgrep", "-l", "-f", "pydiskhealthd"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -86,8 +86,6 @@ def check_backaround_running(name):
             print (stderr)
             return 2
     elif os_type == "Windows":
-        ##
-        import time
         ##
         proc = subprocess.Popen(['tasklist', '/FI', 'imagename eq pydiskhealthd.exe'], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         proc.wait()
