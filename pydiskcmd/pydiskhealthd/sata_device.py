@@ -149,9 +149,7 @@ def get_dev_id(dev_path):
 
 class ATADeviceBase(object):
     """
-    dev_path: the nvme controller device path(ex. /dev/nvme0)
-    
-    
+    dev_path: the nvme controller device path(ex. /dev/sdb)
     """
     def __init__(self, dev_path):
         self.__device_type = 'ata'
@@ -196,9 +194,7 @@ class ATAFeatureStatus(object):
 
 class ATADevice(ATADeviceBase):
     """
-    dev_path: the nvme controller device path(ex. /dev/nvme0)
-    
-    
+    dev_path: the nvme controller device path(ex. /dev/sdb)
     """
     def __init__(self, dev_path, init_db=False):
         super(ATADevice, self).__init__(dev_path)

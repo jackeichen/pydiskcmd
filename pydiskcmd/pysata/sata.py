@@ -403,7 +403,7 @@ class SATA(object):
         ## check fw if multiple of 512
         res = len(data) % 512
         if res != 0:
-            data += (b'\x00'*(512-re)) # need to be multiple of 512 Bytes, otherwise refill it.
+            data += (b'\x00'*(512-res)) # need to be multiple of 512 Bytes, otherwise refill it.
         #dataview = memoryview(data)
         lba = 0
         length = len(data) / 512  # length=how many sectors(512 Bytes) of data

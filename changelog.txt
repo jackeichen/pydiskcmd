@@ -6,7 +6,7 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.2.7(Not Release)
+Version 0.2.7
   * change nvme code base to '0.1.3', pynvme version to '0.1.1'. As OCP support:
   * Change to pynvme:
     * Begin to support OCP Spec command in pynvme
