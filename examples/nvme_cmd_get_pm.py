@@ -2,9 +2,9 @@
 # coding: utf-8
 import sys,os
 import optparse
-from pydiskcmd.pynvme.nvme import NVMe
-from pydiskcmd.pynvme.nvme_spec import nvme_power_management_cq_decode
-from pydiskcmd.utils import init_device
+from pydiskcmdlib.pynvme.nvme import NVMe
+from pydiskcmdcli.nvme_spec import nvme_power_management_cq_decode
+from pydiskcmdlib.utils import init_device
 
 Version = '0.01'
 

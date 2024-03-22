@@ -6,8 +6,8 @@
 import os
 import sys
 import optparse
-import pydiskcmd.pysata.sata
-import pydiskcmd.utils
+from pydiskcmdlib.pysata.sata import SATA
+from pydiskcmdlib.utils import init_device
 Version = '0.0.1'
 options = args = dev = None
 
@@ -24,7 +24,7 @@ def GetOptions():
         help="File(Read first) containing the block to write")
     parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=512,
         help="To fix the block size of the device. Default 512")
-    
+
     global options,args,dev
     (options, args) = parser.parse_args()
     ## check options
@@ -53,8 +53,8 @@ def GetOptions():
 
 def main():
     GetOptions()
-    device = pydiskcmd.utils.init_device(dev)
-    with pydiskcmd.pysata.sata.SATA(device,options.bs) as s:
+    device = init_device(dev)
+    with SATA(device,options.bs) as s:
         print ('issuing write command')
         print ("%s:" % device._file_name)
         print ('')

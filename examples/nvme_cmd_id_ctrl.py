@@ -2,11 +2,11 @@
 # coding: utf-8
 import sys,os
 import optparse
-from pydiskcmd.pynvme.nvme import NVMe
-from pydiskcmd.pynvme.nvme_spec import nvme_id_ctrl_decode
-from pydiskcmd.utils import init_device
-from pydiskcmd.utils.format_print import format_dump_bytes
-from pydiskcmd.utils.converter import scsi_ba_to_int,ba_to_ascii_string
+from pydiskcmdlib.pynvme.nvme import NVMe
+from pydiskcmdcli.nvme_spec import nvme_id_ctrl_decode
+from pydiskcmdlib.utils import init_device
+from pydiskcmdcli.utils.format_print import format_dump_bytes
+from pydiskcmdlib.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 
 
 Version = '0.01'

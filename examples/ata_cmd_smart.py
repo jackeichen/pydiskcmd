@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 import sys
-import pydiskcmd.pysata.sata
-import pydiskcmd.utils
+from pydiskcmdlib.pysata.sata import SATA
+from pydiskcmdlib.utils import init_device
 import binascii
-from pydiskcmd.pysata.sata_spec import decode_smart_info,decode_smart_thresh
-from pydiskcmd.utils.converter import scsi_ba_to_int
-#from pyscsi.utils.bytearray_converter import prtsmartinfo
+from pydiskcmdcli.sata_spec import decode_smart_info,decode_smart_thresh
+from pydiskcmdlib.utils.converter import scsi_ba_to_int
 
 def usage():
     print('Usage: smart.py <device>')
@@ -18,7 +17,7 @@ def bytearray2hex_l(data,start,offset):
     return int(t,16)
 
 def main(device):
-    with pydiskcmd.pysata.sata.SATA(device, 512) as s:
+    with SATA(device, 512) as s:
         data = s.smart_read_data().result
         vs_smart = data.pop('smartInfo')
         general_smart = data
@@ -57,6 +56,6 @@ def main(device):
 
 if __name__ == "__main__":
     if len(sys.argv) == 2:
-        main(pydiskcmd.utils.init_device(sys.argv[1]))
+        main(init_device(sys.argv[1]))
     else:
         usage()

@@ -2,8 +2,8 @@
 # coding: utf-8
 import sys,os
 import optparse
-from pydiskcmd.pynvme.nvme import NVMe
-from pydiskcmd.utils import init_device
+from pydiskcmdlib.pynvme.nvme import NVMe
+from pydiskcmdlib.utils import init_device
 
 Version = '0.01'
 
@@ -39,10 +39,8 @@ def GetOptions():
 
 
 def main():
-    '''
-    Now trim is must 4k aligned.
-    '''
     dev,options = GetOptions()
+    raise NotImplementedError("Function Not Ready")
     device = init_device(dev)
     with NVMe(device) as d:
         if options.behavior & 0x01:

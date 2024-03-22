@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 import sys
-import pydiskcmd.pysata.sata
-import pydiskcmd.utils
+from pydiskcmdlib.pysata.sata import SATA
+from pydiskcmdlib.utils import init_device
 
 Version = '0.01'
 def usage():
@@ -20,7 +20,7 @@ def handle_para():
     if len(sys.argv) == 3:
         dev = sys.argv[1]
         if "/dev/" in dev:
-            device = pydiskcmd.utils.init_device(dev)
+            device = init_device(dev)
         else:
             raise RuntimeError("device Format Error!")
         LBAs = sys.argv[2]
@@ -49,7 +49,7 @@ def main():
     ParaDict = handle_para()
     device = ParaDict["device"]
     lba_description = ParaDict["lba_description"]
-    with pydiskcmd.pysata.sata.SATA(device,512) as s:
+    with SATA(device,512) as s:
         print ("Note: If you want trim command works, lba_description need 4k aligned!")
         print ('')
         print ('issuing trim command')

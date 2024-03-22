@@ -2,8 +2,8 @@
 # coding: utf-8
 import sys,os
 import optparse
-import pydiskcmd.pysata.sata
-import pydiskcmd.utils
+from pydiskcmdlib.pysata.sata import SATA
+from pydiskcmdlib.utils import init_device
 Version = '0.0.1'
 options = args = dev = None
 
@@ -26,8 +26,8 @@ def GetOptions():
 
 def main():
     GetOptions()
-    device = pydiskcmd.utils.init_device(dev)
-    with pydiskcmd.pysata.sata.SATA(device,options.bs) as s:
+    device = init_device(dev)
+    with SATA(device,options.bs) as s:
         print ('issuing read command')
         print ("%s:" % device._file_name)
         cmd = s.read_DMAEXT16(options.slba, options.nlb)

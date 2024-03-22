@@ -6,6 +6,19 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
+Version 0.3.0(Not Release)
+  * Important: pydiskcmd is split into 2 parts, code in different directory has 
+    different jobs
+    * pydiskcmdlib
+      It includes the library api to access the storage device with nvme,scsi and ata
+    * pydiskcmdcli
+      The cli tool code of pynvme,pysata and pyscsi
+  * Important:  Remove pydiskhealthd from the tool
+  * Important:  Executable programs changed
+    * Discard - pydiskutils,pydiskhealthd
+  * cython-sgio becomes an optional module for pydiskcmd, linux sgio device is ready
+  * Give a hint of Dangerous Operation 
+
 Version 0.2.7
   * change nvme code base to '0.1.3', pynvme version to '0.1.1'. As OCP support:
   * Change to pynvme:
