@@ -26,9 +26,6 @@ def GetOptions():
 
 
 def main():
-    '''
-    Now trim is must 4k aligned.
-    '''
     dev,options = GetOptions()
     device = init_device(dev)
     with NVMe(device) as d:

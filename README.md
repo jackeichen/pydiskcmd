@@ -108,7 +108,6 @@ Building and installing
 Sofware Requirements:
 
     * python3(Required)
-    * python3-devel(Required, only in linux)
 
 Python3 Module Requirements:
 

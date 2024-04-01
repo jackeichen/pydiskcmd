@@ -31,3 +31,63 @@ class SRB_IO_CONTROL(Structure):
         ('Length', c_uint32),
     ]
     _pack_ = 1
+
+# typedef struct _FIRMWARE_REQUEST_BLOCK {
+#     ULONG   Version;            // FIRMWARE_REQUEST_BLOCK_STRUCTURE_VERSION
+#     ULONG   Size;               // Size of the data structure.
+#     ULONG   Function;           // Function code
+#     ULONG   Flags;
+
+#     ULONG   DataBufferOffset;   // the offset is from the beginning of buffer. e.g. from beginning of SRB_IO_CONTROL. The value should be multiple of sizeof(PVOID); Value 0 means that there is no data buffer.
+#     ULONG   DataBufferLength;   // length of the buffer
+# } FIRMWARE_REQUEST_BLOCK, *PFIRMWARE_REQUEST_BLOCK;
+class FIRMWARE_REQUEST_BLOCK(Structure):
+    # Total length 24 Bytes
+    _fields_ = [
+        ('Version', c_uint32),
+        ('Size', c_uint32),
+        ('Function', c_uint32),
+        ('Flags', c_uint32),
+        ('DataBufferOffset', c_uint32),
+        ('DataBufferLength', c_uint32),
+    ]
+    _pack_ = 1
+
+# typedef struct _STORAGE_FIRMWARE_DOWNLOAD {
+
+#     ULONG       Version;            // STORAGE_FIRMWARE_DOWNLOAD_STRUCTURE_VERSION
+#     ULONG       Size;               // sizeof(STORAGE_FIRMWARE_DOWNLOAD)
+
+#     ULONGLONG   Offset;             // image file offset, should be aligned to value of "ImagePayloadAlignment" from STORAGE_FIRMWARE_INFO.
+#     ULONGLONG   BufferSize;         // should be multiple of value of "ImagePayloadAlignment" from STORAGE_FIRMWARE_INFO
+
+#     UCHAR       ImageBuffer[0];     // firmware image file. 
+
+# } STORAGE_FIRMWARE_DOWNLOAD, *PSTORAGE_FIRMWARE_DOWNLOAD; 
+class STORAGE_FIRMWARE_DOWNLOAD(Structure):
+    _fields_ = [
+        ('Version', c_uint32),
+        ('Size', c_uint32),
+        ('Offset', c_ulonglong),
+        ('BufferSize', c_ulonglong),
+        ('ImageBuffer', c_uint32 * 0),
+    ]
+    _pack_ = 1
+
+# typedef struct _STORAGE_FIRMWARE_ACTIVATE {
+
+#     ULONG   Version;
+#     ULONG   Size;
+
+#     UCHAR   SlotToActivate;
+#     UCHAR   Reserved0[3];
+
+# } STORAGE_FIRMWARE_ACTIVATE, *PSTORAGE_FIRMWARE_ACTIVATE;
+class STORAGE_FIRMWARE_ACTIVATE(Structure):
+    _fields_ = [
+        ('Version', c_uint32),
+        ('Size', c_uint32),
+        ('SlotToActivate', c_uint8),
+        ('Reserved0', c_ubyte * 3),
+    ]
+    _pack_ = 1

@@ -63,7 +63,7 @@ def print_help():
         print ("  write                       Send a write command to disk")
         print ("  flush                       Send a flush command to disk")
         print ("  trim                        Send a trim command to disk")
-        print ("  download_fw                 Download firmware to target disk")
+        print ("  download-fw                 Download firmware to target disk")
         print ("  version                     Shows the program version")
         print ("  help                        Display this help")
         print ("")
@@ -782,7 +782,7 @@ commands_dict = {"list": _list,
                  "write": write_dma_ext,
                  "flush": flush,
                  "trim": trim,
-                 "download_fw": download_fw,
+                 "download-fw": download_fw,
                  "version": version,
                  "help": print_help,
                  "cli-info": cli_info,

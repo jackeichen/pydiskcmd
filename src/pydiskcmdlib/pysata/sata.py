@@ -387,6 +387,7 @@ class SATA(object):
         ## read fw data
         with open(fw_path, 'rb') as fp:
             data = fp.read()
+        data = bytearray(data)
         ## check fw if multiple of 512
         res = len(data) % 512
         if res != 0:

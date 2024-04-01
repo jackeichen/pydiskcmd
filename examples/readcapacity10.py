@@ -8,12 +8,12 @@
 
 import sys
 
-from pydiskcmd.pyscsi.scsi import SCSI
-from pydiskcmd.utils import init_device
+from pydiskcmdlib.pyscsi.scsi import SCSI
+from pydiskcmdlib.utils import init_device
 
 
 def main(device):
-    with pydiskcmd.pyscsi.scsi.SCSI(device) as s:
+    with SCSI(device) as s:
         print('ReadCapacity10')
         print('==========================================\n')
         r = s.readcapacity10().result

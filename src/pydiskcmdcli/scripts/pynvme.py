@@ -426,6 +426,18 @@ def fw_download():
             parser.error("No Firmware File provided")
             return 1
         ##
+        # if os_type == 'Windows':
+        #     print ("Recommand a safety native methmod to download fimrware to device, with windows Power-Shell.")
+        #     print ("")
+        #     print ("1. First open Power-Shell with administrators;")
+        #     print ("2. Get the UniqueId of PhysicalDriveX(X is the number):")
+        #     print ("   > Get-Disk | Select Number, Uniqueid")
+        #     print ("3. Download the firmware to target disk:")
+        #     print ('   > Update-StorageFirmware -UniqueId "<UniqueId>" -ImagePath "<Firwmare_Ptah>" -SlotNumber <Slot_Number>')
+        #     print ('')
+        #     print ("Note: You may need to active the new firmware after download.")
+        #     print ('')
+        #     return 0
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             ## Get FWUG, fwug is in dward
@@ -478,6 +490,19 @@ def fw_commit():
         ## check device
         dev = sys.argv[2]
         ##
+        # if os_type == 'Windows':
+        #     print ("Recommand a safety methmod to active fimrware in a device, with windows Power-Shell.")
+        #     print ("")
+        #     print ("1. First open Power-Shell with administrators;")
+        #     print ("2. Get the UniqueId of PhysicalDriveX:")
+        #     print ("   > Get-Disk | Select Number, Uniqueid")
+        #     print ("3. Get firmware info on a disk:")
+        #     print ('   > Get-StorageFirmwareInformation -Uniqueid "<UniqueId>"')
+        #     print ("4. Active the firmware to target disk:")
+        #     print ('   > Update-StorageFirmware -UniqueId "<UniqueId>" -SlotNumber <Slot_Number>')
+        #     print ('')
+        #     return 0
+        ## native methmod to update firmware
         script_check(options, admin_check=True)
         smud = False
         with NVMe(init_device(dev, open_t='nvme')) as d:
@@ -1652,7 +1677,7 @@ def ocp():
 from pydiskcmdcli.plugins import vroc_plugin,VROC_ENABLE
 from pydiskcmdcli.utils.string_utils import decode_bytes,string_strip
 if VROC_ENABLE:
-    from pydiskcmdlib.vroc.nvme_raid import NVMeDisk
+    from pydiskcmdlib.vroc.nvme_raid import NVMeDisk  # noqa
 
 def _win_nvme_vroc_print_help():
     if len(sys.argv) > 3 and sys.argv[3] in plugin_ocp_commands_dict:

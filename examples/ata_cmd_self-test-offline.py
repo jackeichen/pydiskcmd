@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 import sys,os
-import pydiskcmd.pysata.sata
-import pydiskcmd.utils
+import pydiskcmdlib
 
 max_short_polling_t = 10 # minutes
 ##
@@ -34,7 +33,7 @@ def get_para():
 
 
 def main(device, op):
-    with pydiskcmd.pysata.sata.SATA(device,512) as s:
+    with pydiskcmdlib.pysata.sata.SATA(device,512) as s:
         print ('issuing self-test command')
         print ("%s:" % device._file_name)
         print ('')
@@ -63,5 +62,5 @@ def main(device, op):
 
 if __name__ == "__main__":
     dev,OP = get_para()
-    main(pydiskcmd.utils.init_device(dev), OP)
+    main(pydiskcmdlib.utils.init_device(dev), OP)
 

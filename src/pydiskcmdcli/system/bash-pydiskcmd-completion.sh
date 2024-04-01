@@ -4,11 +4,11 @@
 # bash tab completion for the nvme command line utility
 
 _pysata_cmds="list check-PowerMode accessible-MaxAddress identify self-test set-feature \
-          read-log smart-read-log smart standby read write flush trim download_fw \
+          read-log smart-read-log smart standby read write flush trim download-fw \
           trusted-receive version help"
 
 _pynvme_cmds="list list-subsys smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
-          format sanitize persistent_event_log device-self-test self-test-log telemetry-log \
+          format sanitize persistent-event-log device-self-test self-test-log telemetry-log \
           sanitize-log get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns \
           nvme-attach-ns nvme-detach-ns commands-se-log pcie flush read write get-lba-status \
           get-log reset subsystem-reset show-regs version help"
@@ -86,7 +86,7 @@ pysata_list_opts () {
         "trim")
 		opts+=" -r --block_range= --show_status -h --help"
 		;;
-        "download_fw")
+        "download-fw")
 		opts+=" -f --file= -c --code= -x --xfer= -h --help"
 		;;
         "version")
@@ -250,7 +250,7 @@ pynvme_list_opts () {
 		opts+=" -d --no-dealloc -i --oipbp= -n --owpass= -u --ause= \
             -a --sanact= -p --ovrpat= -h --help"
 		;;
-        "persistent_event_log")
+        "persistent-event-log")
 		opts+=" -a --action= -o --output-format= -f --filter= \
             -h --help"
 		;;

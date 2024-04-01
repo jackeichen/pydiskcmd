@@ -51,9 +51,14 @@ def execute(
         raise NotImplemented('Indirect IO is not suported')
     elif data_out is not None and len(data_out):
         dxfer_direction = SG_DXFER_TO_DEV
+        # For check if not bytearray data
+        if not isinstance(data_out, bytearray):
+            data_out = bytearray(data_out)
         data_buffer = data_out
     elif data_in is not None and len(data_in):
         dxfer_direction = SG_DXFER_FROM_DEV
+        if not isinstance(data_in, bytearray):
+            raise RuntimeError("Bytearray data_in is need")
         data_buffer = data_in
     else:
         dxfer_direction = SG_DXFER_NONE
