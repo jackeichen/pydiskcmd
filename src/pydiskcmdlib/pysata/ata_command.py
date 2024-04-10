@@ -6,6 +6,7 @@ from pyscsi.pyscsi.scsi_enum_command import sbc_opcodes
 from pyscsi.pyscsi.scsi_cdb_atapassthrough12 import ATAPassThrough12
 from pyscsi.pyscsi.scsi_cdb_atapassthrough16 import ATAPassThrough16
 from pydiskcmdlib.pysata.ata_sense import ATACheckReturnDescriptorCondition
+from pydiskcmdlib.exceptions import CommandReturnStatusError
 ###
 OPCode12 = sbc_opcodes.get("ATA_PASS_THROUGH_12")
 OPCode16 = sbc_opcodes.get("ATA_PASS_THROUGH_16")
@@ -72,6 +73,30 @@ class ATACommand12(ATAPassThrough12):
             decode_sense = ATACheckReturnDescriptorCondition(self.raw_sense_data)
             return decode_sense.ata_pass_thr_return_descriptor
 
+    def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=True):
+        if self.ata_status_return_descriptor:
+            if (self.ata_status_return_descriptor.get("status") & 0x01) == 0 and (self.ata_status_return_descriptor.get("status") & 0x20) == 0:
+                if success_hint:
+                    print ("Command Success")
+                    print ('')
+            else:
+                if fail_hint:
+                    print ("Command failed, and details bellow.")
+                    format_string = "%-10s%-17s%s"
+                    print (format_string % ("Error Bit", "DEVICE FAULT Bit", "Error Field"))
+                    print (format_string % (self.ata_status_return_descriptor.get("status") & 0x01, 
+                                            1 if (self.ata_status_return_descriptor.get("status") & 0x20) else 0, 
+                                            "%#x" % self.ata_status_return_descriptor.get("error"),
+                                            )
+                        )
+                    print ('')
+                if raise_if_fail:
+                    raise CommandReturnStatusError("ATA Return Status Check Error: Error Bit(%d), device fault bit(%d)" % (self.ata_status_return_descriptor.get("status") & 0x01,
+                                                                                                                            1 if (self.ata_status_return_descriptor.get("status") & 0x20) else 0,
+                                                                                                                            ))
+            return self.ata_status_return_descriptor.get("error")
+        return 0
+
 
 class ATACommand16(ATAPassThrough16):
     """
@@ -121,3 +146,27 @@ class ATACommand16(ATAPassThrough16):
         if self.raw_sense_data:
             decode_sense = ATACheckReturnDescriptorCondition(self.raw_sense_data)
             return decode_sense.ata_pass_thr_return_descriptor
+
+    def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=True):
+        if self.ata_status_return_descriptor:
+            if (self.ata_status_return_descriptor.get("status") & 0x01) == 0 and (self.ata_status_return_descriptor.get("status") & 0x20) == 0:
+                if success_hint:
+                    print ("Command Success")
+                    print ('')
+            else:
+                if fail_hint:
+                    print ("Command failed, and details bellow.")
+                    format_string = "%-10s%-17s%s"
+                    print (format_string % ("Error Bit", "DEVICE FAULT Bit", "Error Field"))
+                    print (format_string % (self.ata_status_return_descriptor.get("status") & 0x01, 
+                                            1 if (self.ata_status_return_descriptor.get("status") & 0x20) else 0, 
+                                            "%#x" % self.ata_status_return_descriptor.get("error"),
+                                            )
+                        )
+                    print ('')
+                if raise_if_fail:
+                    raise CommandReturnStatusError("ATA Return Status Check Error: Error Bit(%d), device fault bit(%d)" % (self.ata_status_return_descriptor.get("status") & 0x01,
+                                                                                                                            1 if (self.ata_status_return_descriptor.get("status") & 0x20) else 0,
+                                                                                                                            ))
+            return self.ata_status_return_descriptor.get("error")
+        return 0

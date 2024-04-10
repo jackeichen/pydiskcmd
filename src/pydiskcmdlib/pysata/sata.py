@@ -25,6 +25,7 @@ from pydiskcmdlib.pysata.ata_cdb_flush import Flush
 from pydiskcmdlib.pysata.ata_cdb_hardreset import Hardreset
 from pydiskcmdlib.pysata.ata_cdb_readDMAEXT16 import ReadDMAEXT16
 from pydiskcmdlib.pysata.ata_cdb_readlog import ReadLogExt
+from pydiskcmdlib.pysata.ata_cdb_SanitizeDevice import SanitizeDeviceRaw
 from pydiskcmdlib.pysata.ata_cdb_setFeature import SetFeature
 from pydiskcmdlib.pysata.ata_cdb_smart import SmartReadLog16
 from pydiskcmdlib.pysata.ata_cdb_softreset import SoftReset
@@ -358,6 +359,11 @@ class SATA(object):
                         SP,
                         **kwargs):
         cmd = TrustedReceiveDMA(security_protocol, transfer_length, SP, **kwargs)
+        self.execute(cmd)
+        return cmd
+
+    def sanitize(self, feature, count, lba):
+        cmd = SanitizeDeviceRaw(feature, count, lba)
         self.execute(cmd)
         return cmd
 

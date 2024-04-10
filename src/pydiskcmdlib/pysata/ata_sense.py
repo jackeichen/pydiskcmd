@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmdlib.utils.enum import Enum
-from pydiskcmdlib.exceptions import ExecuteCmdErr
+from pydiskcmdlib.exceptions import ExecuteCmdErr,SenseDataCheckErr
 from pydiskcmdlib import os_type
 ##
 from pyscsi.pyscsi.scsi_sense import SCSICheckCondition,decode_bits,SENSE_FORMAT_CURRENT_DESCRIPTOR
@@ -13,14 +13,14 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
                                                    'additional_descriptor_length': [0xff, 1],
                                                    'extend': [0x01, 2],
                                                    'error': [0xff, 3],
-                                                   'sector_count_rsvd': [0xff, 4],
-                                                   'sector_count': [0xff, 5],
-                                                   'lba_low_rsvd': [0xff, 6],
-                                                   'lba_low': [0xff, 7],
-                                                   'lba_mid_rsvd': [0xff, 8],
-                                                   'lba_mid': [0xff, 9],
-                                                   'lba_high_rsvd': [0xff, 10],
-                                                   'lba_high': [0xff, 11],
+                                                   'sector_count_rsvd': [0xff, 4], # Sector Count (8:15)
+                                                   'sector_count': [0xff, 5],      # Sector Count (0:7)
+                                                   'lba_low_rsvd': [0xff, 6],      # LBA (31:24)
+                                                   'lba_low': [0xff, 7],           # LBA (7:0)
+                                                   'lba_mid_rsvd': [0xff, 8],      # LBA (39:32)
+                                                   'lba_mid': [0xff, 9],           # LBA (15:8)
+                                                   'lba_high_rsvd': [0xff, 10],    # LBA (47:40)
+                                                   'lba_high': [0xff, 11],         # LBA (23:16)
                                                    'device': [0xff, 12],
                                                    'status': [0xff, 13], }        
 
@@ -29,13 +29,18 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
                  print_data=False):
         super(ATACheckReturnDescriptorCondition, self).__init__(sense, print_data=print_data)
         ##
-        if self.asc == 0 and self.ascq == 29: ## ATA PASS THROUGH INFORMATION AVAILABLE, success to handle
-            self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
-        elif self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR and os_type == "Windows":
-            self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
-        else:
-            hint = str(SCSICheckCondition.__str__(self))
-            raise ExecuteCmdErr(hint)
+        if self.data:  # sense data is valid
+            if self.asc == 0 and self.ascq == 29: ## ATA PASS THROUGH INFORMATION AVAILABLE, success to handle
+                self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
+            elif self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR and os_type == "Windows":
+                self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
+            else:
+                raise ExecuteCmdErr(str(SCSICheckCondition.__str__(self)))
+            # check the ATA sense data
+            if self.ata_pass_thr_return_descriptor["descriptor_code"] != 0x09:
+                raise SenseDataCheckErr("ATA Sense Data check error, descriptor_code should be 0x09 but get %#X" % self.ata_pass_thr_return_descriptor["descriptor_code"])
+            if self.ata_pass_thr_return_descriptor["additional_descriptor_length"] != 0x0C:
+                raise SenseDataCheckErr("ATA Sense Data check error, additional_descriptor_length should be 0x0C but get %#X" % self.ata_pass_thr_return_descriptor["additional_descriptor_length"])
 
     @property
     def ata_pass_thr_return_descriptor(self):

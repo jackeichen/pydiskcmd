@@ -58,6 +58,7 @@ def print_help():
         print ("  smart-return-status         Get the reliability status of the device")
         print ("  read-log                    Get the GPL Log and show it")
         print ("  smart-read-log              Get the smart Log and show it")
+        print ("  sanitize                    Send sanitize command")
         print ("  standby                     Send standby command")
         print ("  read                        Send a read command to disk")
         print ("  write                       Send a write command to disk")
@@ -204,11 +205,9 @@ def read_dma_ext():
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ("%s:" % d.device._file_name)
             cmd = d.read_DMAEXT16(options.slba, options.nlb)
-            return_descriptor = cmd.ata_status_return_descriptor
+            cmd.check_return_status()
             if options.show_status:
-                _print_return_status(return_descriptor)
-            print ('')
-            print ('status error bit: ', return_descriptor.get("status") & 0x01)
+                _print_return_status(cmd.ata_status_return_descriptor)
             print ('')
             print ('Data Out:')
             print ('len: %d' % (len(cmd.datain)))
@@ -265,11 +264,9 @@ def write_dma_ext():
             print ("%s:" % d.device._file_name)
             print ('')
             cmd = d.write_DMAEXT16(options.slba, options.nlb, options.data)
-            return_descriptor = cmd.ata_status_return_descriptor
+            cmd.check_return_status()
             if options.show_status:
-                _print_return_status(return_descriptor)
-            print ('status error bit: ', return_descriptor.get("status") & 0x01)
-            print ('')
+                _print_return_status(cmd.ata_status_return_descriptor)
     else:
         parser.print_help()
 
@@ -290,11 +287,9 @@ def flush():
             print ('issuing flush command')
             print ("%s:" % d.device._file_name)
             cmd = d.flush()
-            return_descriptor = cmd.ata_status_return_descriptor
+            cmd.check_return_status()
             if options.show_status:
-                _print_return_status(return_descriptor)
-            print ('')
-            print ('status err_bit:', return_descriptor.get("status") & 0x01)
+                _print_return_status(cmd.ata_status_return_descriptor)
     else:
         parser.print_help()
 
@@ -315,27 +310,28 @@ def accessible_max_address():
             print ('issuing accessible max address command')
             print ("%s:" % d.device._file_name)
             cmd = d.getAccessibleMaxAddress()
-            return_descriptor = cmd.ata_status_return_descriptor
+            cmd.check_return_status()
             if options.show_status:
-                _print_return_status(return_descriptor)
-            print ('')
-            print ('status err_bit:', return_descriptor.get("status") & 0x01)
-            print ('')
+                _print_return_status(cmd.ata_status_return_descriptor)
         ##
-        LBA_ordinal = bytearray(6)
-        #
-        LBA_ordinal[0] = return_descriptor.get("lba_low")
-        LBA_ordinal[1] = return_descriptor.get("lba_mid")
-        LBA_ordinal[2] = return_descriptor.get("lba_high")
-        if return_descriptor.get("extend"):
-            LBA_ordinal[3] = return_descriptor.get("lba_low_rsvd")  
-            LBA_ordinal[4] = return_descriptor.get("lba_mid_rsvd")   
-            LBA_ordinal[5] = return_descriptor.get("lba_high_rsvd")
-        ##
-        LBA_max = int.from_bytes(LBA_ordinal, byteorder='little', signed=False)
-        print ("Max LBA address: %s" % LBA_max)
-        print ("That will present total LBAs: %s" % (LBA_max+1))
-        print ('')
+        return_descriptor = cmd.ata_status_return_descriptor
+        if return_descriptor:
+            LBA_ordinal = bytearray(6)
+            #
+            LBA_ordinal[0] = return_descriptor.get("lba_low")
+            LBA_ordinal[1] = return_descriptor.get("lba_mid")
+            LBA_ordinal[2] = return_descriptor.get("lba_high")
+            if return_descriptor.get("extend"):
+                LBA_ordinal[3] = return_descriptor.get("lba_low_rsvd")  
+                LBA_ordinal[4] = return_descriptor.get("lba_mid_rsvd")   
+                LBA_ordinal[5] = return_descriptor.get("lba_high_rsvd")
+            ##
+            LBA_max = int.from_bytes(LBA_ordinal, byteorder='little', signed=False)
+            print ("Max LBA address: %s" % LBA_max)
+            print ("That will present total LBAs: %s" % (LBA_max+1))
+            print ('')
+        else:
+            print ("No valid data")
     else:
         parser.print_help()
 
@@ -359,6 +355,7 @@ def identify():
             print ('')
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             cmd = d.identify()
+        cmd.check_return_status()
         format_print_identify(cmd, print_type=options.output_format, show_status=options.show_status)
     else:
         parser.print_help()
@@ -384,29 +381,25 @@ def self_test():
                 print ("%s:" % d.device._file_name)
                 print ('')
                 cmd = d.smart_read_data()
+                cmd.check_return_status()
                 data = cmd.result
                 print ('ShortSelftestPollingTimeInMin: %s min' % data['ShortSelftestPollingTimeInMin'][0])
                 print ('')
                 cmd2 = d.smart_exe_offline_imm(0x01)
-                return_descriptor = cmd2.ata_status_return_descriptor
-                if options.show_status:
-                    _print_return_status(return_descriptor)
-                print ('status error bit:', return_descriptor.get("status") & 0x01)
-                print ('')
+                cmd2.check_return_status()
             else:
                 print ('issuing selftest command - long test')
                 print ("%s:" % d.device._file_name)
                 print ('')
                 cmd = d.smart_read_data()
+                cmd.check_return_status()
                 data = cmd.result
                 print ('longSelftestPollingTimeInMin: %s min' % data['longSelftestPollingTimeInMin'][0])
                 print ('')
                 cmd2 = d.smart_exe_offline_imm(0x02)
-                return_descriptor = cmd2.ata_status_return_descriptor
-                if options.show_status:
-                    _print_return_status(return_descriptor)
-                print ('status error bit:', return_descriptor.get("status") & 0x01)
-                print ('')
+                cmd2.check_return_status()
+            if options.show_status:
+                _print_return_status(cmd2.ata_status_return_descriptor)
     else:
         parser.print_help()
 
@@ -437,10 +430,10 @@ def read_log():
             print ("%s:" % d.device._file_name)
             print ('')
             cmd = d.read_log(options.log_address, options.count, page_number=options.page_number, feature=options.feature)
-            return_descriptor = cmd.ata_status_return_descriptor
-            if options.show_status:
-                print ("CDB:", cmd.cdb)
-                _print_return_status(return_descriptor)
+        cmd.check_return_status()
+        if options.show_status:
+            print ("CDB:", cmd.cdb)
+            _print_return_status(cmd.ata_status_return_descriptor)
         if cmd.datain:
             if options.output_format == "normal":
                 func = read_log_format_print_set.get(options.log_address)
@@ -489,6 +482,7 @@ def set_feature():
         print ('')
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             cmd = d.set_feature(options.feature, options.count, options.lba)
+        cmd.check_return_status()
         ##
         if options.show_status:
             print_ata_cmd_status(cmd)
@@ -518,11 +512,11 @@ def smart_read_log():
             print ("%s:" % d.device._file_name)
             print ('')
             cmd = d.smart_read_log(options.log_address, options.count)
-            return_descriptor = cmd.ata_status_return_descriptor
-            if options.show_status:
-                print ("CDB:", bytes(cmd.cdb))
-                print ('')
-                _print_return_status(return_descriptor)
+        cmd.check_return_status()
+        if options.show_status:
+            print ("CDB:", bytes(cmd.cdb))
+            print ('')
+            _print_return_status(cmd.ata_status_return_descriptor)
         if cmd.datain:
             if options.output_format == "normal":
                 func = smart_read_log_format_print_set.get(options.log_address)
@@ -561,10 +555,12 @@ def smart():
             print ('')
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             cmd_read_data = d.smart_read_data(SMART_KEY)
+            cmd_read_data.check_return_status()
             ##
             if options.debug:
                 _debug_info_print(cmd_read_data)
             cmd_thread = d.smart_read_thresh()
+            cmd_thread.check_return_status()
             ##
             if options.debug:
                 _debug_info_print(cmd_thread)
@@ -591,6 +587,7 @@ def smart_return_status():
         print ('')
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             cmd = d.smart_return_status()
+        cmd.check_return_status()
         ##
         if not cmd.ata_status_return_descriptor["extend"]:
             lba = (cmd.ata_status_return_descriptor["lba_high"] << 16) + (cmd.ata_status_return_descriptor["lba_mid"] << 8) + (cmd.ata_status_return_descriptor["lba_low"])
@@ -624,11 +621,9 @@ def standby_imm():
             print ('issuing standby immediate command')
             print ("%s:" % d.device._file_name)
             cmd = d.standby_imm()
-            return_descriptor = cmd.ata_status_return_descriptor
-            if options.show_status:
-                _print_return_status(return_descriptor)
-            print ('')
-            print ('status err_bit:', return_descriptor.get("status") & 0x01)
+        cmd.check_return_status()
+        if options.show_status:
+            _print_return_status(cmd.ata_status_return_descriptor)
     else:
         parser.print_help()
 
@@ -668,11 +663,9 @@ def trim():
             print ('issuing data set management(known as trim) command')
             print ("%s:" % d.device._file_name)
             cmd = d.trim(lba_description)
-            return_descriptor = cmd.ata_status_return_descriptor
-            if options.show_status:
-                _print_return_status(return_descriptor)
-            print ('')
-            print ('status err_bit:', return_descriptor.get("status") & 0x01)
+        cmd.check_return_status()
+        if options.show_status:
+            _print_return_status(cmd.ata_status_return_descriptor)
     else:
         parser.print_help()
 
@@ -736,6 +729,7 @@ Important: To use this command, libata.allow_tpm must be set to 1 in linux.
             print ("%s:" % d.device._file_name)
             try:
                 cmd = d.trusted_receive(options.protocol, options.alloclen, options.sp, INC_512=options.INC_512)
+                cmd.check_return_status()
             except ExecuteCmdErr as e:
                 print (e)
                 if 'Check Condition: Illegal Request(0x05) ASC+Q:Invalid Field In CDB(0x2400)' in str(e):
@@ -745,6 +739,106 @@ Important: To use this command, libata.allow_tpm must be set to 1 in linux.
                     format_dump_bytes(cmd.datain)
                 else:
                     print (bytes(cmd.datain))
+    else:
+        parser.print_help()
+
+def sanitize():
+    usage="usage: %prog sanitize <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-f", "--feature", type="int", dest="feature", action="store", default=0,
+        help="Sanitize Command field of Feature")
+    ## valid in SANITIZE STATUS EXT
+    parser.add_option("", "--clear-failed", dest="clear_failed", action="store_false", default=False,
+        help="Clear sanitize failed, valid in SANITIZE STATUS EXT")
+    ## valid in CRYPTO SCRAMBLE EXT,  BLOCK ERASE EXT
+    parser.add_option("", "--failure-mode", dest="failure_mode", action="store_false", default=False,
+        help="Failuer mode(default 0), valid in CRYPTO SCRAMBLE EXT, BLOCK ERASE EXT, OVERWRITE EXT")
+    parser.add_option("", "--zoned-no-reset", dest="zoned_no_reset", action="store_false", default=False,
+        help="Zoned no reset(default 0), valid in CRYPTO SCRAMBLE EXT, BLOCK ERASE EXT, OVERWRITE EXT")
+    ## valid in OVERWRITE EXT
+    parser.add_option("", "--invert", dest="invert", action="store_false", default=False,
+        help="Invert pattern between overwrite passes(default 0), valid in OVERWRITE EXT")
+    parser.add_option("", "--definitive", dest="definitive", action="store_false", default=False,
+        help="Definitive ending pattern(default 0), valid in OVERWRITE EXT")
+    parser.add_option("-n", "--owpass", type="int", dest="owpass", action="store", default=1,
+        help="Overwrite pass count(default 1), valid in OVERWRITE EXT")
+    parser.add_option("-p", "--ovrpat", type="int", dest="ovrpat", action="store", default=0,
+        help="Overwrite pattern(default 0) in DWORD, valid in OVERWRITE EXT")
+    parser_update(parser, add_force=True)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, danger_check=True if options.feature in (0x0011, 0x0012, 0x0014) else False, admin_check=True)
+        #
+        count = 0
+        if options.feature == 0x0012:
+            lba = 0x4572 + (0x426B << 16)
+            if options.failure_mode:
+                count += (1 << 4)
+            if options.zoned_no_reset:
+                count += (1 << 15)
+        elif options.feature == 0x0011:
+            lba = 0x7970 + (0x4372 << 16)
+            if options.failure_mode:
+                count += (1 << 4)
+            if options.zoned_no_reset:
+                count += (1 << 15)
+        elif options.feature == 0x0014 and options.ovrpat:
+            lba = options.ovrpat + (0x4F57 << 32)
+            if options.owpass < 16:
+                count += options.owpass
+            if options.failure_mode:
+                count += (1 << 4)
+            if options.definitive:
+                count += (1 << 6)
+            if options.invert:
+                count += (1 << 7)
+            if options.zoned_no_reset:
+                count += (1 << 15)
+        elif options.feature == 0x0040:
+            lba = 0x7469 + (0x416E << 16)
+            count = 0
+        elif options.feature == 0x0020:
+            lba = 0x4C6B + (0x4672 << 16)
+            count = 0
+        elif options.feature == 0:
+            lba = 0
+            count = 1 if options.clear_failed else 0
+        else:
+            raise RuntimeError("feature(%s) invalid" % options.feature)
+        ##
+        with SATA(init_device(dev, open_t='ata')) as d:
+            print ('issuing sanitize command')
+            print ("%s:" % d.device._file_name)
+            cmd = d.sanitize(options.feature, count, lba)
+        cmd.check_return_status()
+        return_descriptor = cmd.ata_status_return_descriptor
+        if return_descriptor:
+            print ("Command Error Bit: ", return_descriptor["status"] & 0x01)
+            if (return_descriptor["status"] & 0x01): # error output
+                if return_descriptor["lba_low"] == 0:
+                    print ("Reason not reported or sanitize device command failed")
+                elif return_descriptor["lba_low"] == 1:
+                    print ("Sanitize Command Unsuccessful – The sanitize operation completed with physical sectors that are available to be allocated for user data that were not successfully sanitized.")
+                elif return_descriptor["lba_low"] == 2:
+                    print ("Invalid or unsupported value in the Sanitize Device FEATURE field")
+                elif return_descriptor["lba_low"] == 3:
+                    print ("Device is in the SD1: Sanitize Frozen state")
+                elif return_descriptor["lba_low"] == 4:
+                    print ("SANITIZE FREEZE LOCK command failed as a result of the Sanitize Antifreeze Lock value being set to one")
+                else:
+                    print ("Unknown reason: %d" % return_descriptor["lba_low"])
+            else:    # normal output
+                print ("Process: %s%%" % round(100 * (return_descriptor["lba_low"] + (return_descriptor["lba_mid"] << 8)) / 65535, 1))
+                print ("SANITIZE ANTIFREEZE is %s" % ((return_descriptor["sector_count_rsvd"] & 0x10) > 0))
+                print ("Sanitize Frozen state: %s" % ((return_descriptor["sector_count_rsvd"] & 0x20) > 0))
+                print ("Sanitize in progress state: %s" % ((return_descriptor["sector_count_rsvd"] & 0x40) > 0))
+                print ("Sanitize completed witout error: %s" % ((return_descriptor["sector_count_rsvd"] & 0x80) > 0))
+        else:
+            print ("No valid data to parse")
     else:
         parser.print_help()
 
@@ -778,6 +872,7 @@ commands_dict = {"list": _list,
                  "standby": standby_imm, 
                  "read-log": read_log,
                  "smart-read-log": smart_read_log,
+                 "sanitize": sanitize,
                  "read": read_dma_ext,
                  "write": write_dma_ext,
                  "flush": flush,

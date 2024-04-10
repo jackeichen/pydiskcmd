@@ -53,3 +53,23 @@ class SanitizeDevice(ATACommand16):
                               0x03,      # protocal
                               0,         # t_length
                               0)         # t_dir
+
+
+class SanitizeDeviceRaw(ATACommand16):
+    """
+    A class to send Sanitize Device command to a ATA device
+    """
+    _cmd_error_descriptor = {0: "success", 1:"sense not available", 2:"command abort", 3: "Other errors"}
+    def __init__(self,
+                 feature,
+                 count,
+                 lba):
+        ATACommand16.__init__(self,
+                              feature,   # fetures
+                              count,     # count
+                              lba,       # lba
+                              0,         # device
+                              0xB4,      # command
+                              0x03,      # protocal
+                              0,         # t_length
+                              0)         # t_dir

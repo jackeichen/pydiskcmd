@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import sys,os
 import optparse
-import traceback
 from pydiskcmdcli import os_type
 from pydiskcmdlib.pyscsi.scsi import SCSI
 from pydiskcmdcli.scsi_spec import LogSenseAttr
@@ -1021,7 +1020,8 @@ def pyscsi():
                 commands_dict[command]()
             except Exception as e:
                 print (str(e))
-                #traceback.print_exc()
+                # import traceback
+                # traceback.print_exc()
         else:
             print_help()
     else:

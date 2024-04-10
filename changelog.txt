@@ -21,6 +21,10 @@ Version 0.3.0(Not Release)
   * windows nvme self test command support
   * Fix a bug when SATA disk firmware download, and change download_fw to download-fw
   * remove some examples
+  * add ATA check_return_status
+  * add SATA Sanitize command to pydiskcmdcli
+  * add write buffer command support to pydiskcmdlib
+  * check valid sense data in pydiskcmdlib->pysata
 
 Version 0.2.7
   * change nvme code base to '0.1.3', pynvme version to '0.1.1'. As OCP support:

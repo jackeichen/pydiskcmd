@@ -7,6 +7,7 @@ from pydiskcmdlib.pyscsi.scsi_cdb_synchronizecache import SynchronizeCache10,Syn
 from pydiskcmdlib.pyscsi.scsi_cdb_SecurityProtocolIn import SecurityProtocolIn
 from pydiskcmdlib.pyscsi.scsi_cdb_passthru import CDBPassthru
 from pydiskcmdlib.pyscsi.scsi_cdb_receivediagnosticresults import ReceiveDiagnosticResults # noqa
+from pydiskcmdlib.pyscsi.scsi_cdb_writebuffer import WriteBuffer
 
 
 class SCSI(_SCSI):
@@ -94,5 +95,11 @@ class SCSI(_SCSI):
         """
         opcode = self.device.opcodes.SECURITY_PROTOCOL_IN
         cmd = SecurityProtocolIn(opcode, security_protocol, security_protocol_sp, alloc, **kwargs)
+        self.execute(cmd)
+        return cmd
+
+    def write_buffer(self, mode, mode_spec, buffer_id, buffer_offset, para_list_length, data=None, control=0):
+        opcode = self.device.opcodes.WRITE_BUFFER
+        cmd = WriteBuffer(opcode, mode, mode_spec, buffer_id, buffer_offset, para_list_length, data=data, control=control)
         self.execute(cmd)
         return cmd

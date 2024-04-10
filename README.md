@@ -112,7 +112,7 @@ Sofware Requirements:
 Python3 Module Requirements:
 
     * Cython(Required)
-    * cython-sgio(Optional, only in linux, need latest version from github)
+    * cython-sgio(Optional, can skip, but need latest version from github if used in linux)
 
 Online build and install from the repository:
 

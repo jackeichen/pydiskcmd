@@ -26,10 +26,11 @@ def bytearray2hex_l(data,start,offset):
     return int(t,16)
 
 def _print_return_status(ata_status_return_descriptor):
-    print ("Return Status:")
-    for k,v in ata_status_return_descriptor.items():
-        print ("%-30s: %s" % (k,v))
-    print ('')
+    if ata_status_return_descriptor:
+        print ("Return Status:")
+        for k,v in ata_status_return_descriptor.items():
+            print ("%-30s: %s" % (k,v))
+        print ('')
 
 def _get_log_directory_description(log_address):
     if log_address in ReadLogLogDirectoryDescription:
@@ -102,12 +103,8 @@ smart_read_log_format_print_set = {0: print_smart_read_log_LogDirectory,}
 #############################
 def format_print_identify(cmd, dev='', print_type='normal', show_status=False):
     return_descriptor = cmd.ata_status_return_descriptor
-    if show_status:
-        if print_type != 'json':
-            _print_return_status(return_descriptor)
-    elif print_type != 'json':
-        print ('')
-        print ('status err_bit:', return_descriptor.get("status") & 0x01)
+    if show_status and print_type != 'json':
+        _print_return_status(return_descriptor)
     print ('')
     if print_type == 'normal' or print_type == 'json':
         target = {"return_status": return_descriptor,
@@ -142,18 +139,13 @@ def format_print_identify(cmd, dev='', print_type='normal', show_status=False):
         raise NotImplementedError("Not Support type: %s" % print_type)
 
 def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal', show_status=False):
-    if show_status:
-        if print_type != 'json':
-            print ('Smart Read Data Status:')
-            print ('')
-            _print_return_status(cmd_read_data.ata_status_return_descriptor)
-            print ('Smart Threshold Status:')
-            print ('')
-            _print_return_status(cmd_thread.ata_status_return_descriptor)
-    elif print_type != 'json':
+    if show_status and print_type != 'json':
+        print ('Smart Read Data Status:')
         print ('')
-        print ('status err_bit of Smart Read Data:', cmd_read_data.ata_status_return_descriptor.get("status") & 0x01)
-        print ('status err_bit of Smart Threshold:', cmd_thread.ata_status_return_descriptor.get("status") & 0x01)
+        _print_return_status(cmd_read_data.ata_status_return_descriptor)
+        print ('Smart Threshold Status:')
+        print ('')
+        _print_return_status(cmd_thread.ata_status_return_descriptor)
     print ('')
     if print_type == 'normal' or print_type == 'json':
         target = {"return_status": {"smart_read_data": cmd_read_data.ata_status_return_descriptor, "smart_thread": cmd_thread.ata_status_return_descriptor}, 

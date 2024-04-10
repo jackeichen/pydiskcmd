@@ -4,22 +4,23 @@
 class DeviceTypeError(Exception):
     pass
 
-
 class ExecuteCmdErr(Exception):
     pass
-
 
 class CommandCheckErr(Exception):
     pass
 
+class SenseDataCheckErr(Exception):
+    pass
+
+class CommandReturnStatusError(Exception):
+    pass
 
 class CommandNotSupport(Exception):
     pass
 
-
 class CommandDataStrucError(Exception):
     pass
-    
 
 class BuildNVMeCommandError(Exception):
     pass
