@@ -18,6 +18,12 @@ from pydiskcmdcli.utils.ata_format_print import (
 from pydiskcmdlib.utils import init_device
 from pydiskcmdcli.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmdlib.exceptions import ExecuteCmdErr
+from pydiskcmdcli.exceptions import (
+    CommandSequenceError,
+    CommandNotSupport,
+    UserDefinedError,
+    FunctionNotImplementError,
+)
 from pydiskcmdcli import os_type
 from pydiskcmdcli import version as Version
 from . import parser_update,script_check
@@ -34,7 +40,6 @@ def _debug_info_print(cmd):
 
 def version():
     print ("pysata version %s" % Version)
-    return 0
 
 def print_help():
     if len(sys.argv) > 2 and sys.argv[2] in commands_dict:
@@ -73,7 +78,6 @@ def print_help():
         print ("  cli-autocmd                 Enable or Update the command completion")
         print ("")
         print ("See 'pysata help <command>' or 'pysata <command> --help' for more information on a sub-command")
-    return 0
 
 def _list():
     usage="usage: %prog list <device> [OPTIONS]"
@@ -257,7 +261,6 @@ def write_dma_ext():
                 pass
         else:
             parser.error("Lack of input data")
-            return
         ##
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             print ('issuing write DMA EXT command')
@@ -471,7 +474,7 @@ def set_feature():
         (options, args) = parser.parse_args(sys.argv[2:])
         if options.guideline:
             format_print_set_feature_guide()
-            return 0
+            return
         ##
         script_check(options, admin_check=True)
         ## check device
@@ -650,12 +653,10 @@ def trim():
                 lba_des_list = lba_des.split(':')
                 if len(lba_des_list) != 2:
                     parser.error("lba description Format Error!")
-                    return
                 lba_des_tuple = (int(lba_des_list[0]), int(lba_des_list[1]))
                 lba_description.append(lba_des_tuple)
         else:
             parser.error("lba description Format Error!")
-            return 
         ##
         print ("Note: If you want trim command works, lba_description need 4k aligned!")
         print ('')
@@ -852,12 +853,10 @@ def cli_info():
     print ('')
     print ('pydiskcmdlib version: %s' % lib_version)
     print ('  - ata code version: %s' % ata_version)
-    return 0
 
 def cli_autocmd():
     from pydiskcmdcli.system.bash_completion import enable_cmd_completion
     enable_cmd_completion()
-    return 0
 #########
 
 commands_dict = {"list": _list, 
@@ -885,16 +884,50 @@ commands_dict = {"list": _list,
                  }
 
 def pysata():
+    '''
+    Execute command cli inetrface.
+
+    :return: None
+    :exit: exit code of command
+      code: bit 0-3
+        0: command success
+        1: non pydiskcmd error
+        2: command parameters error
+        3: device operation error
+        4: command build error
+        5: command execute error
+        6: check command return status error
+        7: check command return data error
+        ...
+        13: function error
+        14: user defined error
+        15: reservd
+
+      subcode: bit 4-7
+        ... # TODO
+    '''
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command in commands_dict:
             try:
-                commands_dict[command]()
+                ret = commands_dict[command]()
             except Exception as e:
                 print (str(e))
                 # import traceback
                 # traceback.print_exc()
+                sys.exit(e.exit_code if hasattr(e, 'exit_code') else 1)
+            else:
+                if (ret is not None) and ret > 0:
+                    # function return a number, and is not None and > 0
+                    e = UserDefinedError("pynvme function error", ret)
+                    print (str(e))
+                    sys.exit(e.exit_code)
         else:
             print_help()
+            e = FunctionNotImplementError("pynvme function error")
+            print ('')
+            print (str(e))
+            sys.exit(e.exit_code)
     else:
         print_help()
+    sys.exit(0)

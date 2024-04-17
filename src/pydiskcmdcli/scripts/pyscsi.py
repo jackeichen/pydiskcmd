@@ -14,6 +14,12 @@ from pyscsi.pyscsi.scsi_enum_getlbastatus import P_STATUS
 from pydiskcmdcli.plugins import parse_cmd_plugin
 from pydiskcmdcli import version as Version
 from . import parser_update,script_check
+from pydiskcmdcli.exceptions import (
+    CommandSequenceError,
+    CommandNotSupport,
+    UserDefinedError,
+    FunctionNotImplementError,
+)
 
 
 def _debug_info_print(cmd):
@@ -1013,16 +1019,50 @@ commands_dict = {"list": _list,
                  }
 
 def pyscsi():
+    '''
+    Execute command cli inetrface.
+
+    :return: None
+    :exit: exit code of command
+      code: bit 0-3
+        0: command success
+        1: non pydiskcmd error
+        2: command parameters error
+        3: device operation error
+        4: command build error
+        5: command execute error
+        6: check command return status error
+        7: check command return data error
+        ...
+        13: function error
+        14: user defined error
+        15: reservd
+
+      subcode: bit 4-7
+        ... # TODO
+    '''
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command in commands_dict:
             try:
-                commands_dict[command]()
+                ret = commands_dict[command]()
             except Exception as e:
                 print (str(e))
                 # import traceback
                 # traceback.print_exc()
+                sys.exit(e.exit_code if hasattr(e, 'exit_code') else 1)
+            else:
+                if (ret is not None) and ret > 0:
+                    # function return a number, and is not None and > 0
+                    e = UserDefinedError("pynvme function error", ret)
+                    print (str(e))
+                    sys.exit(e.exit_code)
         else:
             print_help()
+            e = FunctionNotImplementError("pynvme function error")
+            print ('')
+            print (str(e))
+            sys.exit(e.exit_code)
     else:
         print_help()
+    sys.exit(0)

@@ -399,6 +399,10 @@ def persistent_event_log_events_decode(raw_data, total_event_number):
         for i in range(total_event_number):
             event_log_event_format = {}
             event_log_event_header = {}
+            # fix a bug: break loop when there is no avaliable data
+            # By Eric, 2024-04-15
+            if not raw_data[offset:offset+24]:
+                break
             decode_bits(raw_data[offset:offset+24], Persistent_Event_Log_Event_Header_bit_mask, event_log_event_header)
             event_log_event_format["event_log_event_header"] = event_log_event_header
             ##

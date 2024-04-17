@@ -388,9 +388,9 @@ class NVMeCommand(object):
                 temp = win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR.from_buffer_copy(self.cdb_raw)
                 # Validate the returned data.
                 if temp.Version != win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR) or temp.Size != win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR):
-                    raise CommandCheckErr("DeviceNVMeQueryProtocolData: data descriptor header not valid.")
+                    raise CommandReturnDataError("DeviceNVMeQueryProtocolData: data descriptor header not valid.")
 
-    def check_return_status(self, success_hint=False, fail_hint=True):
+    def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=False):
         SC = (self.cq_status & 0xFF)
         SCT = ((self.cq_status >> 8) & 0x07)
         CRD = ((self.cq_status >> 11) & 0x03)
@@ -400,10 +400,13 @@ class NVMeCommand(object):
             if success_hint:
                 print ("Command Success")
                 print ('')
-        elif fail_hint:
-            print ("Command failed, and details bellow.")
-            format_string = "%-15s%-20s%-8s%s"
-            print (format_string % ("Status Code", "Status Code Type", "More", "Do Not Retry"))
-            print (format_string % (SC, SCT, More, DNR))
-            print ('')
+        else:
+            if fail_hint:
+                print ("Command failed, and details bellow.")
+                format_string = "%-15s%-20s%-8s%s"
+                print (format_string % ("Status Code", "Status Code Type", "More", "Do Not Retry"))
+                print (format_string % (SC, SCT, More, DNR))
+                print ('')
+            if raise_if_fail:
+                raise CommandReturnStatusError("NVMe Return Status Check Error: Status Code Type(%#x), Status Code(%#x)" % (SCT, SC))
         return SC,SCT

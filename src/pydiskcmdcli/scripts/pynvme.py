@@ -18,11 +18,16 @@ from pydiskcmdcli.utils import nvme_format_print
 from pydiskcmdcli import os_type
 from pydiskcmdcli import version as Version
 from . import parser_update,script_check
+from pydiskcmdcli.exceptions import (
+    CommandSequenceError,
+    CommandNotSupport,
+    UserDefinedError,
+    FunctionNotImplementError,
+)
 
 
 def version():
     print ("pynvme version %s" % Version)
-    return 0
 
 def print_help():
     if len(sys.argv) > 2 and sys.argv[2] in commands_dict:
@@ -86,7 +91,6 @@ def print_help():
         print ("  cli-autocmd           Enable or Update the command completion")
         print ("")
         print ("See 'pynvme <plugin> help' for more information on a plugin")
-    return 0
 
 def _list():
     usage="usage: %prog list"
@@ -209,7 +213,7 @@ def smart_log():
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.smart_log()
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_smart_log(cmd.data, print_type=options.output_format)
     else:
@@ -230,7 +234,7 @@ def id_ctrl():
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.id_ctrl(uuid=options.uuid_index)
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         nvme_format_print.format_print_id_ctrl(cmd.data, print_type=options.output_format)
     else:
         parser.print_help()
@@ -251,12 +255,11 @@ def id_ns():
         ## check namespace
         if not isinstance(options.namespace_id, int) or options.namespace_id < 1:
             parser.error("namespace id input error.")
-            return
         ##
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.id_ns(options.namespace_id, uuid=options.uuid_index)
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_id_ns(cmd.data, print_type=options.output_format)
     else:
@@ -275,7 +278,7 @@ def id_uuid():
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.uuid_list()
-        SC,SCT = cmd.check_return_status()
+        SC,SCT = cmd.check_return_status(raise_if_fail=True)
         if SC == 0 and SCT == 0:
             nvme_format_print.format_print_id_uuid(cmd, print_type=options.output_format)
     else:
@@ -294,7 +297,7 @@ def error_log():
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.error_log_entry()
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_error_log(cmd.data, dev=dev, print_type=options.output_format)
     else:
@@ -313,7 +316,7 @@ def fw_log():
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.fw_slot_info()
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_fw_log(cmd.data, dev=d.device.device_name, print_type=options.output_format)
     else:
@@ -332,7 +335,7 @@ def sanitize_log():
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.sanitize_log(127, lpol=0)
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_sanitize_log(cmd.data, dev=d.device.device_name, print_type=options.output_format)
     else:
@@ -364,7 +367,7 @@ def telemetry_log():
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 ## Get first 512 bytes log
                 cmd = d.telemetry_ctrl_log(127)
-                cmd.check_return_status()
+                cmd.check_return_status(raise_if_fail=True)
                 #
                 if options.data_area == 1:
                     data_area_last = cmd.data[8] + (cmd.data[9] << 8)
@@ -386,7 +389,7 @@ def telemetry_log():
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 ## Get first 512 bytes log
                 cmd = d.telemetry_host_log(127)
-                cmd.check_return_status()
+                cmd.check_return_status(raise_if_fail=True)
                 #
                 data_area_last = 0
                 if options.data_area == 1:
@@ -424,7 +427,6 @@ def fw_download():
         ## check namespace
         if not os.path.exists(options.fw_path):
             parser.error("No Firmware File provided")
-            return 1
         ##
         # if os_type == 'Windows':
         #     print ("Recommand a safety native methmod to download fimrware to device, with windows Power-Shell.")
@@ -467,9 +469,7 @@ def fw_download():
                     fw_data = f.read(xfer)
                     if fw_data:
                         cmd = d.nvme_fw_download(fw_data, offset)
-                        SC,SCT = cmd.check_return_status()
-                        if SC != 0 or SCT != 0:
-                            break # error, exit
+                        SC,SCT = cmd.check_return_status(raise_if_fail=True)
                     else:
                         print ("Firmware Download Success")
                         break # download finished
@@ -510,7 +510,7 @@ def fw_commit():
             smud = True if (d.ctrl_identify_info[260] & 0x20) else False
             #
             cmd = d.nvme_fw_commit(options.slot, options.action)
-        cmd.check_return_status(True, False)
+        cmd.check_return_status(True, False, raise_if_fail=True)
         ## nvme spec 2.0 
         if smud:
             # TODO
@@ -553,7 +553,7 @@ def nvme_format():
             if (d.ctrl_identify_info[524] & 0x02) and options.ses and options.namespace_id != 0xFFFFFFFF:
                 print ("Any secure erase performed as part of a format results in a secure erase of all the namespace specified")
             cmd = d.nvme_format(options.lbaf, nsid=options.namespace_id, mset=options.ms, pi=options.pi, pil=options.pil, ses=options.ses)
-        cmd.check_return_status(True)
+        cmd.check_return_status(True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -578,6 +578,9 @@ def persistent_event_log():
         dev = sys.argv[2]
         ##
         script_check(options, admin_check=True)
+        #
+        if options.action > 2:
+            parser.error("action should be 0|1|2")
         # check options.filter
         _filter = []
         if options.filter:
@@ -588,8 +591,7 @@ def persistent_event_log():
         with NVMe(init_device(dev, open_t='nvme')) as d:
             ## by nvme spec 1.4a
             if not (d.ctrl_identify_info[261] & 0x10):
-                print ("Device Not support Persistent Event log.")
-                return 1
+                raise CommandNotSupport("Device Not support Persistent Event log.")
             extend_cap = (d.ctrl_identify_info[261] & 0x04)
             event_log_size_max = scsi_ba_to_int(d.ctrl_identify_info[352:356], 'little')  # 64Kib unit
             if options.action == 0:
@@ -631,15 +633,27 @@ def persistent_event_log():
                     elif numd > (max_numd - lpo_dw):
                         print ("NOTE: numd is too big, fix it to a proper value")
                         numd = max_numd - lpo_dw
-                    cmd = d.get_persistent_event_log(0, numd, lpo, uuid=options.uuid_index)
-                    cmd.check_return_status(True, True)
-                    ret_data = cmd.data
+                    # Get raw data
+                    ret_data = b''
+                    chun_size= 128 * 1024  # 1MB every loop
+                    actual_numd = int(chun_size/4-1)
+                    remainder = numd % actual_numd
+                    offset = lpo
+                    for loop in range(int((numd - remainder)/actual_numd)):
+                        cmd = d.get_persistent_event_log(0, actual_numd, offset, uuid=options.uuid_index)
+                        cmd.check_return_status(True, True)
+                        ret_data += cmd.data
+                        offset += chun_size
+                    if remainder:
+                        cmd = d.get_persistent_event_log(0, remainder, offset, uuid=options.uuid_index)
+                        cmd.check_return_status(True, True)
+                        ret_data += cmd.data
                     cmd = None  # release the located memory
-                    nvme_format_print.format_print_event_log(ret_data, dev=d.device.device_name, print_type=options.output_format)
+                    nvme_format_print.format_print_event_log(ret_data, dev=d.device.device_name, print_type=options.output_format, event_filter=_filter)
                 elif SCT == 0 and SC == 0x0C: # if command abort, then Context is already established
-                    print ("Command Sequence Error, may need establish the context")
+                    raise CommandSequenceError("Command Sequence Error, may need establish the context")
                 else:
-                    cmd.check_return_status(True, True)
+                    cmd.check_return_status(True, True, raise_if_fail=True)
             elif options.action == 1:
                 # Establish Context and Read Log Data: The controller shall:
                 #   a) determine the length of the persistent event log page data;
@@ -664,10 +678,10 @@ def persistent_event_log():
                 elif SCT == 0 and SC == 0x0C: # if command abort, then Context is already established
                     print ("Context is already established by others.")
                 else:
-                    cmd.check_return_status(False, True)
+                    cmd.check_return_status(False, True, raise_if_fail=True)
             elif options.action == 2:
                 cmd = d.get_persistent_event_log(2, 0, 0, uuid=options.uuid_index)
-                cmd.check_return_status(True, True)
+                cmd.check_return_status(True, True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -695,7 +709,7 @@ self-test command:                                     \
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.self_test(options.test_code, ns_id=options.namespace_id)
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         if cmd.cq_status == 0x1D:
             print ("The controller or NVM subsystem already has a device self-test operation in process.")
         else:
@@ -718,7 +732,7 @@ def self_test_log():
         script_check(options, admin_check=True)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.self_test_log(uuid=options.uuid_index)
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_self_test_log(cmd.data, dev=d.device.device_name, print_type=options.output_format)
     else:
@@ -788,7 +802,7 @@ def get_feature():
                                     sel=options.sel,
                                     cdw11=options.cdw11,
                                     data_len=options.data_len)
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         ##
         if options.output_format == "hex":
             print ("cmd spec data: %#x" % cmd.cq_cmd_spec)
@@ -864,7 +878,7 @@ def set_feature():
                                 cdw11=options.value,
                                 cdw12=options.cdw12,
                                 data_out=raw_data)
-        cmd.check_return_status(success_hint=True, fail_hint=True)
+        cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -914,7 +928,7 @@ def nvme_create_ns():
                                 options.nvmsetid,
                                 csi=options.csi,
                                 )
-                sc,sct = cmd.check_return_status(success_hint=True, fail_hint=True)
+                sc,sct = cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
                 if sc == 0 and sct == 0:
                     print ("Namespace Identifier is: %s" % cmd.cq_cmd_spec)
         ##
@@ -964,7 +978,7 @@ def nvme_delete_ns():
                 print ("Deleting namespace id %d" % ns_id)
                 cmd = d.ns_delete(ns_id)
                 #
-                cmd.check_return_status(success_hint=True, fail_hint=True)
+                cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1016,7 +1030,7 @@ def nvme_attach_ns():
                 print ("attaching namespace id %d" % ns_id)
                 cmd = d.ns_attachment(ns_id, 0, ctrl_list)
                 ##
-                cmd.check_return_status(success_hint=True, fail_hint=True)
+                cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1068,7 +1082,7 @@ def nvme_detach_ns():
                 print ("detaching namespace id %d" % ns_id)
                 cmd = d.ns_attachment(ns_id, 1, ctrl_list)
                 ##
-                cmd.check_return_status(success_hint=True, fail_hint=True)
+                cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1095,7 +1109,7 @@ def list_ns():
         else:
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.active_ns_ids(options.namespace_id)
-        cmd.check_return_status(success_hint=False, fail_hint=True)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
         ##
         nvme_format_print.format_print_list_ns(cmd.data, dev=d.device.device_name, print_type=options.output_format)
         ##
@@ -1128,7 +1142,7 @@ def list_ctrl():
         else:
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.ns_attached_cnt_ids(options.namespace_id, options.cntid)
-        cmd.check_return_status(success_hint=False, fail_hint=True)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
         ##
         nvme_format_print.format_print_list_ctrl(cmd.data, dev=d.device.device_name, print_type=options.output_format)
         ##
@@ -1182,7 +1196,7 @@ def sanitize():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.sanitize(sanact, ause, owpass, oipbp, no_dealloc, ovrpat=options.ovrpat)
-        cmd.check_return_status(success_hint=True, fail_hint=True)
+        cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1206,7 +1220,7 @@ def read():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.read(options.namespace_id, options.start_block, options.block_count)
-        cmd.check_return_status(success_hint=False, fail_hint=True)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
         ##
         nvme_format_print.format_print_read_data(cmd.metadata, cmd.data, dev=d.device.device_name, print_type=options.output_format)
         ##
@@ -1232,7 +1246,7 @@ def verify():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.verify(options.namespace_id, options.start_block, options.block_count)
-        cmd.check_return_status(success_hint=True, fail_hint=True)
+        cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1267,7 +1281,6 @@ def write():
                     temp_data = f.read()
         if not temp_data:
             parser.error("Lack of input data")
-            return
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.id_ns(options.namespace_id)
@@ -1286,7 +1299,7 @@ def write():
             print ("%s:" % d.device._file_name)
             print ('')
             cmd = d.write(options.namespace_id, options.start_block, options.block_count, temp_data, b'')
-        cmd.check_return_status(True)
+        cmd.check_return_status(True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1305,7 +1318,7 @@ def flush():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.flush(options.namespace_id)
-        cmd.check_return_status(True)
+        cmd.check_return_status(True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1342,7 +1355,7 @@ def get_lba_status():
                                    options.block_count,  # Range Length
                                    timeout=options.timeout, # timeout
                                    )
-        SC,SCT = cmd.check_return_status(False)
+        SC,SCT = cmd.check_return_status(False, raise_if_fail=True)
         ##
         if SC == 0 and SCT == 0:
             nvme_format_print.format_print_LBA_Status_Descriptor(cmd.data, print_type=options.output_format)
@@ -1591,7 +1604,6 @@ def _ocp_print_help():
 def _ocp_print_ver():
     print ("Cloud SSD Plugin Version: %s" % "1.0")
     print ("")
-    return 0
 
 def _ocp_info_check():
     usage="usage: %prog ocp ocp-check <device> [OPTIONS]"
@@ -1668,7 +1680,6 @@ def ocp():
             plugin_ocp_commands_dict[plugin_command]()
             return
     _ocp_print_help()
-    return 0
 
 #################################################
 # Bellow is plugin extensions
@@ -1704,7 +1715,6 @@ def _win_nvme_vroc_print_help():
 def _win_nvme_vroc_print_ver():
     print ("Windows NVMe VROC Plugin Version: %s" % "1.0")
     print ("")
-    return 0
 
 def _win_nvme_vroc_list():
     usage="usage: %prog vroc list"
@@ -1726,7 +1736,7 @@ def _win_nvme_vroc_list():
             cmd_id_ctrl = disk.id_ctrl()
             cmd_id_ns = disk.id_ns()
         except OSError:
-            return
+            return 1
         # para data
         result = nvme_format_print.nvme_id_ctrl_decode(cmd_id_ctrl.data)
         sn = string_strip(decode_bytes(result.get("SN")), b'\x00'.decode(), ' ')
@@ -1805,7 +1815,6 @@ def win_nvme_vroc():
             plugin_win_nvme_vroc_commands_dict[plugin_command]()
             return
     _win_nvme_vroc_print_help()
-    return 0
 
 #################################################
 # Bellow is cli management interface 
@@ -1817,12 +1826,10 @@ def cli_info():
     print ('')
     print ('pydiskcmdlib version : %s' % lib_version)
     print ('  - nvme code version: %s' % nvme_version)
-    return 0
 
 def cli_autocmd():
     from pydiskcmdcli.system.bash_completion import enable_cmd_completion
     enable_cmd_completion()
-    return 0
 
 ###########################
 ###########################
@@ -1875,18 +1882,50 @@ commands_dict = {"list": _list,
                  }
 
 def pynvme():
+    '''
+    Execute command cli inetrface.
+
+    :return: None
+    :exit: exit code of command
+      code: bit 0-3
+        0: command success
+        1: non pydiskcmd error
+        2: command parameters error
+        3: device operation error
+        4: command build error
+        5: command execute error
+        6: check command return status error
+        7: check command return data error
+        ...
+        13: function error
+        14: user defined error
+        15: reservd
+
+      subcode: bit 4-7
+        ... # TODO
+    '''
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command in commands_dict:
             try:
-                commands_dict[command]()
-                sys.exit(0)
+                ret = commands_dict[command]()
             except Exception as e:
                 print (str(e))
                 # import traceback
                 # traceback.print_exc()
-                sys.exit(1)
+                sys.exit(e.exit_code if hasattr(e, 'exit_code') else 1)
+            else:
+                if (ret is not None) and ret > 0:
+                    # function return a number, and is not None and > 0
+                    e = UserDefinedError("pynvme function error", ret)
+                    print (str(e))
+                    sys.exit(e.exit_code)
         else:
             print_help()
+            e = FunctionNotImplementError("pynvme function error")
+            print ('')
+            print (str(e))
+            sys.exit(e.exit_code)
     else:
         print_help()
+    sys.exit(0)

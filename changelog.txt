@@ -25,6 +25,8 @@ Version 0.3.0(Not Release)
   * add SATA Sanitize command to pydiskcmdcli
   * add write buffer command support to pydiskcmdlib
   * check valid sense data in pydiskcmdlib->pysata
+  * support exit code in pydiskcmdcli
+  * 
 
 Version 0.2.7
   * change nvme code base to '0.1.3', pynvme version to '0.1.1'. As OCP support:
