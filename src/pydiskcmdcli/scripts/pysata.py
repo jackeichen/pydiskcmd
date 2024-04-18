@@ -919,12 +919,12 @@ def pysata():
             else:
                 if (ret is not None) and ret > 0:
                     # function return a number, and is not None and > 0
-                    e = UserDefinedError("pynvme function error", ret)
+                    e = UserDefinedError("pynvme function of <%s> error" % commands_dict[command].__name__, ret)
                     print (str(e))
                     sys.exit(e.exit_code)
         else:
             print_help()
-            e = FunctionNotImplementError("pynvme function error")
+            e = FunctionNotImplementError("pynvme command of <%s> Not Implement error" % command)
             print ('')
             print (str(e))
             sys.exit(e.exit_code)

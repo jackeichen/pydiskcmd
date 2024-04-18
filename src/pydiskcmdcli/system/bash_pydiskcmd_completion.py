@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 # bash tab completion for the nvme command line utility
 
+def get_completion():
+    text="""# This is a bash completion for pydiskcmd
 _pysata_cmds="list check-PowerMode accessible-MaxAddress identify sanitize self-test set-feature \
           read-log smart-read-log smart smart-return-status standby read write flush trim \
           download-fw trusted-receive version help"
@@ -382,3 +384,5 @@ complete -o default -F _pysata_subcmds pysata
 complete -o default -F _pynvme_subcmds pynvme
 
 complete -o default -F _pyscsi_subcmds pyscsi
+"""
+    return text
