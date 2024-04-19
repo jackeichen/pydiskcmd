@@ -9,6 +9,9 @@ from pydiskcmdlib.utils.converter import encode_dict,decode_bits,CheckDict
 from pydiskcmdlib.pynvme import linux_nvme_command
 from pydiskcmdlib.pynvme import win_nvme_command
 from pydiskcmdlib.pynvme.data_buffer import DataBuffer
+from pydiskcmdlib.os.win_ioctl_utils import StorageProtocolStatus
+#
+sizeof = win_nvme_command.sizeof
 ##
 class AdminCommandOpcode(Enum):
     DeleteIOSQ               = 0x00
@@ -107,6 +110,8 @@ class NVMeCommand(object):
         ##
         self.__data_buffer = None
         self.__metadata_buffer = None
+        ## inner used for check
+        self.__command_data_length = 0
         ## used by build command
         self._byteorder = sys.byteorder
         ## init bitmap
@@ -224,6 +229,9 @@ class NVMeCommand(object):
 
         :return: the built command
         """
+        ## init command_data_length to zero before build command
+        self.__command_data_length = 0
+        ##
         if os_type == "Linux":
             ## build CDB
             if self._req_id in (linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value, 
@@ -275,10 +283,30 @@ class NVMeCommand(object):
                 _cdb = self.marshall_cdb(kwargs, win_nvme_command.sizeof(win_nvme_command.StorageQueryWithoutBuffer))
                 self._cdb = win_nvme_command.StorageQueryWithoutBuffer.from_buffer(_cdb)
                 data_len = self._cdb.protocol_specific.ProtocolDataLength
+                # allocate memory to use if need
                 if data_len > 0:
-                    # Get the StorageQueryWithBuffer with data_len
+                    # For an IOCTL_STORAGE_QUERY_PROPERTY that uses a STORAGE_PROPERTY_ID of StorageAdapterProtocolSpecificProperty, 
+                    # and whose STORAGE_PROTOCOL_SPECIFIC_DATA or STORAGE_PROTOCOL_SPECIFIC_DATA_EXT structure is set to 
+                    # ProtocolType=ProtocolTypeNvme and DataType=NVMeDataTypeLogPage, set the ProtocolDataLength member of that same 
+                    # structure to a minimum value of 512 (bytes).
+                    if (self._cdb.protocol_specific.DataType == win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value
+                    and self._cdb.query.PropertyId == win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value
+                    and self._cdb.protocol_specific.ProtocolType == win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value 
+                    and data_len < 512):
+                        raise BuildNVMeCommandError("ProtocolDataLength shoule be a minimum value of 512 (bytes)")
+                    # Callers could use a STORAGE_PROPERTY_ID of StorageAdapterProtocolSpecificProperty, and whose STORAGE_PROTOCOL_SPECIFIC_DATA 
+                    # or STORAGE_PROTOCOL_SPECIFIC_DATA_EXT structure is set to ProtocolDataRequestValue=VENDOR_SPECIFIC_LOG_PAGE_IDENTIFIER to 
+                    # request 512 byte chunks of vendor specific data.
+                    if (self._cdb.protocol_specific.DataType in (win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
+                                                                win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeFeature.value,)
+                    and (0xBF < self._cdb.protocol_specific.ProtocolDataRequestValue < 0x100)
+                    and data_len % 512 != 0):
+                        raise BuildNVMeCommandError("Need request 512 byte chunks of vendor specific data")
+                    ## Get the StorageQueryWithBuffer with data_len
                     _cdb = self.marshall_cdb(kwargs, win_nvme_command.sizeof(win_nvme_command.StorageQueryWithoutBuffer)+data_len)
                     self._cdb = win_nvme_command.GetStorageQueryWithBuffer(data_len).from_buffer(_cdb)
+                    # for delay check
+                    self.__command_data_length = data_len
             # STORAGE_PROTOCOL_COMMAND
             elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_PROTOCOL_COMMAND.value:
                 ## if use default cdb bitmap, check the parametrs and fix
@@ -337,6 +365,23 @@ class NVMeCommand(object):
                 if data_len > 0:
                     _cdb = self.marshall_cdb(kwargs, win_nvme_command.sizeof(win_nvme_command.StorageQueryWithoutBuffer)+data_len)
                     self._cdb = win_nvme_command.GetStorageProtocolCommandWithBuffer(data_len).from_buffer(_cdb)
+            # set feature request
+            elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_SET_PROPERTY.value:
+                if not self._cdb_bits:
+                    # kwargs["PropertyId"]
+                    # kwargs["QueryType"]
+                    kwargs["ProtocolType"] = win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value
+                    if kwargs["DataType"] >= win_nvme_command.StorageProtocolNVMeDataType.UnusedMaxValue.value:
+                        raise BuildNVMeCommandError("DataType should be less than %d" % win_nvme_command.StorageProtocolNVMeDataType.UnusedMaxValue.value)
+                # This will get the data length in StorageQueryWithBuffer.StorageProtocolSpecificData.ProtocolDataLength
+                _cdb = self.marshall_cdb(kwargs, sizeof(win_nvme_command.IOCTL_STORAGE_SET_PROPERTY))
+                self._cdb = win_nvme_command.IOCTL_STORAGE_SET_PROPERTY.from_buffer(_cdb)
+                self.__command_data_length = self._cdb.protocolData.ProtocolDataLength
+                # allocate memory to use if need
+                if self.__command_data_length > 0:
+                    ## Get the StorageQueryWithBuffer with data_len
+                    _cdb = self.marshall_cdb(kwargs, sizeof(win_nvme_command.StorageQueryWithoutBuffer)+self.__command_data_length)
+                    self._cdb = win_nvme_command.GetIOCTLStorageSetPropertyWithBuffer(self.__command_data_length).from_buffer(_cdb)
             elif self._req_id in (win_nvme_command.IOCTLRequest.FSCTL_LOCK_VOLUME.value,
                                   win_nvme_command.IOCTLRequest.FSCTL_UNLOCK_VOLUME.value,
                                   win_nvme_command.IOCTLRequest.IOCTL_DISK_FLUSH_CACHE.value,
@@ -384,11 +429,21 @@ class NVMeCommand(object):
 
     def _win_execute_check(self):
         if self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value:
-            if self._cdb:
-                temp = win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR.from_buffer_copy(self.cdb_raw)
+            if self.cdb_struc:
+                temp = win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR.from_buffer_copy(bytearray(self.cdb_struc)) # cdb_struc
                 # Validate the returned data.
-                if temp.Version != win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR) or temp.Size != win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR):
-                    raise CommandReturnDataError("DeviceNVMeQueryProtocolData: data descriptor header not valid.")
+                if (temp.Version != win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR) 
+                 or temp.Size != win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR)):
+                    raise CommandReturnStatusError("DeviceNVMeQueryProtocolData: data descriptor header not valid.")
+                if self.__command_data_length > 0 and (temp.protocol_specific.ProtocolDataOffset < win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData) or temp.protocol_specific.ProtocolDataLength < self.__command_data_length):
+                    raise CommandReturnStatusError("DeviceNVMeQueryProtocolData: ProtocolData Offset/Length not valid.")
+        elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_PROTOCOL_COMMAND.value:
+            if self._cdb.storage_protocal_command.ReturnStatus not in (StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_SUCCESS.value, StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_PENDING.value):
+                message = "Unkown Storage Protocol Status"
+                for status in StorageProtocolStatus:
+                    if self._cdb.storage_protocal_command.ReturnStatus == status.value:
+                        message = status.name
+                raise CommandReturnStatusError(message)
 
     def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=False):
         SC = (self.cq_status & 0xFF)

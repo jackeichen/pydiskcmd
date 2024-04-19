@@ -25,13 +25,25 @@ class ExitCode(CodeDescription):
 
     def get_full_descrption(self, message: str,  subcode: Optional[int]=None) -> str:
         return message + \
-            " (Based on %s:%#x" %  (self.description, self.code) + \
+            " (Based on %s:%#x" % (self.description, self.code) + \
             ", %s:%#x)" % (self.subcode[subcode].description, subcode) if subcode in self.subcode else ")"
 
-
+# no use, here to show the occupied code/subcode
+# Exit code 0 means success
 class SuccessCode(ExitCode):
     def __init__(self):
         super(SuccessCode, self).__init__(0, 'Success')
+        self.add_sub_code({0: 'Success'})
+
+
+class CommonErrorCode(ExitCode):
+    '''
+    code:    0
+    subcode: from 1 to 0xF, 0 is used by success
+    '''
+    def __init__(self):
+        super(CommonErrorCode, self).__init__(0, 'Common Error')
+        self.add_sub_code({15: 'subcode',})
 
 
 class DeviceOperationErrorCode(ExitCode):
@@ -82,16 +94,18 @@ class CheckCommandReturnDataErrorCode(ExitCode):
 
 
 
-ExitCodeInfo = {0: SuccessCode(),
-                # 1: 'reserved',
-                # 2: 'reserved',
+ExitCodeInfo = {0: CommonErrorCode(),
+                # 1: 'reserved for future use', 
+                # 2: 'reserved for future use',
                 3: DeviceOperationErrorCode(),
                 4: CommandBuildErrorCode(),
                 5: CommandExecuteErrorCode(),
                 6: CheckCommandReturnStatusErrorCode(),
                 7: CheckCommandReturnDataErrorCode(),
-                # 13: 'reserved by pydiskcmdcli',
-                # 14: 'reserved by pydiskcmdcli',
+                # 8: 'reserved for future use',
+                # 9: 'reserved for future use',
+                # 10: 'reserved for future use',
+                # 11: 'reserved for future use',
                 }
 
 

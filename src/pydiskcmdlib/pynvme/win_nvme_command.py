@@ -70,6 +70,27 @@ cdb_bitmap = {IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value: {
                 "CDW14": [0xFFFFFFFF, 136],
                 "CDW15": [0xFFFFFFFF, 140],
                 },
+              IOCTLRequest.IOCTL_STORAGE_SET_PROPERTY.value: {
+                "PropertyId": [0xFFFFFFFF, 0],
+                "SetType": [0xFFFFFFFF, 4],
+                "ProtocolType": [0xFFFFFFFF, 8],
+                "DataType":[0xFFFFFFFF, 12],
+                "ProtocolDataValue":[0xFFFFFFFF, 16],
+                "ProtocolDataSubValue":[0xFFFFFFFF, 20],  # This will pass to CDW11
+                "ProtocolDataOffset":[0xFFFFFFFF, 24],
+                "ProtocolDataLength":[0xFFFFFFFF, 28],
+                "FixedProtocolReturnData":[0xFFFFFFFF, 32],
+                "ProtocolDataRequestSubValue2":[0xFFFFFFFF, 36],  # This will pass to CDW12
+                "ProtocolDataRequestSubValue3":[0xFFFFFFFF, 40],  # This will pass to CDW13
+                "ProtocolDataRequestSubValue4":[0xFFFFFFFF, 44],  # This will pass to CDW14
+                "ProtocolDataRequestSubValue5":[0xFFFFFFFF, 48],  # This will pass to CDW15
+                "Reserved_0":[0xFFFFFFFF, 52],
+                "Reserved_1":[0xFFFFFFFF, 56],
+                "Reserved_2":[0xFFFFFFFF, 60],
+                "Reserved_3":[0xFFFFFFFF, 64],
+                "Reserved_4":[0xFFFFFFFF, 68],
+                "data": ['b', 72, 0],
+                },
              }
 ## 
 STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST = 0x80000000
@@ -88,7 +109,7 @@ STORAGE_HW_FIRMWARE_REQUEST_FLAG_REPLACE_EXISTING_IMAGE = 1073741824
 STORAGE_HW_FIRMWARE_REQUEST_FLAG_SWITCH_TO_EXISTING_FIRMWARE = 2147483648
 STORAGE_HW_FIRMWARE_INVALID_SLOT = 255
 STORAGE_HW_FIRMWARE_REVISION_LENGTH = 16
-
+##
 
 class STORAGE_SET_TYPE(Enum):
     PropertyStandardSet    = 0
@@ -849,3 +870,114 @@ class NVME_ERROR_INFO_LOG(Structure):
         ('Reserved1', c_ubyte * 24),
     ]
     _pack_ = 1
+
+
+class STORAGE_PROPERTY_SET(Structure):
+    _fields_ = [
+        ("PropertyId", c_uint32),
+        ("SetType", c_uint32),
+        ("AdditionalParameters", c_ubyte),
+    ]
+    _pack_ = 1
+
+
+class _STORAGE_PROPERTY_SET(Structure):
+    _fields_ = [
+        ("PropertyId", c_uint32),
+        ("SetType", c_uint32),
+    ]
+    _pack_ = 1
+
+
+class STORAGE_PROTOCOL_SPECIFIC_DATA_EXT(Structure):
+    _fields_ = [
+        ("ProtocolType", c_uint32),
+        ("DataType", c_uint32),
+        ("ProtocolDataValue", c_uint32),
+        ("ProtocolDataSubValue", c_uint32),
+        ("ProtocolDataOffset", c_uint32),
+        ("ProtocolDataLength", c_uint32),
+        ("FixedProtocolReturnData", c_uint32),
+        ("ProtocolDataRequestSubValue2", c_uint32),
+        ("ProtocolDataRequestSubValue3", c_uint32),
+        ("ProtocolDataRequestSubValue4", c_uint32),
+        ("ProtocolDataRequestSubValue5", c_uint32),
+        ("Reserved", c_uint32 * 5),
+    ]
+    _pack_ = 1
+
+
+class IOCTL_STORAGE_SET_PROPERTY(Structure):
+    _fields_ = [
+        ("setProperty", _STORAGE_PROPERTY_SET),
+        ("protocolData", STORAGE_PROTOCOL_SPECIFIC_DATA_EXT),
+    ]
+    _pack_ = 1
+    def __init__(self):
+        pass
+
+    @property
+    def command_buf(self):
+        return self
+
+    @property
+    def data_buf(self):
+        return None
+
+    @property
+    def data_len(self):
+        return 0
+
+    @property
+    def metadata_buf(self):
+        return None
+
+    @property
+    def result(self):
+        return self.protocolData.FixedProtocolReturnData
+
+    def dump_element(self):
+        return {}
+
+
+def GetIOCTLStorageSetPropertyWithBuffer(buffer_len:int):
+    class IOCTL_STORAGE_SET_PROPERTY_WITH_BUFFER(Structure):
+        _fields_ = [
+            ("set_property_without_buffer", IOCTL_STORAGE_SET_PROPERTY),
+            ('data_buffer', c_ubyte * buffer_len),
+        ]
+        _pack_ = 1
+        def __init__(self):
+            pass
+
+        @property
+        def setProperty(self):
+            return self.set_property_without_buffer.setProperty
+
+        @property
+        def protocolData(self):
+            return self.set_property_without_buffer.protocolData
+
+        @property
+        def command_buf(self):
+            return self.set_property_without_buffer
+
+        @property
+        def data_buf(self):
+            return self.data_buffer
+
+        @property
+        def data_len(self):
+            return self.protocolData.ProtocolDataLength
+
+        @property
+        def metadata_buf(self):
+            return None
+
+        @property
+        def result(self):
+            return self.protocolData.FixedProtocolReturnData
+
+        def dump_element(self):
+            return {}
+    return IOCTL_STORAGE_SET_PROPERTY_WITH_BUFFER

@@ -174,15 +174,15 @@ def encode_dict(data_dict,
             v = scsi_int_to_ba(value, _num, byteorder=byteorder)
             for i in range(len(v)):
                 result[bytepos + i] ^= v[i]
-        elif val[0] == 'b':
+        elif val[0] == 'b' and val[2] > 0:
             offset, length = val[1:]
             if isinstance(value, str):
                 value = value.encode()
             result[offset:offset + length] = value
-        elif val[0] == 'w':
+        elif val[0] == 'w' and val[2] > 0:
             offset, length = val[1:]
             result[offset:offset + length * 2] = value
-        elif val[0] == 'dw':
+        elif val[0] == 'dw' and val[2] > 0:
             offset, length = val[1:]
             result[offset:offset + length * 4] = value
 

@@ -4,16 +4,9 @@
 import sys
 import time
 from pydiskcmdcli.system.os_tool import checkAdmin
+from pydiskcmdcli.exceptions import UserDefinedError
 
 __all__ = []
-
-ExitCode = {0: "Success",
-            1: "Common Error",
-            10: "privilege limited",
-            11: "Operation Cancelled",
-            12: "KeyboardInterrupt Detect",
-            255: "Unkown Error",
-            }
 
 def parser_update(parser, add_output=[], add_force=False, add_debug=False):
     if add_output:
@@ -30,9 +23,10 @@ def parser_update(parser, add_output=[], add_force=False, add_debug=False):
 def script_check(options, danger_check=False, admin_check=False, delay_act=False):
     if admin_check:
         if not checkAdmin():
-            print ("ERROR - Script required root or admin permissions to run!")
+            e = UserDefinedError("Script required root or admin permissions to run!", 10)
+            print (str(e))
             print ("")
-            sys.exit(10)
+            sys.exit(e.exit_code)
     if danger_check and not options.force:
         if delay_act:
             try:
@@ -42,11 +36,15 @@ def script_check(options, danger_check=False, admin_check=False, delay_act=False
                     time.sleep(5)
                     print ("")
             except KeyboardInterrupt:
+                e = UserDefinedError("Operation exit", 12)
+                print (str(e))
                 print ("")
-                print ("Operation exit")
-                sys.exit(12)
-            except Exception as e:
-                sys.exit(255)
+                sys.exit(e.exit_code)
+            except Exception as _e:
+                e = UserDefinedError(str(_e), 15)
+                print (str(e))
+                print ("")
+                sys.exit(e.exit_code)
         else:
             while True:
                 answer = input("This is a dangerous operation, may destroy the data on disk, continue(yes/no): ")
@@ -54,7 +52,10 @@ def script_check(options, danger_check=False, admin_check=False, delay_act=False
                 if answer in ('y', 'yes'):
                     break
                 elif answer in ('n', 'no'):
-                    sys.exit(11)
+                    e = UserDefinedError("Canceled by user", 11)
+                    print (str(e))
+                    print ("")
+                    sys.exit(e.exit_code)
                 else:
                     print ("Wrong input")
                     print ("")

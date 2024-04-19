@@ -21,6 +21,7 @@ from pydiskcmdlib.exceptions import ExecuteCmdErr
 from pydiskcmdcli.exceptions import (
     CommandSequenceError,
     CommandNotSupport,
+    NonpydiskcmdError,
     UserDefinedError,
     FunctionNotImplementError,
 )
@@ -894,17 +895,28 @@ def pysata():
         1: non pydiskcmd error
         2: command parameters error
         3: device operation error
+          subcode: bit 4-7
+            0: ...  # TODO
         4: command build error
+          subcode: bit 4-7
+            0: ...  # TODO
         5: command execute error
+          subcode: bit 4-7
+            0: ...  # TODO
         6: check command return status error
+          subcode: bit 4-7
+            0: ...  # TODO
         7: check command return data error
+          subcode: bit 4-7
+            0: ...  # TODO
         ...
         13: function error
+          subcode: bit 4-7
+            0: ...  # TODO
         14: user defined error
+          subcode: bit 4-7
+            0: ...  # TODO
         15: reservd
-
-      subcode: bit 4-7
-        ... # TODO
     '''
     if len(sys.argv) > 1:
         command = sys.argv[1]
@@ -912,14 +924,15 @@ def pysata():
             try:
                 ret = commands_dict[command]()
             except Exception as e:
+                e = NonpydiskcmdError(str(e))
                 print (str(e))
                 # import traceback
                 # traceback.print_exc()
-                sys.exit(e.exit_code if hasattr(e, 'exit_code') else 1)
+                sys.exit(e.exit_code)
             else:
                 if (ret is not None) and ret > 0:
                     # function return a number, and is not None and > 0
-                    e = UserDefinedError("pynvme function of <%s> error" % commands_dict[command].__name__, ret)
+                    e = UserDefinedError("pynvme command of <%s> error" % command, ret)
                     print (str(e))
                     sys.exit(e.exit_code)
         else:

@@ -33,7 +33,28 @@ class SetFeature(NVMeCommand):
                      "result":[0xFFFFFFFF, 68],
                      }
     elif os_type == "Windows":
-        _req_id = win_nvme_command.IOCTLRequest.RESERVED_REQUEST_ID.value
+        _req_id = win_nvme_command.IOCTLRequest.RESERVED_REQUEST_ID.value 
+        # _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_SET_PROPERTY.value 
+        _cdb_bits = {"PropertyId": [0xFFFFFFFF, 0],
+                     "SetType": [0xFFFFFFFF, 4],
+                     "ProtocolType": [0xFFFFFFFF, 8],
+                     "DataType":[0xFFFFFFFF, 12],
+                     "ProtocolDataValue":[0xFFFFFFFF, 16],
+                     "ProtocolDataSubValue":[0xFFFFFFFF, 20],  # This will pass to CDW11
+                     "ProtocolDataOffset":[0xFFFFFFFF, 24],
+                     "ProtocolDataLength":[0xFFFFFFFF, 28],
+                     "FixedProtocolReturnData":[0xFFFFFFFF, 32],
+                     "ProtocolDataRequestSubValue2":[0xFFFFFFFF, 36],  # This will pass to CDW12
+                     "ProtocolDataRequestSubValue3":[0xFFFFFFFF, 40],  # This will pass to CDW13
+                     "ProtocolDataRequestSubValue4":[0xFFFFFFFF, 44],  # This will pass to CDW14
+                     "ProtocolDataRequestSubValue5":[0xFFFFFFFF, 48],  # This will pass to CDW15
+                     "Reserved_0":[0xFFFFFFFF, 52],
+                     "Reserved_1":[0xFFFFFFFF, 56],
+                     "Reserved_2":[0xFFFFFFFF, 60],
+                     "Reserved_3":[0xFFFFFFFF, 64],
+                     "Reserved_4":[0xFFFFFFFF, 68],
+                     "data": ['b', 72, 0],
+                     }
 
     def __init__(self, 
                  fid, 
@@ -62,4 +83,20 @@ class SetFeature(NVMeCommand):
                                cdw15=cdw15, 
                                timeout_ms=CommandTimeout.admin.value,)
         elif os_type == "Windows":
-            self.build_command()
+            # update data length
+            self._cdb_bitmap["data"][2] = len(data_out)
+            # build command
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
+                               SetType=win_nvme_command.STORAGE_SET_TYPE.PropertyStandardSet.value,
+                               ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
+                               DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeFeature.value,
+                               ProtocolDataValue=fid,
+                               ProtocolDataSubValue=cdw11, 
+                               ProtocolDataRequestSubValue2=cdw12, 
+                               ProtocolDataRequestSubValue3=cdw13, 
+                               ProtocolDataRequestSubValue4=uuid_index, 
+                               ProtocolDataRequestSubValue5=cdw15, 
+                               ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_SPECIFIC_DATA_EXT) if data_out else 0, 
+                               ProtocolDataLength=len(data_out),
+                               data=data_out,
+                               )

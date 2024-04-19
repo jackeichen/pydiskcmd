@@ -21,6 +21,7 @@ from . import parser_update,script_check
 from pydiskcmdcli.exceptions import (
     CommandSequenceError,
     CommandNotSupport,
+    NonpydiskcmdError,
     UserDefinedError,
     FunctionNotImplementError,
 )
@@ -99,14 +100,14 @@ def _list():
 
     (options, args) = parser.parse_args()
     ##
+    script_check(options, admin_check=True)
+    ##
     print_format = "%-20s %-20s %-40s %-9s %-26s %-16s %-8s"
     print (print_format % ("Node", "SN", "Model", "Namespace", "Usage", "Format", "FW Rev"))
     print (print_format % ("-"*20, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
     from pydiskcmdcli.system.lin_os_tool import scan_nvme_ctrls
     from pydiskcmdcli.utils.string_utils import decode_bytes,string_strip
     scsi_ba_to_int = nvme_format_print.scsi_ba_to_int
-    ##
-    script_check(options, admin_check=True)
     if os_type == 'Linux':
         for ctrl_name,ctrl_info in scan_nvme_ctrls().items():
             with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
@@ -177,6 +178,10 @@ def _list():
 def _list_subsys():
     usage="usage: %prog list-subsys"
     parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal",])
+    (options, args) = parser.parse_args()
+    ##
+    script_check(options, admin_check=True)
     ##
     if os_type == 'Linux':
         from pydiskcmdcli.system.lin_os_tool import scan_nvme_subsystem
@@ -1892,17 +1897,28 @@ def pynvme():
         1: non pydiskcmd error
         2: command parameters error
         3: device operation error
+          subcode: bit 4-7
+            0: ...  # TODO
         4: command build error
+          subcode: bit 4-7
+            0: ...  # TODO
         5: command execute error
+          subcode: bit 4-7
+            0: ...  # TODO
         6: check command return status error
+          subcode: bit 4-7
+            0: ...  # TODO
         7: check command return data error
+          subcode: bit 4-7
+            0: ...  # TODO
         ...
         13: function error
+          subcode: bit 4-7
+            0: ...  # TODO
         14: user defined error
+          subcode: bit 4-7
+            0: ...  # TODO
         15: reservd
-
-      subcode: bit 4-7
-        ... # TODO
     '''
     if len(sys.argv) > 1:
         command = sys.argv[1]
@@ -1910,14 +1926,15 @@ def pynvme():
             try:
                 ret = commands_dict[command]()
             except Exception as e:
+                e = NonpydiskcmdError(str(e))
                 print (str(e))
                 # import traceback
                 # traceback.print_exc()
-                sys.exit(e.exit_code if hasattr(e, 'exit_code') else 1)
+                sys.exit(e.exit_code)
             else:
                 if (ret is not None) and ret > 0:
                     # function return a number, and is not None and > 0
-                    e = UserDefinedError("pynvme function of <%s> error" % commands_dict[command].__name__, ret)
+                    e = UserDefinedError("pynvme command of <%s> error" % command, ret)
                     print (str(e))
                     sys.exit(e.exit_code)
         else:

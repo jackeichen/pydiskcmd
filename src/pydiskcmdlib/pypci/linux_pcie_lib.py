@@ -208,9 +208,11 @@ class NVMePCIe(PCIeConfig):
         subvendor_id = scsi_ba_to_int(self.pci_header.decode_data["SubsystemVendorID"], byteorder='little')
         subdevice_id = scsi_ba_to_int(self.pci_header.decode_data["SubsystemDeviceID"], byteorder='little')
         dev_name = 'Unknown'
+        def format_pci_ids(pci_id: int) -> str:
+            return ("%x" % pci_id).zfill(4)
         for f in pci_ids_locations:
             if os.path.isfile(f):
-                dev_name = ", ".join(get_pci_descriptation(f, "%x" % vendor_id, device_id="%x" % device_id, subvd_id=("%x" % subvendor_id,"%x" % subdevice_id)))
+                dev_name = ", ".join(get_pci_descriptation(f, format_pci_ids(vendor_id), device_id=format_pci_ids(device_id), subvd_id=(format_pci_ids(subvendor_id),format_pci_ids(subdevice_id))))
         print ("%-11s: %s" % ("Device Name", dev_name))
         print ("")
         print ("VID=%#x, DID=%#x, SSVID=%#x, SSDID=%#x" % (vendor_id,device_id,subvendor_id,subdevice_id))
