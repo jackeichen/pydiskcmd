@@ -187,6 +187,30 @@ def encode_dict(data_dict,
             result[offset:offset + length * 4] = value
 
 
+def get_check_dict_maxsize(check_dict) -> int:
+    """
+    helper method to get check_dict max size in byte
+
+    :param check_dict: a dict mapping field-names to notation tuples.
+    """
+    max_size = 0
+    if check_dict:
+        # check the max 
+        for val in check_dict.values():
+            if len(val) == 2:
+                length = 0
+                while (val[0] >> 8 * length) > 0:
+                    length += 1
+                max_size = max(max_size, val[1] + length)
+            elif val[0] == 'b':
+                max_size = max(max_size, val[1] + val[2])
+            elif val[0] == 'w':
+                max_size = max(max_size, val[1] + val[2] * 2)
+            elif val[0] == 'dw':
+                max_size = max(max_size, val[1] + val[2] * 4)
+    return max_size
+
+
 def print_data(data_dict):
     """
     A small method to print out data we generate in this package.

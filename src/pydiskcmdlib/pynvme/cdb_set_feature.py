@@ -53,7 +53,6 @@ class SetFeature(NVMeCommand):
                      "Reserved_2":[0xFFFFFFFF, 60],
                      "Reserved_3":[0xFFFFFFFF, 64],
                      "Reserved_4":[0xFFFFFFFF, 68],
-                     "data": ['b', 72, 0],
                      }
 
     def __init__(self, 
@@ -67,9 +66,9 @@ class SetFeature(NVMeCommand):
                  cdw15=0, 
                  data_out=b''):
         super(SetFeature, self).__init__()
+        # init data buffer
+        data_buffer = self.init_data_buffer(data_length=len(data_out), data_out=data_out)
         if os_type == "Linux":
-            # init data buffer
-            data_buffer = self.init_data_buffer(data_length=len(data_out), data_out=data_out)
             self.build_command(opcode=CmdOPCode,
                                nsid=nsid,
                                addr=data_buffer.addr,
@@ -83,8 +82,6 @@ class SetFeature(NVMeCommand):
                                cdw15=cdw15, 
                                timeout_ms=CommandTimeout.admin.value,)
         elif os_type == "Windows":
-            # update data length
-            self._cdb_bitmap["data"][2] = len(data_out)
             # build command
             self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                SetType=win_nvme_command.STORAGE_SET_TYPE.PropertyStandardSet.value,
@@ -98,5 +95,4 @@ class SetFeature(NVMeCommand):
                                ProtocolDataRequestSubValue5=cdw15, 
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_SPECIFIC_DATA_EXT) if data_out else 0, 
                                ProtocolDataLength=len(data_out),
-                               data=data_out,
                                )

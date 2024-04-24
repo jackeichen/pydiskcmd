@@ -16,7 +16,20 @@ from pydiskcmdlib.pyscsi.win_scsi_structures import (
     SCSIPassThroughDirectWithBufferEx,
 )
 ##
-from pydiskcmdlib.os.win_ioctl_request import IOCTLRequest   # used by pynvme, Do Not delete
+from pydiskcmdlib.os.win_ioctl_request import IOCTLRequest    # used by pynvme, Do Not delete
+from pydiskcmdlib.os.win_ioctl_structures import (
+    SRB_IO_CONTROL,
+    FIRMWARE_REQUEST_BLOCK,
+    STORAGE_FIRMWARE_DOWNLOAD,
+    STORAGE_FIRMWARE_ACTIVATE,
+)
+from pydiskcmdlib.os.win_ioctl_utils import (
+    IOCTL_SCSI_MINIPORT_FIRMWARE,       # Do Not Delete
+    IOCTL_MINIPORT_SIGNATURE_FIRMWARE,  # Do Not Delete
+    FIRMWARE_REQUEST_BLOCK_STRUCTURE_VERSION,
+    FIRMWARE_REQUEST_FLAG_CONTROLLER,
+    FIRMWARE_FUNCTION,
+)
 ##
 from pydiskcmdlib.utils.converter import decode_bits
 ##
@@ -92,6 +105,10 @@ cdb_bitmap = {IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value: {
                 "data": ['b', 72, 0],
                 },
              }
+##
+SRB_IO_CONTROL_LEN = sizeof(SRB_IO_CONTROL)
+NVME_PT_TIMEOUT = 40
+SCSI_FIRMWARE_TIMEOUT = 30
 ## 
 STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST = 0x80000000
 STORAGE_PROTOCOL_COMMAND_LENGTH = 0x54   # sizeof(STORAGE_PROTOCOL_COMMAND) = 84
@@ -981,3 +998,126 @@ def GetIOCTLStorageSetPropertyWithBuffer(buffer_len:int):
         def dump_element(self):
             return {}
     return IOCTL_STORAGE_SET_PROPERTY_WITH_BUFFER
+
+
+class SCSI_MINIPORT_FIRMWARE_HEADER(Structure):
+    _fields_ = [
+        ('srbIoCtrl', SRB_IO_CONTROL),
+        ("firmwareRequest", FIRMWARE_REQUEST_BLOCK),
+    ]
+    _pack_ = 1
+
+
+class SCSI_MINIPORT_FIRMWARE_DOWNLOAD_HEADER(Structure):
+    _fields_ = [
+        ('srbIoCtrl', SRB_IO_CONTROL),
+        ("firmwareRequest", FIRMWARE_REQUEST_BLOCK),
+        ("firmwareDownload", STORAGE_FIRMWARE_DOWNLOAD),
+    ]
+    _pack_ = 1
+    def __init__(self):
+        pass
+
+    @property
+    def command_buf(self):
+        return self
+
+    @property
+    def data_buf(self):
+        return None
+
+    @property
+    def data_len(self):
+        return 0
+
+    @property
+    def metadata_buf(self):
+        return None
+
+    @property
+    def result(self):
+        return
+
+    def dump_element(self):
+        return {}
+
+
+def GetScsiMiniportFirmwareDownload(buffer_len:int):
+    class IOCTL_MINIPORT_FIRMWARE_DOWNLOAD_WITH_BUFFER(Structure):
+        _fields_ = [
+            ("firmwareDownloadHeader", SCSI_MINIPORT_FIRMWARE_DOWNLOAD_HEADER),
+            ('ImageBuffer', c_ubyte * buffer_len),
+        ]
+        _pack_ = 1
+        def __init__(self):
+            pass
+
+        @property
+        def srbIoCtrl(self):
+            return self.firmwareDownloadHeader.srbIoCtrl
+
+        @property
+        def firmwareRequest(self):
+            return self.firmwareDownloadHeader.firmwareRequest
+
+        @property
+        def firmwareDownload(self):
+            return self.firmwareDownloadHeader.firmwareDownload
+
+        @property
+        def command_buf(self):
+            return self.firmwareDownloadHeader
+
+        @property
+        def data_buf(self):
+            return self.ImageBuffer
+
+        @property
+        def data_len(self):
+            return len(self.data_buf)
+
+        @property
+        def metadata_buf(self):
+            return None
+
+        @property
+        def result(self):
+            return None
+
+        def dump_element(self):
+            return {}
+    return IOCTL_MINIPORT_FIRMWARE_DOWNLOAD_WITH_BUFFER
+
+
+class SCSI_MINIPORT_FIRMWARE_ACTIVE(Structure):
+    _fields_ = [
+        ('srbIoCtrl', SRB_IO_CONTROL),
+        ("firmwareRequest", FIRMWARE_REQUEST_BLOCK),
+        ("firmwareActivate", STORAGE_FIRMWARE_ACTIVATE),
+    ]
+    _pack_ = 1
+    def __init__(self):
+        pass
+
+    @property
+    def command_buf(self):
+        return self
+
+    @property
+    def data_buf(self):
+        return None
+
+    @property
+    def data_len(self):
+        return 0
+
+    @property
+    def metadata_buf(self):
+        return None
+
+    @property
+    def result(self):
+        return
+
+    def dump_element(self):
+        return {}

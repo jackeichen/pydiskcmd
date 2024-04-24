@@ -35,16 +35,38 @@ class FWCommit(NVMeCommand):
                      }
     elif os_type == "Windows":
         from pydiskcmdlib.pynvme import win_nvme_command
-        _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_FIRMWARE_ACTIVATE.value
+        _req_id = win_nvme_command.IOCTLRequest.IOCTL_SCSI_MINIPORT.value
+        _cdb_bits = {"HeaderLength": [0xFFFFFFFF, 0],
+                     "Signature": ('b', 4, 8),
+                     "Timeout": [0xFFFFFFFF, 12],
+                     "ControlCode": [0xFFFFFFFF, 16],
+                     "ReturnCode": [0xFFFFFFFF, 20],
+                     "Length": [0xFFFFFFFF, 24],       # 
+                     "Version": [0xFFFFFFFF, 28],
+                     "Size": [0xFFFFFFFF, 32],
+                     "Function": [0xFFFFFFFF, 36],
+                     "Flags": [0xFFFFFFFF, 40],
+                     "DataBufferOffset": [0xFFFFFFFF, 44],
+                     "DataBufferLength": [0xFFFFFFFF, 48], # 
+                     "faVersion": [0xFFFFFFFF, 52],
+                     "faSize": [0xFFFFFFFF, 56],
+                     "faSlotToActivate": [0xFF, 60],
+                     "faReserved0": [0xFFFFFF, 61],
+                     }
 
     def __init__(self, 
                  fw_slot, 
                  action,
                  bpid=0):
         super(FWCommit, self).__init__()
-        self.build_command(opcode=CmdOPCode,
-                           fs=fw_slot,
-                           ca=action,
-                           bpid=bpid,
-                           timeout_ms=CommandTimeout.admin.value)
-
+        if os_type == "Linux":
+            self.build_command(opcode=CmdOPCode,
+                               fs=fw_slot,
+                               ca=action,
+                               bpid=bpid,
+                               timeout_ms=CommandTimeout.admin.value)
+        elif os_type == "Windows":
+            self.build_command(ControlCode=FWCommit.win_nvme_command.IOCTL_SCSI_MINIPORT_FIRMWARE,
+                               Function=FWCommit.win_nvme_command.FIRMWARE_FUNCTION.ACTIVATE.value,
+                               faSlotToActivate=fw_slot,
+                               )

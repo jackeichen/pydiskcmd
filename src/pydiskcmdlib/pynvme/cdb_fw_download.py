@@ -34,6 +34,24 @@ class FWImageDownload(NVMeCommand):
     elif os_type == "Windows":
         from pydiskcmdlib.pynvme import win_nvme_command
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_FIRMWARE_DOWNLOAD.value
+        _cdb_bits = {"HeaderLength": [0xFFFFFFFF, 0],
+                     "Signature": ('b', 4, 8),
+                     "Timeout": [0xFFFFFFFF, 12],
+                     "ControlCode": [0xFFFFFFFF, 16],
+                     "ReturnCode": [0xFFFFFFFF, 20],
+                     "Length": [0xFFFFFFFF, 24],       # 
+                     "Version": [0xFFFFFFFF, 28],
+                     "Size": [0xFFFFFFFF, 32],
+                     "Function": [0xFFFFFFFF, 36],
+                     "Flags": [0xFFFFFFFF, 40],
+                     "DataBufferOffset": [0xFFFFFFFF, 44],
+                     "DataBufferLength": [0xFFFFFFFF, 48], # 
+                     "fdVersion": [0xFFFFFFFF, 52],
+                     "fdSize": [0xFFFFFFFF, 56],
+                     "fdOffset": [0xFFFFFFFFFFFFFFFF, 60],
+                     "fdBufferSize": [0xFFFFFFFFFFFFFFFF, 68],
+                     #"fdImageBuffer": ['b', 76, 0],
+                     }
 
     def __init__(self, 
                  data, 
@@ -45,9 +63,16 @@ class FWImageDownload(NVMeCommand):
             raise BuildNVMeCommandError("data length should be dword aligned")
         dataout_buffer = self.init_data_buffer(data_length=data_len)
         dataout_buffer.data_buffer = data
-        self.build_command(opcode=CmdOPCode,
-                           addr=dataout_buffer.addr,
-                           data_len=dataout_buffer.data_length,
-                           numd=int(((data_len / 4) - 1)),
-                           ofst=offset,
-                           timeout_ms=CommandTimeout.admin.value)
+        if os_type == "Linux":
+            self.build_command(opcode=CmdOPCode,
+                               addr=dataout_buffer.addr,
+                               data_len=dataout_buffer.data_length,
+                               numd=int(((data_len / 4) - 1)),
+                               ofst=offset,
+                               timeout_ms=CommandTimeout.admin.value)
+        elif os_type == "Windows":
+            self.build_command(ControlCode=FWImageDownload.win_nvme_command.IOCTL_SCSI_MINIPORT_FIRMWARE,
+                               Function=FWImageDownload.win_nvme_command.FIRMWARE_FUNCTION.DOWNLOAD.value,
+                               fdOffset=offset,
+                               fdBufferSize=len(data),
+                               )

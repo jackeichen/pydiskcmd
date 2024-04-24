@@ -5,7 +5,12 @@ import sys
 from enum import Enum
 from pydiskcmdlib import os_type
 from pydiskcmdlib.exceptions import *
-from pydiskcmdlib.utils.converter import encode_dict,decode_bits,CheckDict
+from pydiskcmdlib.utils.converter import (
+    encode_dict,
+    decode_bits,
+    CheckDict,
+    get_check_dict_maxsize,
+)
 from pydiskcmdlib.pynvme import linux_nvme_command
 from pydiskcmdlib.pynvme import win_nvme_command
 from pydiskcmdlib.pynvme.data_buffer import DataBuffer
@@ -216,16 +221,22 @@ class NVMeCommand(object):
 
     def build_command(self, **kwargs):
         """
+        We suppose the command is consist of command-descriptor,in-data or out-data.
         Build the command in different OS:
           1. The Linux define a fixed-length ctypes.structure;
-          2. The Windows define a bariable-length ctypes.structure.
-            * Windows init the cdb bufffer with StorageQueryWithoutBuffer
-            * Windows cannot set a data buffer in building
+             * the command is always 72-bytes;
+             * the in-data or out-data in command should be included in command-descriptor as a memory address.
+          2. The Windows May define a bariable-length ctypes.structure. So The function will:
+            * The function will determine the command type with req_id;
+            * the in-data or out-data in command should follow the command-descriptor OR
+              should be included in command-descriptor as a memory address(Not enabled for now);
+            * For data-in command, the length could be in the command descriptor(like 
+              StorageQueryWithoutBuffer.StorageProtocolSpecificData.ProtocolDataLength), and this function will init a 0x00 data buffer;
+            * For data-out command, the length could be in the command descriptor, and this function will init a 0x00 data buffer and 
+              then set the data buffer with self.__data_buffer. You must call init_data_buffer() before do build_command() when send 
+              data-out command.
 
         :param kwargs: the parameters to build command
-                    For Linux, the key in kwargs should be xxx(like abc)
-                    For Windows, the key in kwargs should be Xxx(like Abc)
-                the kwargs is to build command.
 
         :return: the built command
         """
@@ -365,7 +376,7 @@ class NVMeCommand(object):
                 if data_len > 0:
                     _cdb = self.marshall_cdb(kwargs, win_nvme_command.sizeof(win_nvme_command.StorageQueryWithoutBuffer)+data_len)
                     self._cdb = win_nvme_command.GetStorageProtocolCommandWithBuffer(data_len).from_buffer(_cdb)
-            # set feature request
+            # set feature request, data out command
             elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_SET_PROPERTY.value:
                 if not self._cdb_bits:
                     # kwargs["PropertyId"]
@@ -381,7 +392,86 @@ class NVMeCommand(object):
                 if self.__command_data_length > 0:
                     ## Get the StorageQueryWithBuffer with data_len
                     _cdb = self.marshall_cdb(kwargs, sizeof(win_nvme_command.StorageQueryWithoutBuffer)+self.__command_data_length)
+                    # set data buffer
+                    if self.__data_buffer:
+                        _cdb[sizeof(win_nvme_command.IOCTL_STORAGE_SET_PROPERTY):self._cdb.protocolData.ProtocolDataOffset+self.__command_data_length] = bytes(self.__data_buffer.data_buffer)[0:self.__command_data_length]
+                    else:
+                        raise BuildNVMeCommandError("Building data-out command, but no invalid data in data buffer")
+                    ##
                     self._cdb = win_nvme_command.GetIOCTLStorageSetPropertyWithBuffer(self.__command_data_length).from_buffer(_cdb)
+                    #
+                    if self._cdb.protocolData.ProtocolDataOffset == 0:
+                        self._cdb.protocolData.ProtocolDataOffset = sizeof(win_nvme_command.IOCTL_STORAGE_SET_PROPERTY)
+            elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_SCSI_MINIPORT.value:
+                ## first check the srbIoCtrl->ControlCode
+                # max_size = get_check_dict_maxsize(self._cdb_bitmap)  # obsoleted
+                max_size = 0
+                _cdb_ba = self.marshall_cdb(kwargs, 256) # give an enough buffer to set cdb
+                _cdb = win_nvme_command.SRB_IO_CONTROL.from_buffer(_cdb_ba[0:win_nvme_command.SRB_IO_CONTROL_LEN])
+                if _cdb.Length > 0:
+                    max_size = _cdb.Length + win_nvme_command.SRB_IO_CONTROL_LEN
+                if _cdb.ControlCode == win_nvme_command.IOCTL_SCSI_MINIPORT_FIRMWARE:
+                    _cdb = win_nvme_command.SCSI_MINIPORT_FIRMWARE_HEADER.from_buffer(_cdb_ba[0:sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_HEADER)])
+                    if _cdb.firmwareRequest.DataBufferLength > 0:
+                        max_size = _cdb.firmwareRequest.DataBufferLength + sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_HEADER)
+                    if _cdb.firmwareRequest.Function == win_nvme_command.FIRMWARE_FUNCTION.DOWNLOAD.value:
+                        _cdb = win_nvme_command.SCSI_MINIPORT_FIRMWARE_DOWNLOAD_HEADER.from_buffer(_cdb_ba[0:sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_DOWNLOAD_HEADER)])
+                        if _cdb.firmwareDownload.BufferSize > 0:
+                            max_size = _cdb.firmwareDownload.BufferSize + sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_DOWNLOAD_HEADER)
+                        self.__command_data_length = max_size - sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_DOWNLOAD_HEADER)
+                        if max_size == 0:
+                            raise BuildNVMeCommandError("Data Buffer Length Not Set")
+                        elif self.__command_data_length > 0:
+                            _cdb_ba = self.marshall_cdb(kwargs, max_size)
+                            # set data
+                            if self.__data_buffer:
+                                # Set data to command data
+                                _cdb_ba[sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_DOWNLOAD_HEADER):sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_DOWNLOAD_HEADER)+self.__command_data_length] = bytes(self.__data_buffer.data_buffer)[0:self.__command_data_length]
+                            else:
+                                raise BuildNVMeCommandError("Building data-out command, but no invalid data in data buffer")
+                            #
+                            self._cdb = win_nvme_command.GetScsiMiniportFirmwareDownload(self.__command_data_length).from_buffer(_cdb_ba)
+                        else:
+                            raise BuildNVMeCommandError("Data Buffer Length Error")
+                        # check parameters
+                        if self._cdb.firmwareDownload.Version == 0:
+                            self._cdb.firmwareDownload.Version = 1
+                        if self._cdb.firmwareDownload.Size == 0:
+                            self._cdb.firmwareDownload.Size = sizeof(win_nvme_command.STORAGE_FIRMWARE_DOWNLOAD)
+                        if self._cdb.firmwareDownload.BufferSize == 0:
+                            self._cdb.firmwareDownload.BufferSize = self.__command_data_length
+                    elif _cdb.firmwareRequest.Function == win_nvme_command.FIRMWARE_FUNCTION.ACTIVATE.value:
+                        self._cdb = win_nvme_command.SCSI_MINIPORT_FIRMWARE_ACTIVE.from_buffer(_cdb_ba[0:sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_ACTIVE)])
+                        # check parameters
+                        if self._cdb.firmwareActivate.Version == 0:
+                            self._cdb.firmwareActivate.Version = 1
+                        if self._cdb.firmwareActivate.Size == 0:
+                            self._cdb.firmwareActivate.Size = sizeof(win_nvme_command.STORAGE_FIRMWARE_ACTIVATE)
+                    else:
+                        raise BuildNVMeCommandError("Unknown Or Non-support Firmware Request Function(%#X)" % _cdb.firmwareRequest.Function)
+                    # check invalid parameters
+                    if self._cdb.srbIoCtrl.Timeout == 0:
+                        self._cdb.srbIoCtrl.Timeout = win_nvme_command.SCSI_FIRMWARE_TIMEOUT
+                    if bytes(self._cdb.srbIoCtrl.Signature) == b'\x00\x00\x00\x00\x00\x00\x00\x00':
+                        for k,v in enumerate(win_nvme_command.IOCTL_MINIPORT_SIGNATURE_FIRMWARE.encode()):
+                            self._cdb.srbIoCtrl.Signature[k] = v
+                    if self._cdb.firmwareRequest.Size == 0:
+                        self._cdb.firmwareRequest.Size = sizeof(win_nvme_command.FIRMWARE_REQUEST_BLOCK)
+                    if self._cdb.firmwareRequest.Version == 0:
+                        self._cdb.firmwareRequest.Version = win_nvme_command.FIRMWARE_REQUEST_BLOCK_STRUCTURE_VERSION
+                    if self._cdb.firmwareRequest.Flags == 0:
+                        self._cdb.firmwareRequest.Flags = win_nvme_command.FIRMWARE_REQUEST_FLAG_CONTROLLER
+                    if self._cdb.firmwareRequest.DataBufferOffset == 0:
+                        self._cdb.firmwareRequest.DataBufferOffset = sizeof(win_nvme_command.SCSI_MINIPORT_FIRMWARE_HEADER)
+                    if self._cdb.firmwareRequest.DataBufferLength == 0:
+                        self._cdb.firmwareRequest.DataBufferLength = sizeof(self._cdb) - self._cdb.firmwareRequest.DataBufferOffset
+                ##
+                # check and fix the SrbIoCtrl structures
+                if self._cdb.srbIoCtrl.HeaderLength == 0:
+                    self._cdb.srbIoCtrl.HeaderLength = win_nvme_command.SRB_IO_CONTROL_LEN
+                if self._cdb.srbIoCtrl.Length == 0:
+                    self._cdb.srbIoCtrl.Length = sizeof(self._cdb) - win_nvme_command.SRB_IO_CONTROL_LEN
+            
             elif self._req_id in (win_nvme_command.IOCTLRequest.FSCTL_LOCK_VOLUME.value,
                                   win_nvme_command.IOCTLRequest.FSCTL_UNLOCK_VOLUME.value,
                                   win_nvme_command.IOCTLRequest.IOCTL_DISK_FLUSH_CACHE.value,
