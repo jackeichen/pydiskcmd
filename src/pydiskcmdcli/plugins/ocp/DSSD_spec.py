@@ -64,16 +64,26 @@ ocp_latency_monitor_bit_mask = {"Latency Monitor Feature Status": ('b', 0, 1),
                                 "Active Bucket Counter 3": ('b', 80, 16),
                                 "Active Latency Stamp": ('b', 96, 96),
                                 "Active Measured Latency": ('b', 192, 24),
-
-
-
-
-                                "Device Recovery Action_2 Timeout": ('b', 30, 1),
+                                "Active Measured Stamp Unit": ('b', 216, 2),
+                                "Static Bucket Counter 0": ('b', 240, 16),
+                                "Static Bucket Counter 1": ('b', 256, 16),
+                                "Static Bucket Counter 2": ('b', 272, 16),
+                                "Static Bucket Counter 3": ('b', 288, 16),
+                                "Static Latency Stamp": ('b', 304, 96),
+                                "Static Measured Latency": ('b', 400, 24),
+                                "Static Latency Stamp Unit": ('b', 424, 2),
+                                "Latency Monitor Debug Telemetry Log Size": ('b', 436, 12),
+                                "Debug Log Trigger Enable": ('b', 448, 2),
+                                "Debug Log Measured Latency": ('b', 450, 2),
+                                "Debug Log Latency Stamp": ('b', 452, 8),
+                                "Debug Log Pointer": ('b', 460, 2),
+                                "Debug Counter Trigger Source": ('b', 462, 2),
+                                "Debug Log Stamp Units": ('b', 464, 1),
                                 "Log Page Version": ('b', 494, 2),
                                 "Log Page GUID": ('b', 496, 16),
                                 }
 
-
+ocp_device_capabilities_bit_mask = {}
 
 
 def ocp_smart_extended_decode(data):

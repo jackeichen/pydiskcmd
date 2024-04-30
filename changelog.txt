@@ -27,6 +27,8 @@ Version 0.3.0(Not Release)
   * check valid sense data in pydiskcmdlib->pysata
   * support exit code in pydiskcmdcli
   * fix bugs for persistent-event-log
+  * firmware commit command support for windows
+
 
 Version 0.2.7
   * change nvme code base to '0.1.3', pynvme version to '0.1.1'. As OCP support:

@@ -5,10 +5,27 @@ from pydiskcmdcli import os_type
 from .constants import CommandTimeout
 from pydiskcmdlib.pynvme.nvme_command import NVMeCommand,AdminCommandOpcode,build_int_by_bitmap
 from pydiskcmdlib.pynvme import linux_nvme_command,win_nvme_command
+from enum import Enum
 #####
 CmdOPCode = AdminCommandOpcode.GetLogPage.value
 admin_timeout_ms = CommandTimeout.admin.value
 #####
+class OCPLogIdentifier(Enum):
+    DEVICE_SMART_INFORMATION = 0xC0
+    DEVICE_ERROR_RECOVERY = 0xC1
+    FIRMWARE_ACTIVATION_HISTORY = 0xC2
+    LATENCY_MONITOR = 0xC3
+    DEVICE_CAPABILITIES = 0xC4
+    UNSUPPORTED_REQUIREMENTS = 0xC5
+    HARDWARE_COMPONENT = 0xC6
+    TCG_CONFIGURATION = 0xC7
+    TELEMETRY_STRING_LOG = 0xC9
+
+##### For windows vendor spec log page
+# Callers could use a STORAGE_PROPERTY_ID of StorageAdapterProtocolSpecificProperty, and whose 
+# STORAGE_PROTOCOL_SPECIFIC_DATA or STORAGE_PROTOCOL_SPECIFIC_DATA_EXT structure is set to 
+# ProtocolDataRequestValue=VENDOR_SPECIFIC_LOG_PAGE_IDENTIFIER to request 512 byte chunks of vendor specific data.
+##### For windows vendor spec log page
 
 class SmartExtendedLog(NVMeCommand):
     if os_type == "Linux":
@@ -19,7 +36,7 @@ class SmartExtendedLog(NVMeCommand):
         data_length = 512
         ### build command
         numdl = int(data_length / 4) - 1
-        cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, 0xC0),      # log id
+        cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, OCPLogIdentifier.DEVICE_SMART_INFORMATION.value),      # log id
                                      "numdl": (0x0FFF, 2, numdl),})
         cdw14 = build_int_by_bitmap({"UUID Index": (0x7F, 0, uuid_index),      # log id
                                     })
@@ -36,13 +53,13 @@ class SmartExtendedLog(NVMeCommand):
                                cdw14=cdw14,
                                timeout_ms=admin_timeout_ms)
         elif os_type == "Windows":
-            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageDeviceProtocolSpecificProperty.value,
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                QueryType=win_nvme_command.StorageQueryType.PropertyStandardQuery.value,
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
                                ProtocolDataLength=data_length,
-                               lid=0xC0)
+                               ProtocolDataRequestValue=OCPLogIdentifier.DEVICE_SMART_INFORMATION.value)
 
 
 class ErrorRecoveryLog(NVMeCommand):
@@ -54,7 +71,7 @@ class ErrorRecoveryLog(NVMeCommand):
         data_length = 512
         ### build command
         numdl = int(data_length / 4) - 1
-        cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, 0xC1),      # log id
+        cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, OCPLogIdentifier.DEVICE_ERROR_RECOVERY.value),      # log id
                                      "numdl": (0x0FFF, 2, numdl),})
         cdw14 = build_int_by_bitmap({"UUID Index": (0x7F, 0, uuid_index),      # log id
                                     })
@@ -71,13 +88,13 @@ class ErrorRecoveryLog(NVMeCommand):
                                cdw14=cdw14,
                                timeout_ms=admin_timeout_ms)
         elif os_type == "Windows":
-            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageDeviceProtocolSpecificProperty.value,
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                QueryType=win_nvme_command.StorageQueryType.PropertyStandardQuery.value,
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
                                ProtocolDataLength=data_length,
-                               lid=0xC1)
+                               ProtocolDataRequestValue=OCPLogIdentifier.DEVICE_ERROR_RECOVERY.value)
 
 
 class LatencyMonitor(NVMeCommand):
@@ -87,7 +104,7 @@ class LatencyMonitor(NVMeCommand):
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value
     def __init__(self, uuid_index=0, data_buffer=None):
         data_length = 512
-        lid = 0xC3
+        lid = OCPLogIdentifier.LATENCY_MONITOR.value
         ### build command
         numdl = int(data_length / 4) - 1
         cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, lid),      # log id
@@ -107,13 +124,13 @@ class LatencyMonitor(NVMeCommand):
                                cdw14=cdw14,
                                timeout_ms=admin_timeout_ms)
         elif os_type == "Windows":
-            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageDeviceProtocolSpecificProperty.value,
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                QueryType=win_nvme_command.StorageQueryType.PropertyStandardQuery.value,
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
                                ProtocolDataLength=data_length,
-                               lid=lid)
+                               ProtocolDataRequestValue=lid)
 
 
 class DeviceCapabilities(NVMeCommand):
@@ -123,7 +140,7 @@ class DeviceCapabilities(NVMeCommand):
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value
     def __init__(self, uuid_index=0, data_buffer=None):
         data_length = 4096
-        lid = 0xC4
+        lid = OCPLogIdentifier.DEVICE_CAPABILITIES.value
         ### build command
         numdl = int(data_length / 4) - 1
         cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, lid),      # log id
@@ -143,13 +160,13 @@ class DeviceCapabilities(NVMeCommand):
                                cdw14=cdw14,
                                timeout_ms=admin_timeout_ms)
         elif os_type == "Windows":
-            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageDeviceProtocolSpecificProperty.value,
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                QueryType=win_nvme_command.StorageQueryType.PropertyStandardQuery.value,
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
                                ProtocolDataLength=data_length,
-                               lid=lid)
+                               ProtocolDataRequestValue=lid)
 
 
 class UnsupportedRequirements(NVMeCommand):
@@ -159,7 +176,7 @@ class UnsupportedRequirements(NVMeCommand):
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value
     def __init__(self, uuid_index=0, data_buffer=None):
         data_length = 4096
-        lid = 0xC5
+        lid = OCPLogIdentifier.UNSUPPORTED_REQUIREMENTS.value
         ### build command
         numdl = int(data_length / 4) - 1
         cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, lid),      # log id
@@ -179,13 +196,13 @@ class UnsupportedRequirements(NVMeCommand):
                                cdw14=cdw14,
                                timeout_ms=admin_timeout_ms)
         elif os_type == "Windows":
-            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageDeviceProtocolSpecificProperty.value,
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                QueryType=win_nvme_command.StorageQueryType.PropertyStandardQuery.value,
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
                                ProtocolDataLength=data_length,
-                               lid=lid)
+                               ProtocolDataRequestValue=lid)
 
 
 class HardwareComponent(NVMeCommand):
@@ -194,7 +211,7 @@ class HardwareComponent(NVMeCommand):
     elif os_type == "Windows":
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value
     def __init__(self, data_length, uuid_index=0, data_buffer=None):
-        lid = 0xC6
+        lid = OCPLogIdentifier.HARDWARE_COMPONENT.value
         ### build command
         numdl = int(data_length / 4) - 1
         cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, lid),      # log id
@@ -214,13 +231,13 @@ class HardwareComponent(NVMeCommand):
                                cdw14=cdw14,
                                timeout_ms=admin_timeout_ms)
         elif os_type == "Windows":
-            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageDeviceProtocolSpecificProperty.value,
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                QueryType=win_nvme_command.StorageQueryType.PropertyStandardQuery.value,
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
                                ProtocolDataLength=data_length,
-                               lid=lid)
+                               ProtocolDataRequestValue=lid)
 
 
 class TCGConfiguration(NVMeCommand):
@@ -230,7 +247,7 @@ class TCGConfiguration(NVMeCommand):
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value
     def __init__(self, uuid_index=0, data_buffer=None):
         data_length = 512
-        lid = 0xC7
+        lid = OCPLogIdentifier.TCG_CONFIGURATION.value
         ### build command
         numdl = int(data_length / 4) - 1
         cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, lid),      # log id
@@ -250,13 +267,13 @@ class TCGConfiguration(NVMeCommand):
                                cdw14=cdw14,
                                timeout_ms=admin_timeout_ms)
         elif os_type == "Windows":
-            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageDeviceProtocolSpecificProperty.value,
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                QueryType=win_nvme_command.StorageQueryType.PropertyStandardQuery.value,
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
                                ProtocolDataLength=data_length,
-                               lid=lid)
+                               ProtocolDataRequestValue=lid)
 
 
 class TelemetryStringLog(NVMeCommand):
@@ -265,7 +282,7 @@ class TelemetryStringLog(NVMeCommand):
     elif os_type == "Windows":
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value
     def __init__(self, data_length, uuid_index=0, data_buffer=None):
-        lid = 0xC9
+        lid = OCPLogIdentifier.TELEMETRY_STRING_LOG.value
         ### build command
         numdl = int(data_length / 4) - 1
         cdw10 = build_int_by_bitmap({"lid": (0xFF, 0, lid),      # log id
@@ -285,10 +302,10 @@ class TelemetryStringLog(NVMeCommand):
                                cdw14=cdw14,
                                timeout_ms=admin_timeout_ms)
         elif os_type == "Windows":
-            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageDeviceProtocolSpecificProperty.value,
+            self.build_command(PropertyId=win_nvme_command.StoragePropertyID.StorageAdapterProtocolSpecificProperty.value,
                                QueryType=win_nvme_command.StorageQueryType.PropertyStandardQuery.value,
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
                                ProtocolDataLength=data_length,
-                               lid=lid)
+                               ProtocolDataRequestValue=lid)

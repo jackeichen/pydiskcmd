@@ -15,6 +15,7 @@ from pydiskcmdlib.pynvme import linux_nvme_command
 from pydiskcmdlib.pynvme import win_nvme_command
 from pydiskcmdlib.pynvme.data_buffer import DataBuffer
 from pydiskcmdlib.os.win_ioctl_utils import StorageProtocolStatus
+from pydiskcmdlib.utils.common_lib import enum_find
 #
 sizeof = win_nvme_command.sizeof
 ##
@@ -518,34 +519,59 @@ class NVMeCommand(object):
             return bytes(self.cdb.metadata_buf)
 
     def _win_execute_check(self):
+        SCT,SC =  0,0
+        hint = ''
         if self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value:
             if self.cdb_struc:
                 temp = win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR.from_buffer_copy(bytearray(self.cdb_struc)) # cdb_struc
                 # Validate the returned data.
                 if (temp.Version != win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR) 
                  or temp.Size != win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_DATA_DESCRIPTOR)):
-                    raise CommandReturnStatusError("DeviceNVMeQueryProtocolData: data descriptor header not valid.")
+                    SCT,SC = 16,1
+                    hint = 'DeviceNVMeQueryProtocolData: data descriptor header not valid.'
                 if self.__command_data_length > 0 and (temp.protocol_specific.ProtocolDataOffset < win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData) or temp.protocol_specific.ProtocolDataLength < self.__command_data_length):
-                    raise CommandReturnStatusError("DeviceNVMeQueryProtocolData: ProtocolData Offset/Length not valid.")
+                    SCT,SC = 16,2
+                    hint = 'DeviceNVMeQueryProtocolData: ProtocolData Offset/Length not valid.'
         elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_PROTOCOL_COMMAND.value:
             if self._cdb.storage_protocal_command.ReturnStatus not in (StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_SUCCESS.value, StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_PENDING.value):
-                message = "Unkown Storage Protocol Status"
-                for status in StorageProtocolStatus:
-                    if self._cdb.storage_protocal_command.ReturnStatus == status.value:
-                        message = status.name
-                raise CommandReturnStatusError(message)
+                SCT,SC = 16,3
+                hint = "Unkown Storage Protocol Status"
+                status = enum_find(StorageProtocolStatus, value=self._cdb.storage_protocal_command.ReturnStatus)
+                if status:
+                    hint = status.name
+        elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_SCSI_MINIPORT.value:
+            if self._cdb and self._cdb.firmwareRequest.Function == win_nvme_command.FIRMWARE_FUNCTION.DOWNLOAD.value:
+                SCT,SC = 16,4
+                if self._cdb.srbIoCtrl.ReturnCode != win_nvme_command.FIRMWARE_STATUS.FIRMWARE_STATUS_SUCCESS.value:
+                    hint = "FirmwareUpgrade - firmware download failed. srbControl->ReturnCode %d." % self._cdb.srbIoCtrl.ReturnCode
+            elif  self._cdb and self._cdb.firmwareRequest.Function == win_nvme_command.FIRMWARE_FUNCTION.ACTIVATE.value:
+                if self._cdb.srbIoCtrl.ReturnCode == win_nvme_command.FIRMWARE_STATUS.FIRMWARE_STATUS_SUCCESS.value:
+                    hint = "FirmwareUpgrade - firmware activate succeeded."
+                elif self._cdb.srbIoCtrl.ReturnCode == win_nvme_command.FIRMWARE_STATUS.FIRMWARE_STATUS_POWER_CYCLE_REQUIRED.value:
+                    hint = "FirmwareUpgrade - firmware activate succeeded. PLEASE REBOOT COMPUTER."
+                else:
+                    SCT,SC = 16,5
+                    status = enum_find(win_nvme_command.FIRMWARE_STATUS, value=self._cdb.srbIoCtrl.ReturnCode)
+                    if status:
+                        hint = "FirmwareUpgrade - firmware activate error. srbControl->ReturnCode %d(%s)." % (status.value, status.name)
+                    else:
+                        hint = "FirmwareUpgrade - firmware activate error. srbControl->ReturnCode %d(Unkonwn Error)." % self._cdb.srbIoCtrl.ReturnCode
+        return SC,SCT,hint
 
     def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=False):
+        """
+        SCT    Status Code Type
+            0-7     For Common: Completion Queue Entry Status Field Definition
+            16      For Windows: Windows IOCTL status check error
+        """
+        ## 
+        # Step 1. Check SQ entry
         SC = (self.cq_status & 0xFF)
         SCT = ((self.cq_status >> 8) & 0x07)
-        CRD = ((self.cq_status >> 11) & 0x03)
-        More = (self.cq_status >> 13 & 0x01)
-        DNR = (self.cq_status >> 14 & 0x01)
-        if SCT == 0 and SC == 0:
-            if success_hint:
-                print ("Command Success")
-                print ('')
-        else:
+        if SCT != 0 or SC != 0:
+            CRD = ((self.cq_status >> 11) & 0x03)
+            More = (self.cq_status >> 13 & 0x01)
+            DNR = (self.cq_status >> 14 & 0x01)
             if fail_hint:
                 print ("Command failed, and details bellow.")
                 format_string = "%-15s%-20s%-8s%s"
@@ -554,4 +580,21 @@ class NVMeCommand(object):
                 print ('')
             if raise_if_fail:
                 raise CommandReturnStatusError("NVMe Return Status Check Error: Status Code Type(%#x), Status Code(%#x)" % (SCT, SC))
+            return SC,SCT
+        # Step 2. If windows, check the return code.
+        if  os_type == 'Windows':
+            SC,SCT,hint = self._win_execute_check()
+            if SCT != 0 or SC != 0:
+                if fail_hint:
+                    print (hint)
+                if raise_if_fail:
+                    raise CommandReturnStatusError("Windows IOCTL Check Error: %s" % hint if hint else "Unkonwn Error")
+                return SC,SCT
+            elif hint and success_hint:
+                print (hint)
+        # Should always SC,SCT = 0,0 here
+        if success_hint:
+            print ("Command Success")
+            print ('')
+        ##
         return SC,SCT

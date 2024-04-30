@@ -29,6 +29,7 @@ from pydiskcmdlib.os.win_ioctl_utils import (
     FIRMWARE_REQUEST_BLOCK_STRUCTURE_VERSION,
     FIRMWARE_REQUEST_FLAG_CONTROLLER,
     FIRMWARE_FUNCTION,
+    FIRMWARE_STATUS,
 )
 ##
 from pydiskcmdlib.utils.converter import decode_bits

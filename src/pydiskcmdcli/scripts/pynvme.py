@@ -494,8 +494,7 @@ def fw_commit():
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
-        ##
-        # if os_type == 'Windows':
+        ## native methmod to update firmware process
         #     print ("Recommand a safety methmod to active fimrware in a device, with windows Power-Shell.")
         #     print ("")
         #     print ("1. First open Power-Shell with administrators;")
@@ -507,8 +506,11 @@ def fw_commit():
         #     print ('   > Update-StorageFirmware -UniqueId "<UniqueId>" -SlotNumber <Slot_Number>')
         #     print ('')
         #     return 0
-        ## native methmod to update firmware
+        ##
         script_check(options, admin_check=True)
+        if os_type == 'Windows':
+            print ("Note: --action is not apply to Windows, it will be ignored and automatically choose a proper action.")
+            print ("")
         smud = False
         with NVMe(init_device(dev, open_t='nvme')) as d:
             # get nvme ver

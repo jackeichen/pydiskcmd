@@ -33,6 +33,7 @@ class FWImageDownload(NVMeCommand):
                      }
     elif os_type == "Windows":
         from pydiskcmdlib.pynvme import win_nvme_command
+        #_req_id = win_nvme_command.IOCTLRequest.IOCTL_SCSI_MINIPORT.value
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_FIRMWARE_DOWNLOAD.value
         _cdb_bits = {"HeaderLength": [0xFFFFFFFF, 0],
                      "Signature": ('b', 4, 8),
@@ -76,3 +77,10 @@ class FWImageDownload(NVMeCommand):
                                fdOffset=offset,
                                fdBufferSize=len(data),
                                )
+
+from .cdb_scsi2nvme_write_buffer import NVMeWriteBuffer
+class SCSI2NVMeFWImageDownload(NVMeWriteBuffer):
+    def __init__(self, 
+                 data, 
+                 offset):
+        NVMeWriteBuffer.__init__(self, 0x0E, 0, offset, int(len(data)/4), data=data)
