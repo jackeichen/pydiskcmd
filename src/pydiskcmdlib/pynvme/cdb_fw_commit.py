@@ -8,6 +8,29 @@ from pydiskcmdlib.pynvme.nvme_command import NVMeCommand,AdminCommandOpcode,Comm
 CmdOPCode = AdminCommandOpcode.FirmwareCommit.value
 #####
 class FWCommit(NVMeCommand):
+    _cmd_spec_fail = {0x06: "Invalid Firmware Slot: The firmware slot indicated is invalid or read only. This error is indicated if \
+the firmware slot exceeds the number supported.",
+                      0x07: "Invalid Firmware Image: The firmware image specified for activation is invalid and not loaded by the controller.",
+                      0x0B: "Firmware Activation Requires Conventional Reset: The firmware commit was successful, \
+however, activation of the firmware image requires a Conventional Reset. If an FLR or Controller \
+Reset occurs prior to a Conventional Reset, the controller shall continue operation with the currently executing firmware image.",
+                      0x10: "Firmware Activation Requires NVM Subsystem Reset: The firmware commit was successful, \
+however, activation of the firmware image requires an NVM Subsystem Reset. If any other type of \
+Controller Level Reset occurs prior to an NVM Subsystem Reset, the controller shall continue \
+operation with the currently executing firmware.",
+                      0x11: "Firmware Activation Requires Controller Level Reset: The firmware commit was successful; \
+however, the image specified does not support being activated without a Controller Level Reset. \
+The image shall be activated at the next Controller Level Reset. This status code should be returned \
+only if the Commit Action field in the Firmware Commit command is set to 011b (i.e., activate immediately).",
+                      0x12: "Firmware Activation Requires Maximum Time Violation: The image specified if activated \
+immediately would exceed the Maximum Time for Firmware Activation (MTFA) value reported in \
+the Identify Controller data structure (refer to Figure 251). To activate the firmware, the Firmware \
+Commit command needs to be re-issued and the image activated using a reset.",
+                      0x13: "Firmware Activation Prohibited: The image specified is being prohibited from activation by the \
+controller for vendor specific reasons (e.g., controller does not support down revision firmware).",
+                      0x14: "Overlapping Range: This error is indicated if the firmware image has overlapping ranges.",
+                      0x1E: "Boot Partition Write Prohibited: This error is indicated if a command attempts to modify a Boot Partition while locked.",
+                      }
     if os_type == "Linux":
         from pydiskcmdlib.pynvme.linux_nvme_command import IOCTLRequest
         _req_id = IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value

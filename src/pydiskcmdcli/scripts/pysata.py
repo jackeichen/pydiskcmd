@@ -924,7 +924,10 @@ def pysata():
             try:
                 ret = commands_dict[command]()
             except Exception as e:
-                e = NonpydiskcmdError(str(e))
+                from pydiskcmdlib.exceptions import BaseError as lib_BaseError
+                from pydiskcmdcli.exceptions import BaseError as cli_BaseError
+                if not isinstance(e, (lib_BaseError, cli_BaseError)):
+                    e = NonpydiskcmdError(str(e))
                 print (str(e))
                 # import traceback
                 # traceback.print_exc()

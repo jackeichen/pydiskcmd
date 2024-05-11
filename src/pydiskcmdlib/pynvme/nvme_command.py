@@ -16,6 +16,7 @@ from pydiskcmdlib.pynvme import win_nvme_command
 from pydiskcmdlib.pynvme.data_buffer import DataBuffer
 from pydiskcmdlib.os.win_ioctl_utils import StorageProtocolStatus
 from pydiskcmdlib.utils.common_lib import enum_find
+from .nvme_status_code import StatusCodeDescription
 #
 sizeof = win_nvme_command.sizeof
 ##
@@ -105,6 +106,7 @@ class NVMeCommand(object):
     '''
     _cdb_bits: CheckDict = {}   # define your self command bitmap
     _req_id: int = 0
+    _cmd_spec_fail = {}
 
     def __init__(self):
         """
@@ -565,24 +567,34 @@ class NVMeCommand(object):
             16      For Windows: Windows IOCTL status check error
         """
         ## 
-        # Step 1. Check SQ entry
+        # Step 1. Check SQ entry, sometimes do not work for windows 
         SC = (self.cq_status & 0xFF)
         SCT = ((self.cq_status >> 8) & 0x07)
         if SCT != 0 or SC != 0:
             CRD = ((self.cq_status >> 11) & 0x03)
             More = (self.cq_status >> 13 & 0x01)
             DNR = (self.cq_status >> 14 & 0x01)
+            _hint = "NVMe Return Status Check Error: Status Code Type(%#x), Status Code(%#x)" % (SCT, SC)
             if fail_hint:
                 print ("Command failed, and details bellow.")
                 format_string = "%-15s%-20s%-8s%s"
                 print (format_string % ("Status Code", "Status Code Type", "More", "Do Not Retry"))
                 print (format_string % (SC, SCT, More, DNR))
                 print ('')
+                print (StatusCodeDescription.get((SCT,SC)))
+                print ('')
+                # Step 1.2 check Command Specific Status Value. It may not work,
+                # just an ideas
+                if os_type == 'Linux':
+                    if fail_hint and self.cq_cmd_spec in self._cmd_spec_fail:
+                        print (self._cmd_spec_fail.get(self.cq_cmd_spec))
+                        print ('')
+                        _hint = "%s, Command Specific Status Value: %#x" % (_hint, self.cq_cmd_spec)
             if raise_if_fail:
-                raise CommandReturnStatusError("NVMe Return Status Check Error: Status Code Type(%#x), Status Code(%#x)" % (SCT, SC))
+                raise CommandReturnStatusError(_hint)
             return SC,SCT
         # Step 2. If windows, check the return code.
-        if  os_type == 'Windows':
+        if os_type == 'Windows':
             SC,SCT,hint = self._win_execute_check()
             if SCT != 0 or SC != 0:
                 if fail_hint:

@@ -56,6 +56,15 @@ Compared to the compiled language, python code may take up more time and memory 
 more size in packaged program(i.e. program packaged by pyinstaller). Most of the time is consumed 
 by loading the code in first use.
 
+| Test item             | Used Time(milliseconds) | Description                   |
+|-----------------------|-------------------------| ----------------------------- |
+| Load pydiskcmdlib     | 35.99839                | Only load module pydiskcmdlib |
+| Load pydiskcmdcli     | 36.59582                | Only load module pydiskcmdcli |
+| NVMe.id_ctrl()        | 0.138521                | run NVMe.id_ctrl() after pydiskcmdlib loaded |
+| pynvme id-ctrl        | 69                      | run pynvme id-ctl <device>, include print data |
+
+The test uses CentOS Stream 9 with python 3.9, and get the average value in 5 times.
+
 
 License
 =======
