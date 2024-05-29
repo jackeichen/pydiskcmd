@@ -77,6 +77,10 @@ def print_help():
         print ("  read                  Submit a read command, return results")
         print ("  verify                Submit a verify command, return results")
         print ("  write                 Submit a write command, return results")
+        print ("  write-zeroes          Submit a write zeroes command, return results")
+        print ("  write-uncor           Submit a write uncorrectable command, return results")
+        print ("  compare               Submit a Compare command, return results")
+        print ("  dsm                   Submit a Data Set Management command, return results")
         print ("  get-lba-status        Submit a Get LBA Status command, return results")
         print ("  version               Shows the program version")
         print ("  help                  Display this help")
@@ -1300,7 +1304,7 @@ def write():
             remainder = data_l % lba_size
             if remainder:
                 data_l += (lba_size-remainder) 
-            temp_data.ljust(data_l, b'\x00')
+            temp_data = temp_data.ljust(data_l, b'\x00')
             ##
             print ('issuing write command')
             print ("%s:" % d.device._file_name)
@@ -1581,6 +1585,91 @@ def show_regs():
     else:
         parser.print_help()
 
+def compare():
+    usage="usage: %prog compare <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=1,
+        help="namespace to read(default 1)")
+    parser.add_option("-s", "--start-block", type="int", dest="start_block", action="store", default=0,
+        help="64-bit addr of first block to access")
+    parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
+        help="number of blocks (zeroes based) on device to access")
+    parser.add_option("-f", "--data-file", type="str", dest="dfile", action="store", default='',
+        help="File(Read first) containing the data to write")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, admin_check=True)
+        ##
+        # get data
+        with open(options.dfile, 'rb') as f:
+            temp_data = f.read()
+        #
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.read(options.namespace_id, options.start_block, options.block_count, temp_data)
+        cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
+    else:
+        parser.print_help()
+
+def dsm():
+    raise NotImplementedError("Dataset Management is comming soon.")
+
+def write_uncor():
+    usage="usage: %prog write-uncor <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=1,
+        help="namespace to read(default 1)")
+    parser.add_option("-s", "--start-block", type="int", dest="start_block", action="store", default=0,
+        help="64-bit addr of first block to access")
+    parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
+        help="number of blocks (zeroes based) on device to access")
+    parser_update(parser, add_force=True)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, danger_check=True, admin_check=True)
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            print ('issuing write uncorrectable command')
+            print ("%s:" % d.device._file_name)
+            print ('')
+            cmd = d.write_uncorrectable(options.namespace_id, options.start_block, options.block_count)
+        cmd.check_return_status(True, raise_if_fail=True)
+    else:
+        parser.print_help()
+
+def write_zeroes():
+    usage="usage: %prog write-zeroes <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=1,
+        help="namespace to read(default 1)")
+    parser.add_option("-s", "--start-block", type="int", dest="start_block", action="store", default=0,
+        help="64-bit addr of first block to access")
+    parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
+        help="number of blocks (zeroes based) on device to access")
+    parser_update(parser, add_force=True)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, danger_check=True, admin_check=True)
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            print ('issuing write zeroes command')
+            print ("%s:" % d.device._file_name)
+            print ('')
+            cmd = d.write_zeroes(options.namespace_id, options.start_block, options.block_count)
+        cmd.check_return_status(True, raise_if_fail=True)
+    else:
+        parser.print_help()
 #################################################
 # Bellow is plugin extensions
 #   - OCP NVMe SSD SPEC Command, Spec can be download in https://www.opencompute.org/
@@ -1705,8 +1794,8 @@ def _win_nvme_vroc_print_help():
         print ("pynvme-%s" % Version)
         print ("usage: pynvme vroc <command> [<device>] [<args>]")
         print ("")
-        print ("The '<device>' is a string(ex: \\.\Scsi0:/390) split by '/' that include")
-        print ("VROC Controller(ex: \\.\Scsi0:) and VROC Disk ID.")
+        print (r"The '<device>' is a string(ex: \\.\Scsi0:/390) split by '/' that include")
+        print (r"VROC Controller(ex: \\.\Scsi0:) and VROC Disk ID.")
         print ("")
         print ("Windows NVMe VROC extensions")
         print ("")
@@ -1879,6 +1968,10 @@ commands_dict = {"list": _list,
                  "read": read,
                  "verify": verify,
                  "write": write,
+                 "compare": compare,
+                 "dsm": dsm,
+                 "write-uncor": write_uncor,
+                 "write-zeroes": write_zeroes,
                  "get-lba-status":get_lba_status,
                  "version": version,
                  "help": print_help,

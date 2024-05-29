@@ -14,26 +14,21 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from pydiskcmdlib.pysata.ata_command import ATACommand16
+from pydiskcmdlib.pysata.ata_command import ATACommand16,ProtocalMap
 
 
-class ReadDMAEXT16(ATACommand16):
+class WriteUncorrectableEXT(ATACommand16):
     """
-    A class to send read dma command to a ATA device.
+    A class to send CheckPowerMode command to a ATA device
     """
-    def __init__(self,
-                 lba,
-                 tl,
-                 blocksize):
+    def __init__(self, feature, count, lba):
         ATACommand16.__init__(self,
-                              0,         # fetures
-                              tl,        # count
-                              lba,       # lba
-                              0,         # device
-                              0x25,      # command
-                              0x06,      # protocal
-                              2,         # t_length
-                              1,         # t_dir
-                              t_type=1,
-                              byte_block=1,
-                              blocksize=blocksize) 
+                              feature,         # fetures
+                              count,           # count
+                              lba,             # lba
+                              0,               # device
+                              0x45,            # command
+                              ProtocalMap.NonData.value,      # protocal
+                              0,               # t_length
+                              0,               # t_dir
+                              ) 

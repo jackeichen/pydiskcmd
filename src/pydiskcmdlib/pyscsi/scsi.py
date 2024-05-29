@@ -15,6 +15,10 @@ class SCSI(_SCSI):
                  dev,
                  blocksize=0):
         super(SCSI, self).__init__(dev, blocksize=blocksize)
+        # auto detect blocksize
+        if self._blocksize == 0:
+            cap = self.readcapacity16().result
+            self._blocksize = cap["block_length"]
 
     def __del__(self):
         if self.device:

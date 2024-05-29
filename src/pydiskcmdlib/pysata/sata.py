@@ -5,6 +5,8 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 ###
+import binascii
+from pydiskcmdlib.utils.converter import translocate_bytearray
 from pyscsi.pyscsi.scsi_enum_command import spc, sbc, smc, ssc, mmc
 from pyscsi.pyscsi.scsi_cdb_inquiry import Inquiry
 from pydiskcmdlib.pysata.ata_cdb_smart import SmartReadData16 as SmartReadData
@@ -31,6 +33,9 @@ from pydiskcmdlib.pysata.ata_cdb_smart import SmartReadLog16
 from pydiskcmdlib.pysata.ata_cdb_softreset import SoftReset
 from pydiskcmdlib.pysata.ata_cdb_TrustedReceive import TrustedReceiveDMA
 from pydiskcmdlib.pysata.ata_cdb_writeDMAEXT16 import WriteDMAEXT16
+from pydiskcmdlib.pysata.ata_cdb_read_verify_sectors import ReadVerifySectorEXT
+from pydiskcmdlib.pysata.ata_cdb_writelog import WriteLogExt
+from pydiskcmdlib.pysata.ata_cdb_write_uncorrectable import WriteUncorrectableEXT
 ##
 
 class SATA(object):
@@ -51,6 +56,13 @@ class SATA(object):
         self.__init_opcode()
         ##
         self.__identify = self.identify().datain
+        # auto detect blocksize
+        # set blocksize if blocksize=0
+        if self._blocksize == 0 and self.__identify[213] & 0xC0 == 0x40: # word 106 valid
+            if self.__identify[213] & 0x10:
+                self._blocksize = int(binascii.hexlify(translocate_bytearray(self.__identify[234:238], 2)),16) * 2
+            else:
+                self._blocksize = 512
 
     def __call__(self,
                  dev):
@@ -203,6 +215,11 @@ class SATA(object):
         self.execute(cmd)
         return cmd
 
+    def read_verify_sector(self, lba, tl):
+        cmd = ReadVerifySectorEXT(lba, tl)
+        self.execute(cmd)
+        return cmd
+
     def read_DMAEXT16(self, 
                       lba,
                       tl,):
@@ -214,7 +231,7 @@ class SATA(object):
         
         :return: a read16 instance
         """
-        cmd = ReadDMAEXT16(lba, tl)
+        cmd = ReadDMAEXT16(lba, tl, self.blocksize)
         self.execute(cmd)
         return cmd
 
@@ -222,7 +239,12 @@ class SATA(object):
                        lba,
                        tl,
                        data):
-        cmd = WriteDMAEXT16(lba, tl, data)
+        cmd = WriteDMAEXT16(lba, tl, data, self.blocksize)
+        self.execute(cmd)
+        return cmd
+
+    def write_log(self, log_page_count, log_address, page_number, data=None):
+        cmd = WriteLogExt(log_page_count, log_address, page_number, data=data)
         self.execute(cmd)
         return cmd
 
@@ -364,6 +386,11 @@ class SATA(object):
 
     def sanitize(self, feature, count, lba):
         cmd = SanitizeDeviceRaw(feature, count, lba)
+        self.execute(cmd)
+        return cmd
+
+    def write_uncorrectable_ext(self, feature, count, lba):
+        cmd = WriteUncorrectableEXT(feature, count, lba)
         self.execute(cmd)
         return cmd
 

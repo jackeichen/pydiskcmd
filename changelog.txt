@@ -28,6 +28,13 @@ Version 0.3.0(Not Release)
   * support exit code in pydiskcmdcli
   * fix bugs for persistent-event-log
   * firmware commit command support for windows
+  * add auto detect disk block size for pydiskcmdlib.pysata.SATA & pydiskcmdlib.pyscsi.SCSI,
+  * fix that cannot specify block size for pydiskcmdcli.pysata
+  * pydiskcmdlib.pysata add commands to support:
+    * ReadVerifySectorEXT and ReadVerifySector
+    * WriteLogDMAExt and WriteLogExt
+    * Write Uncorrectable EXT command
+  * Test Fedora Workstation 40
 
 
 Version 0.2.7
@@ -96,5 +103,5 @@ Version 0.2.2
     * Only a part of commands (in command spec) are supported in User-Level
 
 List of contributors to version 0.*.* branch:
-  Eric (author),
+  Eric (author), gao7904,
 ################################################################################

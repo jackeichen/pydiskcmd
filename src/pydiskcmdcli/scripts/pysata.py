@@ -63,11 +63,14 @@ def print_help():
         print ("  smart                       Get smart information")
         print ("  smart-return-status         Get the reliability status of the device")
         print ("  read-log                    Get the GPL Log and show it")
+        print ("  write-log                   Send write log command")
         print ("  smart-read-log              Get the smart Log and show it")
         print ("  sanitize                    Send sanitize command")
         print ("  standby                     Send standby command")
         print ("  read                        Send a read command to disk")
-        print ("  write                       Send a write command to disk")
+        print ("  read-verify-sector          Send read verify sector(s) command")
+        print ("  write                       Send a write command to disk") 
+        print ("  write-uncorrectable         Send a write uncorrectable command to disk") 
         print ("  flush                       Send a flush command to disk")
         print ("  trim                        Send a trim command to disk")
         print ("  download-fw                 Download firmware to target disk")
@@ -194,8 +197,8 @@ def read_dma_ext():
         help="Logical Block Address to write to. Default 0")
     parser.add_option("-c", "--block-count", type="int", dest="nlb", action="store", default=1,
         help="Transfer Length in blocks. Default 1")
-    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=512,
-        help="To fix the block size of the device. Default 512")
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
+        help="To fix the block size of the device. Default 0")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
 
@@ -207,7 +210,7 @@ def read_dma_ext():
         script_check(options, admin_check=True)
         ##
         print ('issuing read DMA EXT command.')
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
             print ("%s:" % d.device._file_name)
             cmd = d.read_DMAEXT16(options.slba, options.nlb)
             cmd.check_return_status()
@@ -217,6 +220,36 @@ def read_dma_ext():
             print ('Data Out:')
             print ('len: %d' % (len(cmd.datain)))
             print (cmd.datain)
+    else:
+        parser.print_help()
+
+def read_verify_sector():
+    usage="usage: %prog read-verify-sector <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-s", "--start-block", type="int", dest="slba", action="store", default=0,
+        help="Logical Block Address to write to. Default 0")
+    parser.add_option("-c", "--block-count", type="int", dest="nlb", action="store", default=1,
+        help="Transfer Length in blocks. Default 1")
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
+        help="To fix the block size of the device. Default 0")
+    parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
+        help="Show status return value")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, admin_check=True)
+        ##
+        print ('issuing read verify sector(s) command.')
+        with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
+            print ("%s:" % d.device._file_name)
+            cmd = d.read_verify_sector(options.slba, options.nlb)
+            cmd.check_return_status(success_hint=True)
+            if options.show_status:
+                _print_return_status(cmd.ata_status_return_descriptor)
+            print ('')
     else:
         parser.print_help()
 
@@ -231,8 +264,8 @@ def write_dma_ext():
         help="String containing the block to write")
     parser.add_option("-f", "--data-file", type="str", dest="dfile", action="store", default='',
         help="File(Read first) containing the block to write")
-    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=512,
-        help="To fix the block size of the device. Default 512")
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
+        help="To fix the block size of the device. Default 0")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
     parser_update(parser, add_force=True)
@@ -243,31 +276,87 @@ def write_dma_ext():
         dev = sys.argv[2]
         ##
         script_check(options, danger_check=True, admin_check=True)
-        ## check data
-        if options.data:
-            options.data = bytearray(options.data, 'utf-8')
-        elif options.dfile:
-            if os.path.isfile(options.dfile):
-                with open(options.dfile, 'rb') as f:
-                    data = f.read()
-                options.data = bytearray(data)
-        if options.data:
-            data_l = len(options.data)
-            data_size = options.nlb * options.bs
-            if data_size < data_l:
-                options.data = options.data[0:data_size]
-            elif data_size > data_l:
-                options.data = options.data + bytearray(data_size-data_l)
-            else:
-                pass
-        else:
-            parser.error("Lack of input data")
         ##
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
+            # check data
+            if options.data:
+                options.data = bytearray(options.data, 'utf-8')
+            elif options.dfile:
+                if os.path.isfile(options.dfile):
+                    with open(options.dfile, 'rb') as f:
+                        data = f.read()
+                    options.data = bytearray(data)
+            if options.data:
+                data_l = len(options.data)
+                data_size = options.nlb * d.blocksize
+                if data_size < data_l:
+                    options.data = options.data[0:data_size]
+                elif data_size > data_l:
+                    options.data = options.data + bytearray(data_size-data_l)
+                else:
+                    pass
+            else:
+                parser.error("Lack of input data")
+            # issue command
             print ('issuing write DMA EXT command')
             print ("%s:" % d.device._file_name)
             print ('')
             cmd = d.write_DMAEXT16(options.slba, options.nlb, options.data)
+            cmd.check_return_status()
+            if options.show_status:
+                _print_return_status(cmd.ata_status_return_descriptor)
+    else:
+        parser.print_help()
+
+def write_log():
+    usage="usage: %prog write-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-l", "--log-address", type="int", dest="log_address", action="store", default=0,
+        help="Log address to read")
+    parser.add_option("-p", "--page-number", type="int", dest="page_number", action="store", default=0,
+        help="Page number offset in this log address")
+    parser.add_option("-c", "--count", type="int", dest="count", action="store", default=1,
+        help="Read log data transfer length, 512 Bytes per count")
+    parser.add_option("-d", "--data", type="str", dest="data", action="store", default='',
+        help="String containing the block to write")
+    parser.add_option("-f", "--data-file", type="str", dest="dfile", action="store", default='',
+        help="File(Read first) containing the block to write")
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
+        help="To fix the block size of the device. Default 0")
+    parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
+        help="Show status return value")
+    parser_update(parser, add_force=True)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, danger_check=True, admin_check=True)
+        with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
+            ## check data
+            data = None
+            if options.data:
+                data = bytearray(options.data, 'utf-8')
+            elif options.dfile:
+                if os.path.isfile(options.dfile):
+                    with open(options.dfile, 'rb') as f:
+                        data = f.read()
+                    data = bytearray(data)
+            if data:
+                data_l = len(data)
+                data_size = options.nlb * d.blocksize
+                if data_size < data_l:
+                    data = data[0:data_size]
+                elif data_size > data_l:
+                    data = data + bytearray(data_size-data_l)
+                else:
+                    pass
+            ##
+            print ('issuing write log command')
+            print ("%s:" % d.device._file_name)
+            print ('')
+            cmd = d.write_log(options.count, options.log_address, options.page_number, data)
             cmd.check_return_status()
             if options.show_status:
                 _print_return_status(cmd.ata_status_return_descriptor)
@@ -287,7 +376,7 @@ def flush():
         ##
         script_check(options, admin_check=True)
         ##
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             print ('issuing flush command')
             print ("%s:" % d.device._file_name)
             cmd = d.flush()
@@ -310,7 +399,7 @@ def accessible_max_address():
         ##
         script_check(options, admin_check=True)
         ##
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             print ('issuing accessible max address command')
             print ("%s:" % d.device._file_name)
             cmd = d.getAccessibleMaxAddress()
@@ -357,7 +446,7 @@ def identify():
             print ('issuing identify command')
             print ('Device: %s' % dev)
             print ('')
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             cmd = d.identify()
         cmd.check_return_status()
         format_print_identify(cmd, print_type=options.output_format, show_status=options.show_status)
@@ -379,7 +468,7 @@ def self_test():
         ##
         script_check(options, admin_check=True)
         ##
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             if options.self_test == "short":
                 print ('issuing selftest command - short test')
                 print ("%s:" % d.device._file_name)
@@ -429,7 +518,7 @@ def read_log():
         ##
         script_check(options, admin_check=True)
         ##
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             print ('issuing read-log command')
             print ("%s:" % d.device._file_name)
             print ('')
@@ -484,7 +573,7 @@ def set_feature():
         print ('issuing set-feature command')
         print ('Device: %s' % dev)
         print ('')
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             cmd = d.set_feature(options.feature, options.count, options.lba)
         cmd.check_return_status()
         ##
@@ -511,7 +600,7 @@ def smart_read_log():
         ##
         script_check(options, admin_check=True)
         ##
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             print ('issuing smart-read-log command')
             print ("%s:" % d.device._file_name)
             print ('')
@@ -557,7 +646,7 @@ def smart():
             print ('issuing smart command')
             print ('Device: %s' % dev)
             print ('')
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             cmd_read_data = d.smart_read_data(SMART_KEY)
             cmd_read_data.check_return_status()
             ##
@@ -589,7 +678,7 @@ def smart_return_status():
         print ('issuing smart-return-status command')
         print ('Device: %s' % dev)
         print ('')
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             cmd = d.smart_return_status()
         cmd.check_return_status()
         ##
@@ -621,7 +710,7 @@ def standby_imm():
         ##
         script_check(options, admin_check=True)
         ##
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             print ('issuing standby immediate command')
             print ("%s:" % d.device._file_name)
             cmd = d.standby_imm()
@@ -661,7 +750,7 @@ def trim():
         ##
         print ("Note: If you want trim command works, lba_description need 4k aligned!")
         print ('')
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             print ('issuing data set management(known as trim) command')
             print ("%s:" % d.device._file_name)
             cmd = d.trim(lba_description)
@@ -672,7 +761,7 @@ def trim():
         parser.print_help()
 
 def download_fw():
-    usage="usage: %prog standby <device> [OPTIONS]"
+    usage="usage: %prog download-fw <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-f", "--file", dest="fw_file", action="store", default='',
         help="The firmware file path.")
@@ -690,7 +779,7 @@ def download_fw():
         if not os.path.isfile(options.fw_file):
             parser.error("Firmware file Not Exist.")
         ##
-        with SATA(init_device(dev, open_t='ata'), 512) as d:
+        with SATA(init_device(dev, open_t='ata')) as d:
             print ('issuing download microcode command')
             print ("%s:" % d.device._file_name)
             rc = d.download_fw(options.fw_file, transfer_size=options.xfer, feature=options.code)
@@ -844,6 +933,37 @@ def sanitize():
     else:
         parser.print_help()
 
+def write_uncorrectable():
+    usage="usage: %prog write-uncorrectable <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-f", "--feature", type=int, dest="feature", action="store", default=0xAA,
+        help="Uncorrectable options to set. 0x55h: Create a pseudo-uncorrectable error with logging,\
+0x5Ah: Vendor specific, \
+0xA5h: Vendor specific, \
+0xAAh: Create a flagged error without logging. Default is 0xAA")
+    parser.add_option("-c", "--count", type=int, dest="count", action="store", default=8,
+        help="The number of logical sectors to be marked. A value of 0000h indicates that 65 536 logical sectors, default is 8")
+    parser.add_option("-l", "--lba", type=int, dest="lba", action="store", default=0,
+        help="LBA of first logical sector to be marked.")
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        #
+        if options.feature not in (0x55, 0x5A, 0xA5, 0xAA):
+            parser.error("Feature should be 0x55|0x5A|0xA5|0xAA")
+        ##
+        script_check(options, admin_check=True)
+        ##
+        with SATA(init_device(dev, open_t='ata')) as d:
+            print ('issuing download microcode command')
+            print ("%s:" % d.device._file_name)
+            cmd = d.write_uncorrectable_ext(options.feature, options.count, options.lba)
+        cmd.check_return_status(success_hint=True, )
+    else:
+        parser.print_help()
+
 #################################################
 # Bellow is cli management interface 
 #################################################
@@ -874,7 +994,10 @@ commands_dict = {"list": _list,
                  "smart-read-log": smart_read_log,
                  "sanitize": sanitize,
                  "read": read_dma_ext,
+                 "read-verify-sector": read_verify_sector,
                  "write": write_dma_ext,
+                 "write-uncorrectable": write_uncorrectable,
+                 "write-log": write_log,
                  "flush": flush,
                  "trim": trim,
                  "download-fw": download_fw,

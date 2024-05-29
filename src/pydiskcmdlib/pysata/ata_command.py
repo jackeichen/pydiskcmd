@@ -25,6 +25,31 @@ class ProtocalMap(Enum):
     NCQ                       = 0x0C
     ReturnResponseInformation = 0x0F
 
+class TransferDirection(Enum):
+    NonData = 0
+    Host2Device = 0
+    Device2Host = 1
+
+#  T_LENGTH field
+#  Code             Description
+#  00b              No data is transferred
+#  01b              The transfer length is an unsigned integer specified in the FEATURES (7:0) field and, 
+#                   for the ATA PASS-THROUGH (16) command and the ATA PASS-THROUGH (32) 
+#                   command, the FEATURES (15:8) field.
+#  10b              The transfer length is an unsigned integer specified in the COUNT (7:0) field and, for 
+#                   the ATA PASS-THROUGH(16) command and the ATA PASS-THROUGH (32) 
+#                   command, the COUNT(15:8) field.
+#  11b              The transfer length is an unsigned integer specified in the TPSIU.
+# 
+# 
+# Mapping of BYTE_BLOCK bit, T_TYPE bit, and T_LENGTH field
+#  BYTE_BLOCK  T_TYPE  T_LENGTH    Transfer length
+#  1b          0b      non-zero    The number of 512 byte blocks to be transferred
+#  1b          1b      non-zero    The number of ATA logical sector size blocks to be transferred
+#  0b          all     non-zero    The number of bytes to be transferred
+#  all         all     zero        No data to be transferred
+# 
+
 
 class ATACommand12(ATAPassThrough12):
     """

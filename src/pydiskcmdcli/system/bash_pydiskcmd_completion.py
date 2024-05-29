@@ -7,13 +7,14 @@ def get_completion():
     text="""# This is a bash completion for pydiskcmd
 _pysata_cmds="list check-PowerMode accessible-MaxAddress identify sanitize self-test set-feature \
           read-log smart-read-log smart smart-return-status standby read write flush trim \
-          download-fw trusted-receive version help"
+          download-fw trusted-receive read-verify-sector write-log write-uncorrectable \
+          version help"
 
 _pynvme_cmds="list list-subsys smart-log id-ctrl id-ns error-log fw-log fw-download fw-commit \
           format sanitize persistent-event-log device-self-test self-test-log telemetry-log \
           sanitize-log get-feature set-feature list-ctrl list-ns nvme-create-ns nvme-delete-ns \
           nvme-attach-ns nvme-detach-ns commands-se-log pcie flush read write get-lba-status \
-          get-log reset subsystem-reset show-regs version help"
+          compare dsm write-uncor write-zeroes get-log reset subsystem-reset show-regs version help"
 
 _pyscsi_cmds="list inq getlbastatus readcap luns mode-sense log-sense read write \
           sync cdb-passthru se-protocol-in version help"
@@ -74,6 +75,10 @@ pysata_list_opts () {
         opts+=" -l --log-address= -p --page-number= -c --count= -f --feature= \
             -o --output-format= --show_status -h --help"
         ;;
+        "write-log")
+        opts+=" -l --log-address= -p --page-number= -c --count= -d --data= \
+            -f --data-file= -b --block-size= --show_status -h --help"
+        ;;
         "smart-read-log")
         opts+=" -l --log-address= -c --count= -o --output-format= \
             --show_status -h --help"
@@ -85,9 +90,17 @@ pysata_list_opts () {
         opts+=" -s --start-block= -c --block-count= -b --block-size= \
             --show_status -h --help"
         ;;
+        "read-verify-sector")
+        opts+=" -s --start-block= -c --block-count= -b --block-size= \
+            --show_status -h --help"
+        ;;
         "write")
         opts+=" -s --start-block= -c --block-count= -d --data= \
             -f --data-file= -b --block-size= --show_status -h --help"
+        ;;
+        "write-uncorrectable")
+        opts+=" -l --lba= -c --count= -f --feature= \
+             -h --help"
         ;;
         "flush")
         opts+=" --show_status -h --help"
@@ -315,6 +328,22 @@ pynvme_list_opts () {
         "write")
         opts+=" -n --namespace-id= -s --start-block= -c --block-count= \
             -d --data= -f --data-file= -h --help"
+        ;;
+        "compare")
+        opts+=" -n --namespace-id= -s --start-block= -c --block-count= \
+            -f --data-file= -h --help"
+        ;;
+        "dsm")
+        opts+=" -n --namespace-id= -s --start-block= -c --block-count= \
+            -f --data-file= -h --help"
+        ;;
+        "write-uncor")
+        opts+=" -n --namespace-id= -s --start-block= -c --block-count= \
+            -h --help"
+        ;;
+        "write-zeroes")
+        opts+=" -n --namespace-id= -s --start-block= -c --block-count= \
+            -h --help"
         ;;
         "get-lba-status")
         opts+=" -n --namespace-id= -s --start-block= -c --block-count= \

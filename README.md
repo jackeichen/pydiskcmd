@@ -9,6 +9,8 @@ Important
 pydiskcmd remove pydiskhealthd in version 0.3.0, it may become a separate project 
 in the future. For the reason:
 
+It's hard to maintain a complex-function project.
+
 If you still want to use it, keep your tool version less than 0.3.0.
 
 
@@ -96,6 +98,7 @@ Support List
 | SUSE 15 SP5           | x64 | Y    | Y   | Y    |
 | Ubuntu 22.04          | x64 | Y    | Y   | Y    |
 | Debian 10             | x64 | Y    | Y   | Y    |
+| Fedora Workstation 40 | x64 | Y    | Y   | Y    |
 | Windows 10 Pro        | x64 | Y    | Y   | Y    |
 | Windows 11            | x64 | Y    | Y   | Y    |
 | Windows Server 2019   | x64 | Y    | Y   | Y    |

@@ -24,7 +24,8 @@ class WriteDMAEXT16(ATACommand16):
     def __init__(self,
                  lba,
                  count,
-                 data):
+                 data,
+                 blocksize):
         if count == 0:
             count = 65536
         ATACommand16.__init__(self,
@@ -36,4 +37,7 @@ class WriteDMAEXT16(ATACommand16):
                               0x06,      # protocal
                               2,         # t_length
                               0,         # t_dir
-                              data=data) 
+                              data=data,
+                              t_type=1,
+                              byte_block=1,
+                              blocksize=blocksize) 

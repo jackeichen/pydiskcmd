@@ -19,6 +19,10 @@ from pydiskcmdlib.pynvme.cdb_nvme_read import Read
 from pydiskcmdlib.pynvme.cdb_nvme_verify import Verify
 from pydiskcmdlib.pynvme.cdb_nvme_write import Write
 from pydiskcmdlib.pynvme.cdb_nvme_flush import Flush
+from pydiskcmdlib.pynvme.cdb_nvme_compare import Compare
+from pydiskcmdlib.pynvme.cdb_nvme_write_unc import WriteUncorrectable
+from pydiskcmdlib.pynvme.cdb_nvme_write_zeroes import WriteZeroes
+from pydiskcmdlib.pynvme.cdb_nvme_dataset_management import DatasetManagement
 from pydiskcmdlib.pynvme.cdb_nvme_get_lba_status import GetLBAStatus
 from pydiskcmdlib.pynvme.cdb_nvme_reset import Reset
 from pydiskcmdlib.pynvme.cdb_nvme_subsys_reset import SubsysReset
@@ -274,7 +278,7 @@ class NVMe(object):
         self.execute(cmd)
         return cmd
 
-    def read(self, ns_id, slba, nlba):
+    def read(self, ns_id, slba, nlba, **kwargs):
         ## first get the lbaf
         cmd = self.id_ns(ns_id=ns_id)
         # 
@@ -296,7 +300,7 @@ class NVMe(object):
         else:
             metadata_len = 0
         ##
-        cmd = Read(ns_id, slba, nlba, data_len=data_len, metadata_len=metadata_len)
+        cmd = Read(ns_id, slba, nlba, data_len=data_len, metadata_len=metadata_len, **kwargs)
         self.execute(cmd)
         return cmd
 
@@ -312,5 +316,53 @@ class NVMe(object):
 
     def get_lba_status(self, ns_id, slba, mndw, atype, rl, timeout=60000):
         cmd = GetLBAStatus(ns_id, slba, mndw, atype, rl, timeout=60000)
+        self.execute(cmd)
+        return cmd
+
+    def compare(self, ns_id, slba, nlba, data, metadata=None, **kwargs):
+        ## first get the lbaf
+        cmd = self.id_ns(ns_id=ns_id)
+        # 
+        flbaf = cmd.data[26] & 0x0F
+        start_labf_des = 128 + flbaf * 4
+        lbaf_ms = cmd.data[start_labf_des] + (cmd.data[start_labf_des+1] << 8)
+        lbaf_lbads = 2 ** (cmd.data[start_labf_des+2])
+        # get the data length
+        data_len = (nlba + 1) * lbaf_lbads
+        metadata_len = (nlba + 1) * lbaf_ms
+        if lbaf_ms > 0:
+            if (cmd.data[27] & 0x01): # extended data LBA
+                data_len += metadata_len
+                metadata_len = 0
+            elif (cmd.data[27] & 0x02):
+                pass
+            else:
+                metadata_len = 0
+        else:
+            metadata_len = 0
+        ##
+        cmd = Compare(ns_id, 
+                      slba, 
+                      nlba, 
+                      data=data, 
+                      data_len=data_len, 
+                      metadata=metadata, 
+                      metadata_len=metadata_len if metadata else 0,
+                      **kwargs)
+        self.execute(cmd)
+        return cmd
+
+    def write_uncorrectable(self, nsid, slba, nlba):
+        cmd = WriteUncorrectable(nsid, slba, nlba)
+        self.execute(cmd)
+        return cmd
+
+    def write_zeroes(self, nsid, slba, nlba, **kwargs):
+        cmd = WriteZeroes(nsid, slba, nlba, **kwargs)
+        self.execute(cmd)
+        return cmd
+
+    def dataset_management(self, nsid, nr, idr, idw, ad, data):
+        cmd = DatasetManagement(nsid, nr, idr, idw, ad, data)
         self.execute(cmd)
         return cmd

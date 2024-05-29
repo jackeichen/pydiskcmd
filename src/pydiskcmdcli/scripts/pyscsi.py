@@ -321,7 +321,7 @@ def inq():
         if options.page_code >= 0:
             evpd = 1
         ##
-        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing inquiry command')
             print ("%s:" % d.device._file_name)
             try:
@@ -402,7 +402,7 @@ def _list():
             # Then check if ATA device
             device_type = 'scsi'
             try:
-                with SATA(init_device(dev_path, open_t='ata'), 512) as d:
+                with SATA(init_device(dev_path, open_t='ata')) as d:
                     id_info = d.identify_raw
             except:
                 pass
@@ -441,7 +441,7 @@ def getlbastatus():
         ##
         script_check(options, admin_check=True)
         ##
-        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing getlbastatus command')
             print ("%s:" % d.device._file_name)
             ##
@@ -478,7 +478,7 @@ def readcap():
         ##
         script_check(options, admin_check=True)
         ##
-        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing readcap command')
             print ("%s:" % d.device._file_name)
             print ("")
@@ -520,7 +520,7 @@ def luns():
         ##
         script_check(options, admin_check=True)
         ##
-        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing report luns command')
             print ("%s:" % d.device._file_name)
             print ("")
@@ -560,7 +560,7 @@ def mode_sense():
         ##
         script_check(options, admin_check=True)
         ##
-        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing mode sense command')
             print ("%s:" % d.device._file_name)
             print ("")
@@ -612,7 +612,7 @@ def log_sense():
         else:
             log_len = options.alloclen
         ##
-        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing log sense command')
             print ("%s:" % d.device._file_name)
             print ("")
@@ -686,7 +686,7 @@ def sync():
         ##
         script_check(options, admin_check=True)
         ##
-        with SCSI(init_device(dev, open_t='scsi'), 512) as d:
+        with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing SynchronizeCache16 command')
             print ("%s:" % d.device._file_name)
             print ("")
@@ -702,8 +702,8 @@ def read16():
         help="Logical Block Address to write to. Default 0")
     parser.add_option("-c", "--block-count", type="int", dest="nlba", action="store", default=1,
         help="Transfer Length in blocks. Default 1")
-    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=512,
-        help="To fix the block size of the device. Default 512")
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
+        help="To fix the block size of the device. Default 0")
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -733,8 +733,8 @@ def write16():
         help="String containing the block to write")
     parser.add_option("-f", "--data-file", type="str", dest="dfile", action="store", default='',
         help="File(Read first) containing the block to write")
-    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=512,
-        help="To fix the block size of the device. Default 512")
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
+        help="To fix the block size of the device. Default 0")
     parser_update(parser, add_force=True)
 
     if len(sys.argv) > 2:
@@ -743,28 +743,29 @@ def write16():
         dev = sys.argv[2]
         ##
         script_check(options, danger_check=True, admin_check=True)
-        ## check data
-        if options.data:
-            options.data = bytearray(options.data, 'utf-8')
-        elif options.dfile:
-            if os.path.isfile(options.dfile):
-                with open(options.dfile, 'rb') as f:
-                    data = f.read()
-                options.data = bytearray(data)
-        if options.data:
-            data_l = len(options.data)
-            data_size = options.nlba * options.bs
-            if data_size < data_l:
-                options.data = options.data[0:data_size]
-            elif data_size > data_l:
-                options.data = options.data + bytearray(data_size-data_l)
-            else:
-                pass
-        else:
-            parser.error("Lack of input data")
-            return
         ##
         with SCSI(init_device(dev, open_t='scsi'), options.bs) as d:
+            # check data
+            if options.data:
+                options.data = bytearray(options.data, 'utf-8')
+            elif options.dfile:
+                if os.path.isfile(options.dfile):
+                    with open(options.dfile, 'rb') as f:
+                        data = f.read()
+                    options.data = bytearray(data)
+            if options.data:
+                data_l = len(options.data)
+                data_size = options.nlba * d.blocksize
+                if data_size < data_l:
+                    options.data = options.data[0:data_size]
+                elif data_size > data_l:
+                    options.data = options.data + bytearray(data_size-data_l)
+                else:
+                    pass
+            else:
+                parser.error("Lack of input data")
+                return
+            # issue command
             print ('issuing write16 command')
             print ("%s:" % d.device._file_name)
             cmd = d.write16(options.slba, options.nlba, options.data)
@@ -816,7 +817,7 @@ def cdb_passthru():
         help="File containing data that will send to device")
     parser.add_option("-d", "--direction", type="int", dest="direction", action="store", default=0,
         help="data transfer direction, 0: no data transfer, 1: data from device, 2: data to device")
-    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=512,
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
         help="To fix the block size of the device. Default 512")
     parser_update(parser, add_output=["hex", "raw"])
 
