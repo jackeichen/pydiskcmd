@@ -1,0 +1,82 @@
+##############################################
+RAID/HBA support matrix with smartie
+##############################################
+
+smartie is a Pure-python ATA/SATA/ATAPI/SCSI and disk enumeration library for 
+Linux/Windows/OS X, it locates in https://github.com/TkTech/smartie.
+
+When I help to do the compatibility test between smartie and RAID controllers,
+TkTech, the project’s author, suggest a RAID/HBA support matrix in smartie and
+pydiskcmd.
+
+Methmod to do test
+==================
+The test will focus on the raw command structures. The key point of compatibility
+is the controller driver could transfer the scsi commands and the scsi command is 
+built in correct format.
+
+Three scsi commands in smartie are included:
+* inquiry(ATA,SAS)        12 00 00 00 60 00
+* identify(ATA)           85 08 2e 00 00 00 00 00 00 00 00 00 00 00 ec 00
+* smart read data(ATA)    85 08 2e 00 d0 00 00 00 00 00 4f 00 c2 00 b0 00 
+
+The command will be sent with 
+# pyscsi cdb-passthru XX XX XX XX XX XX ...
+
+How to get command from smartie
+-------------------------------
+The code based in smartie/scsi/__init__.py, class SCSIDevice.
+
+**********************************************
+from smartie.scsi.structures import (
+    ATACommands,
+    ATAPICommands,
+    ATAProtocol,
+    ATASmartFeature,
+    Command16,
+    CommandFlags,
+    DescriptorFormatSense,
+    DeviceType,
+    Direction,
+    FixedFormatSense,
+    IdentifyResponse,
+    InquiryCommand,
+    InquiryResponse,
+    OperationCode,
+    SmartDataResponse,
+    SmartThresholdResponse,
+)
+import smartie
+
+inquiry_command = InquiryCommand(
+          operation_code=OperationCode.INQUIRY, allocation_length=96
+        )
+
+identify_command = Command16(
+            operation_code=OperationCode.COMMAND_16,
+            protocol=ATAProtocol.PIO_DATA_IN << 1,
+            flags=CommandFlags(
+                t_length=CommandFlags.Length.IN_SECTOR_COUNT,
+                byt_blok=True,
+                t_dir=True,
+                ck_cond=True,
+            ),
+            command=ATACommands.IDENTIFY,
+        )
+
+smart_read_data_command = Command16(
+          operation_code=OperationCode.COMMAND_16,
+          protocol=ATAProtocol.PIO_DATA_IN << 1,
+          command=ATACommands.SMART,
+          flags=CommandFlags(
+              t_length=CommandFlags.Length.IN_SECTOR_COUNT,
+              byt_blok=True,
+              t_dir=True,
+              ck_cond=True,
+          ),
+          features=smartie.structures.swap_int(
+              2, ATASmartFeature.SMART_READ_DATA
+          ),
+      ).set_lba(0xC24F00)
+
+**********************************************

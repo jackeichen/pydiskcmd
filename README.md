@@ -7,9 +7,8 @@ SPDX-License-Identifier: LGPL-2.1-or-later
 Important
 =========
 pydiskcmd remove pydiskhealthd in version 0.3.0, it may become a separate project 
-in the future. For the reason:
-
-It's hard to maintain a complex-function project.
+in the future. For the reason: Need more effort to maintain a mixed-function project, 
+and pydiskhealthd need more dependencies.
 
 If you still want to use it, keep your tool version less than 0.3.0.
 
@@ -90,6 +89,9 @@ It is also available as a downloadable zip archive from:
 Support List
 ============
 
+OS Support
+---------
+
 | OS                    | arc | SCSI | ATA | NVME |
 |-----------------------|-----|------|-----|------|
 | CentOS/RHEL 7.6       | x64 | Y    | Y   | Y    |
@@ -111,7 +113,29 @@ Note:
     * Only some of the commands are tested, Do Not guarantee all the other commands work;
     * This tool should work in Linux&Windows, but may be incompatible in OS other than this Support List;
     * Windows only support some of the get-feature/get-log/idenfity commands;
-    * Support Direct-Connection/HBA Mode/JBOD Mode, RAID Mode is not support.
+    * Support Direct-Connection/HBA Mode/JBOD Mode, RAID Mode is not supported.
+
+RAID/HBD Support
+----------------
+Only HBA Card and RAID JBOD mode under test. Do Not support RAID Mode.
+
+The configuration should matrixed support with smartie. See raid_support_matrix_with_smartie.txt for 
+details.
+
+| RAID HBA Family       | CentOS/RHEL 8.4 |
+|-----------------------|-----------------|
+| Broadcom RAID 9440    | Y               |
+| Broadcom RAID 9560    | Y               |
+| Broadcom HBA 9500     | Y               |
+| ThinkSystem 930       | Y               |
+| ThinkSystem 940       | Y               |
+| ThinkSystem 5350      | Y               |
+| ThinkSystem 5350      | Y               |
+
+Note:
+
+    * Only some log page and identify is tested, which command support denpends on the card driver;
+    * May need update driver if error occurs;
 
 
 Building and installing
