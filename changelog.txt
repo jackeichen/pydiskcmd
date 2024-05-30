@@ -6,7 +6,7 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.3.0(Not Release)
+Version 0.3.0
   * Important: pydiskcmd is split into 2 parts, code in different directory has 
     different jobs
     * pydiskcmdlib
@@ -35,6 +35,7 @@ Version 0.3.0(Not Release)
     * WriteLogDMAExt and WriteLogExt
     * Write Uncorrectable EXT command
   * Test Fedora Workstation 40
+  * Add matrixed support with smartie
 
 
 Version 0.2.7
