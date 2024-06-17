@@ -115,22 +115,22 @@ Note:
     * Windows only support some of the get-feature/get-log/idenfity commands;
     * Support Direct-Connection/HBA Mode/JBOD Mode, RAID Mode is not supported.
 
-RAID/HBD Support
+RAID/HBA Support
 ----------------
 Only HBA Card and RAID JBOD mode under test. Do Not support RAID Mode.
 
 The configuration should matrixed support with smartie. See raid_support_matrix_with_smartie.txt for 
 details.
 
-| RAID HBA Family       | CentOS/RHEL 8.4 |
-|-----------------------|-----------------|
-| Broadcom RAID 9440    | Y               |
-| Broadcom RAID 9560    | Y               |
-| Broadcom HBA 9500     | Y               |
-| ThinkSystem 930       | Y               |
-| ThinkSystem 940       | Y               |
-| ThinkSystem 5350      | Y               |
-| ThinkSystem 5350      | Y               |
+| RAID/HBA Adapter   | OS under test| SCSI Supported | ATA Supported |
+|--------------------|--------------|----------------|---------------|
+| Broadcom RAID 9440 | CentOS 8.4   | Yes            | Yes           |
+| Broadcom RAID 9560 | CentOS 8.4   | Yes            | Yes           |
+| Broadcom HBA  9500 | CentOS 8.4   | Yes            | Yes           |
+| ThinkSystem   930  | CentOS 8.4   | Yes            | Yes           |
+| ThinkSystem   940  | CentOS 8.4   | Yes            | Yes           |
+| ThinkSystem   4350 | CentOS 8.4   | Yes            | Yes           |
+| ThinkSystem   5350 | CentOS 8.4   | Yes            | Yes           |
 
 Note:
 
