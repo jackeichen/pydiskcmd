@@ -9,4 +9,4 @@ pyscsi
 pyscsi is forked from python-scsi/pyscsi, Do Not change the code!
 Instead, update it from https://github.com/python-scsi/python-scsi
 
-Current Version: Commits a0dcf313ea8dc8204a72c7067b95f9d19bf89f35
+Current Version: Commits 2f7057b4c48843191ed246cbc5f3f6bd51f77c73
