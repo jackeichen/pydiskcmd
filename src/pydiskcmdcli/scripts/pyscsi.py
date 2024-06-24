@@ -5,9 +5,9 @@ import sys,os
 import optparse
 from pydiskcmdcli import os_type
 from pydiskcmdlib.pyscsi.scsi import SCSI
-from pydiskcmdcli.scsi_spec import LogSenseAttr
+from pydiskcmdcli.scsi_spec import LogSenseAttr,get_smart_simulate
 from pydiskcmdlib.utils import init_device
-from pydiskcmdcli.utils.format_print import format_dump_bytes,human_read_capacity
+from pydiskcmdcli.utils.format_print import format_dump_bytes,human_read_capacity,json_print
 from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 from pyscsi.pyscsi.scsi_enum_getlbastatus import P_STATUS
@@ -57,6 +57,7 @@ def print_help():
         print ("  log-sense                   Send Log Sense command to target SCSI device")
         print ("  cdb-passthru                Submit an arbitrary SCSI command, return results")
         print ("  se-protocol-in              Submit SECURITY PROTOCOL IN command, return results")
+        print ("  smart-simulate              Retrieve different logs, return simulate smart")
         print ("  sync                        Synchronize cache to non-volatile cache, as known as flush")
         print ("  read                        Send a read command to disk")
         print ("  write                       Send a write command to disk")
@@ -594,6 +595,8 @@ def log_sense():
         help="Select report field value")
     parser.add_option("-s", "--subpage", type="int", dest="subpage", action="store", default=0,
         help="Select report field value")
+    parser.add_option("-c", "--pc", type="int", dest="page_ctrl", action="store", default=0,
+        help="The page control value")
     parser.add_option("-l", "--alloclen", type="int", dest="alloclen", action="store", default=0,
         help="Transfer data length, default 0 means auto fix the length")
     parser_update(parser, add_output=["normal", "hex", "raw"], add_debug=True)
@@ -623,7 +626,7 @@ def log_sense():
                 if log_len > options.alloclen:
                     # Fixed the length to 
                     # print ("Fixed alloclen %s->%s" % (options.alloclen, log_len))
-                    cmd = d.logsense(options.page, sub_page_code=options.subpage, sp=0, pc=0, parameter=0, alloclen=log_len, control=0)
+                    cmd = d.logsense(options.page, sub_page_code=options.subpage, sp=0, pc=options.page_ctrl, parameter=0, alloclen=log_len, control=0)
         if options.debug:
             _debug_info_print(cmd)
         ##
@@ -896,6 +899,46 @@ def security_protocol_in():
     else:
         parser.print_help()
 
+def smart_simulate():
+    usage="usage: %prog smart-simulate <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal", "json"], add_debug=True)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        #
+        script_check(options, admin_check=True)
+        ##
+        if options.output_format != 'json':
+            print ('issuing smart simulate command')
+            print ('Device: %s' % dev)
+            print ('')
+        with SCSI(init_device(dev, open_t='scsi')) as d:
+            smart = get_smart_simulate(d)
+        if options.output_format == 'normal':
+            print_format = "%-25s %-15s %s"
+            print (print_format % ("ATTRIBUTE_NAME", "THRESH", "VALUE"))
+            for k,v in smart.items():
+                if k == "Power On Minutes":
+                    print (print_format % ("Power On Hours", "-" if v.Threshold is None else round(v.Threshold / 60, 2), round(v.Value / 60, 2)))
+                elif k in ("Total Write", "Total Read"):
+                    print (print_format % ("%s(GB)" % k, "-" if v.Threshold is None else round(v.Threshold / 10**9, 3), round(v.Value / 10**9, 3)))
+                elif k in ("Percentage Used", "Available Spare"):
+                    print (print_format % ("%s(%%)" % k, "-" if v.Threshold is None else v.Threshold, v.Value))
+                elif k == "Workload Utilization":
+                    print (print_format % ("%s(%%)" % k, "-" if v.Threshold is None else (v.Threshold / 100), (v.Value / 100)))
+                else:
+                    print (print_format % (k, "-" if v.Threshold is None else v.Threshold, v.Value))
+        elif options.output_format == 'json':
+            for k in smart.keys():
+                smart[k] = {"AttributeName": k, "Threshold": smart[k].Threshold, "Value": smart[k].Value}
+            json_print(smart)
+        ##
+        # format_print_smart()
+    else:
+        parser.print_help()
 #################################################
 # Bellow is parse-cmd plugin 
 #################################################
@@ -1010,6 +1053,7 @@ commands_dict = {"list": _list,
                  "mode-sense": mode_sense,
                  "log-sense": log_sense,
                  "se-protocol-in": security_protocol_in,
+                 "smart-simulate": smart_simulate,
                  "version": version,
                  "sync": sync,
                  "read": read16,

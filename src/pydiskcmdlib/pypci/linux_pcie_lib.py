@@ -6,6 +6,7 @@ from mmap import mmap, PAGESIZE
 try:
     from mmap import PROT_READ
     from mmap import PROT_WRITE
+    from mmap import MAP_ANONYMOUS,MAP_SHARED
 except ImportError:
     from mmap import ACCESS_READ as PROT_READ
     from mmap import ACCESS_WRITE as PROT_WRITE
@@ -236,8 +237,12 @@ class PCIeBar(object):
         if os.path.isfile(self.__bar_path):
             self.__stat = os.stat(self.__bar_path)
             fd = os.open(self.__bar_path, os.O_RDONLY)
-            self.__context = mmap(fd, 0, prot=PROT_READ)
-            os.close(fd)
+            try:
+                self.__context = mmap(fd, 0, prot=PROT_READ)
+            except OSError:
+                self.__context = mmap(fd, 0, flags=MAP_ANONYMOUS|MAP_SHARED, prot=PROT_READ)
+            finally:
+                os.close(fd)
         else:
             raise
 

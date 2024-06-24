@@ -17,7 +17,7 @@ _pynvme_cmds="list list-subsys smart-log id-ctrl id-ns error-log fw-log fw-downl
           compare dsm write-uncor write-zeroes get-log reset subsystem-reset show-regs version help"
 
 _pyscsi_cmds="list inq getlbastatus readcap luns mode-sense log-sense read write \
-          sync cdb-passthru se-protocol-in version help"
+          smart-simulate sync cdb-passthru se-protocol-in version help"
 
 
 pysata_list_opts () {
@@ -168,6 +168,9 @@ pyscsi_list_opts () {
         "se-protocol-in")
         opts+=" -p --protocol= -s --sp= -i --INC_512= -l --alloclen= \
             -o --output-format= -h --help"
+        ;;
+        "smart-simulate")
+        opts+=" -o --output-format= -h --help"
         ;;
         "mode-sense")
         opts+=" -p --page= -s --subpage= -o --output-format= -l --alloclen= \
