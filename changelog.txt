@@ -6,6 +6,11 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
+Version 0.3.1
+  * update pyscsi to latest version
+  * fix a nvme status error
+  * add sas disk smart simulation
+
 Version 0.3.0
   * Important: pydiskcmd is split into 2 parts, code in different directory has 
     different jobs
