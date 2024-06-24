@@ -85,7 +85,7 @@ protected as a result of a change in the namespace write protection state as def
 Namespace Write Protection State Machine",
     (0, 0x21): "Command Interrupted: Command processing was interrupted and the controller is unable to \
 successfully complete the command. The host should retry the command.",
-    (0, 0): "Transient Transport Error: A transient transport error was detected. If the command is retried on \
+    (0, 22): "Transient Transport Error: A transient transport error was detected. If the command is retried on \
 the same controller, the command is likely to succeed. A command that fails with a transient \
 transport error four or more times should be treated as a persistent transport error that is not likely \
 to succeed if retried on the same controller.",
