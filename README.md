@@ -266,7 +266,7 @@ The following are all implemented sub-commands:
   write                       Send a write command to disk
   flush                       Send a flush command to disk
   trim                        Send a trim command to disk
-  download_fw                 Download firmware to target disk
+  download-fw                 Download firmware to target disk
   version                     Shows the program version
   help                        Display this help
 

@@ -9,6 +9,12 @@ from pydiskcmdlib import os_type
 def init_device(dev, 
                 read_write=(False if os_type == "Linux" else True), 
                 open_t=None):
+    '''
+    initialize a device object
+        :param dev: the device path
+        :param readwrite: access type
+        :param open_t: the open type of device, valid values is None, 'scsi', 'ata', 'nvme', 'vroc'
+    '''
     if open_t == 'scsi' or open_t == 'ata':
         from pydiskcmdlib.pyscsi.scsi_device import SCSIDevice
         if os_type == "Windows" and dev.upper().startswith("PHYSICALDRIVE"): 
