@@ -5,7 +5,7 @@ import ctypes
 from pydiskcmdlib.device.device import DeviceBase
 
 class BytesReturnedStruc(ctypes.Structure):
-    _fields_ = [("return_bytes", ctypes.c_uint64),]
+    _fields_ = [("return_bytes", ctypes.c_uint32),]
     _pack_ = 1
 
     def __init__(self, return_bytes: int =0):
