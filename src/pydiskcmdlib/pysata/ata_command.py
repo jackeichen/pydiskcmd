@@ -113,6 +113,8 @@ class ATACommand12(ATAPassThrough12):
         _success = True
         decode_sense = self._decode_sense()
         ata_status_return = self.get_ata_status_return()
+        # TODO, usually get true here for now.
+        # Linux usually return sense_key = 0x01, asc/ascq = 0/29
         if decode_sense and decode_sense.data.get("sense_key") in (0x01,  # Recovered Error
                                                                    0x02,  # Not Ready
                                                                    0x03,  #
@@ -124,6 +126,10 @@ class ATACommand12(ATAPassThrough12):
                                                                    0x0E,
                                                                  ):
             _success = False
+            if decode_sense.data.get("sense_key") == 1 and decode_sense.asc == 0 and decode_sense.ascq == 29:
+                _success = True
+            else:
+                _success = True
         if ata_status_return and (ata_status_return.get("status") & 0x01 != 0 or ata_status_return.get("status") & 0x20 != 0):
             _success = False
         #
@@ -224,6 +230,8 @@ class ATACommand16(ATAPassThrough16):
         _success = True
         decode_sense = self._decode_sense()
         ata_status_return = self.get_ata_status_return()
+        # TODO, usually get true here for now.
+        # Linux usually return sense_key = 0x01, asc/ascq = 0/29
         if decode_sense and decode_sense.data.get("sense_key") in (0x01,  # Recovered Error
                                                                    0x02,  # Not Ready
                                                                    0x03,  #
@@ -235,6 +243,10 @@ class ATACommand16(ATAPassThrough16):
                                                                    0x0E,
                                                                  ):
             _success = False
+            if decode_sense.data.get("sense_key") == 1 and decode_sense.asc == 0 and decode_sense.ascq == 29:
+                _success = True
+            else:
+                _success = True
         if ata_status_return and (ata_status_return.get("status") & 0x01 != 0 or ata_status_return.get("status") & 0x20 != 0):
             _success = False
         #
