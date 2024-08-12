@@ -14,6 +14,13 @@ def init_device(dev,
         :param dev: the device path
         :param readwrite: access type
         :param open_t: the open type of device, valid values is None, 'scsi', 'ata', 'nvme', 'vroc'
+        :param backends: backend io engine type, valid parameters: 
+            * 'ioctl'                ioctl type, alias ioctl_fcntl
+            * 'ioctl_fcntl'          ioctl type, Send sgio request with ioctl (python fcntl.ioctl)
+            * 'ioctl_sgio'           ioctl type, alias ioctl_sgio_local
+            * 'ioctl_sgio_pyscsi'    ioctl type, Send sgio request with cython-sgio (python cython-sgio)
+            * 'ioctl_sgio_local'     ioctl type, Send sgio request with local code (pydiskcmdlib.sgio)
+            * 'io_uring'             under development
     '''
     if open_t == 'scsi' or open_t == 'ata':
         from pydiskcmdlib.pyscsi.scsi_device import SCSIDevice

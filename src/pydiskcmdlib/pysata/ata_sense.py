@@ -2,10 +2,16 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmdlib.utils.enum import Enum
+from pydiskcmdlib.utils.converter import scsi_int_to_ba
 from pydiskcmdlib.exceptions import ExecuteCmdErr,SenseDataCheckErr
 from pydiskcmdlib import os_type
 ##
-from pyscsi.pyscsi.scsi_sense import SCSICheckCondition,decode_bits,SENSE_FORMAT_CURRENT_DESCRIPTOR
+from pyscsi.pyscsi.scsi_sense import (
+    SCSICheckCondition,
+    decode_bits,
+    SENSE_FORMAT_CURRENT_DESCRIPTOR,
+    SENSE_FORMAT_CURRENT_FIXED,
+)
 
 
 class ATACheckReturnDescriptorCondition(SCSICheckCondition):
@@ -24,6 +30,21 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
                                                    'device': [0xff, 12],
                                                    'status': [0xff, 13], }        
 
+    _fixed_format_sense_information = {'error': [0xff, 0],
+                                       'status': [0xff, 1],
+                                       'device': [0xff, 2],
+                                       'sector_count': [0xff, 3],
+                                       }
+    _fixed_format_sense_cmd_spec = {'log_index': [0x0f, 0],
+                                    'rsvd': [0x10, 0],
+                                    'lba_upper_nonzero': [0x20, 0],
+                                    'count_upper_nonzero': [0x40, 0],
+                                    'extend': [0x80, 0],
+                                    'lba_low': [0xff, 1],
+                                    'lba_mid': [0xff, 2],
+                                    'lba_high': [0xff, 3],
+                                    }
+
     def __init__(self,
                  sense,
                  print_data=False):
@@ -31,26 +52,59 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
         ##
         if self.data:  # sense data is valid
             if self.asc == 0 and self.ascq == 29: ## ATA PASS THROUGH INFORMATION AVAILABLE, success to handle
-                self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
-            elif self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR and os_type == "Windows":
+                if self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR:
+                    self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
+                elif self.response_code == SENSE_FORMAT_CURRENT_FIXED:
+                    self.data['ata_pass_thr_fixed_format'] = self.unmarshall_ata_fixed_format_sense_data(scsi_int_to_ba(self.data["information"]), 
+                                                                                                         scsi_int_to_ba(self.data["command_specific_information"]))
+                else:
+                    raise SenseDataCheckErr("Not support decode response code %#x" % self.response_code)
+            elif self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR and os_type == "Windows": # TODO
                 self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
             else:
                 raise ExecuteCmdErr(str(SCSICheckCondition.__str__(self)))
             # check the ATA sense data
-            if self.ata_pass_thr_return_descriptor["descriptor_code"] != 0x09:
-                raise SenseDataCheckErr("ATA Sense Data check error, descriptor_code should be 0x09 but get %#X" % self.ata_pass_thr_return_descriptor["descriptor_code"])
-            if self.ata_pass_thr_return_descriptor["additional_descriptor_length"] != 0x0C:
-                raise SenseDataCheckErr("ATA Sense Data check error, additional_descriptor_length should be 0x0C but get %#X" % self.ata_pass_thr_return_descriptor["additional_descriptor_length"])
+            if self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR:
+                if self.ata_pass_thr_return_descriptor["descriptor_code"] != 0x09:
+                    raise SenseDataCheckErr("ATA Sense Data check error, descriptor_code should be 0x09 but get %#X" % self.ata_pass_thr_return_descriptor["descriptor_code"])
+                if self.ata_pass_thr_return_descriptor["additional_descriptor_length"] != 0x0C:
+                    raise SenseDataCheckErr("ATA Sense Data check error, additional_descriptor_length should be 0x0C but get %#X" % self.ata_pass_thr_return_descriptor["additional_descriptor_length"])
+
+    def _print_data(self, data: dict, indent: int) -> None:
+        for k, v in data.items():
+            if isinstance(v, dict):
+                print("%s%s :" % (" " * indent, k))
+                self._print_data(v, indent+4)
+            else:
+                print("%s%s : 0x%02X" % (" " * indent, k, v))
+
+    def print_data(self) -> None:
+        self._print_data(self.data, 0)
 
     @property
     def ata_pass_thr_return_descriptor(self):
         return self.data.get("ata_pass_thr_return_descriptor")
+
+    @property
+    def ata_pass_thr_fixed_format(self):
+        return self.data.get("ata_pass_thr_fixed_format")
 
     @staticmethod
     def unmarshall_extend_ata_status_return_descriptor_data(data):
         result = {}
         decode_bits(data,
                     ATACheckReturnDescriptorCondition._extend_ata_status_return_descriptor,
+                    result)
+        return result
+
+    @staticmethod
+    def unmarshall_ata_fixed_format_sense_data(info, cmd_spec) -> dict:
+        result = {}
+        decode_bits(info,
+                    ATACheckReturnDescriptorCondition._fixed_format_sense_information,
+                    result)
+        decode_bits(cmd_spec,
+                    ATACheckReturnDescriptorCondition._fixed_format_sense_cmd_spec,
                     result)
         return result
 

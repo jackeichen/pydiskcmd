@@ -68,6 +68,9 @@ def format_print_smart_log(raw_data, print_type='normal'):
             for k,v in decoded_data.items():
                 if k == "Composite Temperature":
                     print ("%-40s: %.2f" % ("%s(C)" % k, v-273.15))
+                elif "Temperature Sensor" in k:
+                    if v > 0:
+                        print ("%-40s: %.2f" % ("%s(C)" % k, v-273.15))
                 elif k in ("Critical Warning",):
                     print ("%-40s: %#x" % (k, v))
                 else:

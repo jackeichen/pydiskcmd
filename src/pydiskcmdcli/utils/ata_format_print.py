@@ -25,10 +25,10 @@ def bytearray2hex_l(data,start,offset):
     t = binascii.hexlify(a)
     return int(t,16)
 
-def _print_return_status(ata_status_return_descriptor):
-    if ata_status_return_descriptor:
+def _print_return_status(ata_status_return):
+    if ata_status_return:
         print ("Return Status:")
-        for k,v in ata_status_return_descriptor.items():
+        for k,v in ata_status_return.items():
             print ("%-30s: %s" % (k,v))
         print ('')
 
@@ -41,8 +41,7 @@ def _get_log_directory_description(log_address):
                 return ReadLogLogDirectoryDescription[i]
 
 def print_ata_cmd_status(cmd):
-    return_descriptor = cmd.ata_status_return_descriptor
-    _print_return_status(return_descriptor)
+    cmd._decode_sense().print_data()
 
 def print_read_log_LogDirectory(raw_data):
     if 0 in read_log_decode_set:
@@ -102,12 +101,12 @@ smart_read_log_format_print_set = {0: print_smart_read_log_LogDirectory,}
 
 #############################
 def format_print_identify(cmd, dev='', print_type='normal', show_status=False):
-    return_descriptor = cmd.ata_status_return_descriptor
+    return_status = cmd.get_ata_status_return()
     if show_status and print_type != 'json':
-        _print_return_status(return_descriptor)
+        print_ata_cmd_status(cmd)
     print ('')
     if print_type == 'normal' or print_type == 'json':
-        target = {"return_status": return_descriptor,
+        target = {"return_status": return_status,
                   "content": {}}
         for k,v in cmd.result.items():
             if k in ("FirmwareRevision", "SerialNumber", "ModelNumber"):

@@ -300,6 +300,7 @@ The following are all implemented sub-commands:
   log-sense                   Send Log Sense command to target SCSI device
   cdb-passthru                Submit an arbitrary SCSI command, return results
   se-protocol-in              Submit SECURITY PROTOCOL IN command, return results
+  smart-simulate              Retrieve different logs, return simulate smart
   sync                        Synchronize cache to non-volatile cache, as known as flush
   read                        Send a read command to disk
   write                       Send a write command to disk

@@ -27,6 +27,7 @@ from pydiskcmdcli.exceptions import (
 )
 from pydiskcmdcli import os_type
 from pydiskcmdcli import version as Version
+from pydiskcmdcli.plugins import ata_plugins
 from . import parser_update,script_check
 
 def _debug_info_print(cmd):
@@ -433,6 +434,8 @@ def identify():
     parser = optparse.OptionParser(usage)
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser.add_option("", "--ignore_error", dest="ignore_error", action="store_true", default=False,
+        help="Ignore error that was checked out and continue to show the result")
     parser_update(parser, add_output=["normal", "hex", "raw", "json"])
 
     if len(sys.argv) > 2:
@@ -448,7 +451,7 @@ def identify():
             print ('')
         with SATA(init_device(dev, open_t='ata')) as d:
             cmd = d.identify()
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=not options.ignore_error)
         format_print_identify(cmd, print_type=options.output_format, show_status=options.show_status)
     else:
         parser.print_help()
@@ -979,7 +982,6 @@ def cli_autocmd():
     from pydiskcmdcli.system.bash_completion import enable_cmd_completion
     enable_cmd_completion()
 #########
-
 commands_dict = {"list": _list, 
                  "check-PowerMode": check_power_mode,
                  "accessible-MaxAddress": accessible_max_address,
@@ -1006,6 +1008,7 @@ commands_dict = {"list": _list,
                  "cli-info": cli_info,
                  "cli-autocmd": cli_autocmd,
                  }
+commands_dict.update(ata_plugins)
 
 def pysata():
     '''

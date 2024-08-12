@@ -9,7 +9,6 @@ try:
 except ModuleNotFoundError:
     VROC_ENABLE = False
 
-
 def scan_nvme_raid_controller():
     for device in scan_all_physical_drive(device_type='Scsi'):
         try:

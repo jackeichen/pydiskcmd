@@ -92,35 +92,72 @@ class ATACommand12(ATAPassThrough12):
                                   control=control,
                                   data=data)
 
+    def _decode_sense(self):
+        if self.raw_sense_data:
+            return ATACheckReturnDescriptorCondition(self.raw_sense_data)
+
     @property
     def ata_status_return_descriptor(self):
-        if self.raw_sense_data:
-            decode_sense = ATACheckReturnDescriptorCondition(self.raw_sense_data)
+        decode_sense = self._decode_sense()
+        if decode_sense:
             return decode_sense.ata_pass_thr_return_descriptor
 
-    def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=True):
-        if self.ata_status_return_descriptor:
-            if (self.ata_status_return_descriptor.get("status") & 0x01) == 0 and (self.ata_status_return_descriptor.get("status") & 0x20) == 0:
-                if success_hint:
-                    print ("Command Success")
-                    print ('')
-            else:
-                if fail_hint:
-                    print ("Command failed, and details bellow.")
-                    format_string = "%-10s%-17s%s"
-                    print (format_string % ("Error Bit", "DEVICE FAULT Bit", "Error Field"))
-                    print (format_string % (self.ata_status_return_descriptor.get("status") & 0x01, 
-                                            1 if (self.ata_status_return_descriptor.get("status") & 0x20) else 0, 
-                                            "%#x" % self.ata_status_return_descriptor.get("error"),
-                                            )
-                        )
-                    print ('')
-                if raise_if_fail:
-                    raise CommandReturnStatusError("ATA Return Status Check Error: Error Bit(%d), device fault bit(%d)" % (self.ata_status_return_descriptor.get("status") & 0x01,
-                                                                                                                            1 if (self.ata_status_return_descriptor.get("status") & 0x20) else 0,
-                                                                                                                            ))
-            return self.ata_status_return_descriptor.get("error")
-        return 0
+    def get_ata_status_return(self):
+        decode_sense = self._decode_sense()
+        # This will include ata_pass_thr_return_descriptor and ata_pass_thr_fixed_format
+        if decode_sense:
+            return decode_sense.ata_pass_thr_return_descriptor or decode_sense.ata_pass_thr_fixed_format
+
+    def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=True) -> bool:
+        ##
+        _success = True
+        decode_sense = self._decode_sense()
+        ata_status_return = self.get_ata_status_return()
+        if decode_sense and decode_sense.data.get("sense_key") in (0x01,  # Recovered Error
+                                                                   0x02,  # Not Ready
+                                                                   0x03,  #
+                                                                   0x04,
+                                                                   0x05,
+                                                                   0x07,
+                                                                   0x0A,
+                                                                   0x0B,
+                                                                   0x0E,
+                                                                 ):
+            _success = False
+        if ata_status_return and (ata_status_return.get("status") & 0x01 != 0 or ata_status_return.get("status") & 0x20 != 0):
+            _success = False
+        #
+        if _success:
+            if success_hint:
+                print ("Command Success")
+                print ('')
+        else:
+            if fail_hint:
+                print ("Command failed, and details bellow.")
+                print ("- SCSI Status:")
+                format_string = "  %-12s%-7s%s"
+                print (format_string % ("Sense Key", "ASC", "ASCQ"))
+                print (format_string % (decode_sense.data.get("sense_key"),
+                                        decode_sense.data.get("additional_sense_code"),
+                                        decode_sense.data.get("additional_sense_code_qualifier"),
+                                        )
+                )
+                print ('')
+                print ("- ATA Status:")
+                format_string = "  %-12s%-19s%s"
+                print (format_string % ("Error Bit", "DEVICE FAULT Bit", "Error Field"))
+                print (format_string % (ata_status_return.get("status") & 0x01, 
+                                        1 if (ata_status_return.get("status") & 0x20) else 0, 
+                                        "%#x" % ata_status_return.get("error"),
+                                        )
+                )
+            print ('')
+            if raise_if_fail:
+                raise CommandReturnStatusError("ATA Return Status Check Error: SCSI Sense Key(%#x), Error Bit(%d), device fault bit(%d)" % (decode_sense.data.get("sense_key"),
+                                                                                                                                            ata_status_return.get("status") & 0x01,
+                                                                                                                                            1 if (ata_status_return.get("status") & 0x20) else 0,
+                                                                                                                                            ))
+        return _success
 
 
 class ATACommand16(ATAPassThrough16):
@@ -166,32 +203,69 @@ class ATACommand16(ATAPassThrough16):
                                   data=data,
                                   extend=extend)
 
+    def _decode_sense(self):
+        if self.raw_sense_data:
+            return ATACheckReturnDescriptorCondition(self.raw_sense_data)
+
     @property
     def ata_status_return_descriptor(self):
-        if self.raw_sense_data:
-            decode_sense = ATACheckReturnDescriptorCondition(self.raw_sense_data)
+        decode_sense = self._decode_sense()
+        if decode_sense:
             return decode_sense.ata_pass_thr_return_descriptor
 
-    def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=True):
-        if self.ata_status_return_descriptor:
-            if (self.ata_status_return_descriptor.get("status") & 0x01) == 0 and (self.ata_status_return_descriptor.get("status") & 0x20) == 0:
-                if success_hint:
-                    print ("Command Success")
-                    print ('')
-            else:
-                if fail_hint:
-                    print ("Command failed, and details bellow.")
-                    format_string = "%-10s%-17s%s"
-                    print (format_string % ("Error Bit", "DEVICE FAULT Bit", "Error Field"))
-                    print (format_string % (self.ata_status_return_descriptor.get("status") & 0x01, 
-                                            1 if (self.ata_status_return_descriptor.get("status") & 0x20) else 0, 
-                                            "%#x" % self.ata_status_return_descriptor.get("error"),
-                                            )
-                        )
-                    print ('')
-                if raise_if_fail:
-                    raise CommandReturnStatusError("ATA Return Status Check Error: Error Bit(%d), device fault bit(%d)" % (self.ata_status_return_descriptor.get("status") & 0x01,
-                                                                                                                            1 if (self.ata_status_return_descriptor.get("status") & 0x20) else 0,
-                                                                                                                            ))
-            return self.ata_status_return_descriptor.get("error")
-        return 0
+    def get_ata_status_return(self):
+        decode_sense = self._decode_sense()
+        # This will include ata_pass_thr_return_descriptor and ata_pass_thr_fixed_format
+        if decode_sense:
+            return decode_sense.ata_pass_thr_return_descriptor or decode_sense.ata_pass_thr_fixed_format
+
+    def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=True) -> bool:
+        ##
+        _success = True
+        decode_sense = self._decode_sense()
+        ata_status_return = self.get_ata_status_return()
+        if decode_sense and decode_sense.data.get("sense_key") in (0x01,  # Recovered Error
+                                                                   0x02,  # Not Ready
+                                                                   0x03,  #
+                                                                   0x04,
+                                                                   0x05,
+                                                                   0x07,
+                                                                   0x0A,
+                                                                   0x0B,
+                                                                   0x0E,
+                                                                 ):
+            _success = False
+        if ata_status_return and (ata_status_return.get("status") & 0x01 != 0 or ata_status_return.get("status") & 0x20 != 0):
+            _success = False
+        #
+        if _success:
+            if success_hint:
+                print ("Command Success")
+                print ('')
+        else:
+            if fail_hint:
+                print ("Command failed, and details bellow.")
+                print ("- SCSI Status:")
+                format_string = "  %-12s%-7s%s"
+                print (format_string % ("Sense Key", "ASC", "ASCQ"))
+                print (format_string % (decode_sense.data.get("sense_key"),
+                                        decode_sense.data.get("additional_sense_code"),
+                                        decode_sense.data.get("additional_sense_code_qualifier"),
+                                        )
+                )
+                print ('')
+                print ("- ATA Status:")
+                format_string = "  %-12s%-19s%s"
+                print (format_string % ("Error Bit", "DEVICE FAULT Bit", "Error Field"))
+                print (format_string % (ata_status_return.get("status") & 0x01, 
+                                        1 if (ata_status_return.get("status") & 0x20) else 0, 
+                                        "%#x" % ata_status_return.get("error"),
+                                        )
+                )
+            print ('')
+            if raise_if_fail:
+                raise CommandReturnStatusError("ATA Return Status Check Error: SCSI Sense Key(%#x), Error Bit(%d), device fault bit(%d)" % (decode_sense.data.get("sense_key"),
+                                                                                                                                            ata_status_return.get("status") & 0x01,
+                                                                                                                                            1 if (ata_status_return.get("status") & 0x20) else 0,
+                                                                                                                                            ))
+        return _success

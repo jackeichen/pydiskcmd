@@ -6,9 +6,16 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
+Version 0.3.3(Not Release)
+  * improve plugin code
+  * change pydiskcmdlib.pysata version from 0.2 -> 0.3
+    * add decode Fixed format sense data
+    * add scsi sense_key,asc,ascq check
+
 Version 0.3.2
   * fix a mistake in smart simulation and improve the code for it
   * change the pydiskcmdcli version to v0.3.1
+  * add sas drive smart simulate
   * update README.md
 
 Version 0.3.1

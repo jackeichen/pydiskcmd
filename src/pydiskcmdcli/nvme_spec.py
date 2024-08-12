@@ -22,6 +22,18 @@ nvme_smart_bit_mask = {"Critical Warning": ('b', 0, 1),
                        "Number of Error Information Log Entries": ('b', 176, 16),
                        "Warning Composite Temperature Time": ('b', 192, 4),
                        "Critical Composite Temperature Time": ('b', 196, 4),
+                       "Temperature Sensor 1": ('b', 200, 2),
+                       "Temperature Sensor 2": ('b', 202, 2),
+                       "Temperature Sensor 3": ('b', 204, 2),
+                       "Temperature Sensor 4": ('b', 206, 2),
+                       "Temperature Sensor 5": ('b', 208, 2),
+                       "Temperature Sensor 6": ('b', 210, 2),
+                       "Temperature Sensor 7": ('b', 212, 2),
+                       "Temperature Sensor 8": ('b', 214, 2),
+                       "Thermal Management T1 Transition Count": ('b', 216, 4),
+                       "Thermal Management T2 Transition Count": ('b', 220, 4),
+                       "Total Time For Thermal Management T1": ('b', 224, 4),
+                       "Total Time For Thermal Management T2": ('b', 228, 4),
                        }
 
 
