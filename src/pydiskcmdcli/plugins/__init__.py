@@ -4,7 +4,6 @@
 from .ocp import ocp
 from .parse_cmd import parse_cmd
 from .vroc import win_nvme_vroc
-from .lenovo import lenovo
 
 nvme_plugins = { "ocp": ocp,
                  "vroc": win_nvme_vroc,}
