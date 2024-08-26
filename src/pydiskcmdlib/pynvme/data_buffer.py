@@ -6,6 +6,12 @@ from pydiskcmdlib.utils.converter import scsi_int_to_ba
 
 class DataBuffer(object):
     def __init__(self, length):
+        """
+        Initializes a new instance of the Format class.
+
+        Parameters:
+            length (int): The length of the data buffer to be created.
+        """
         self.__len = length
         ## init
         self._data_buf = create_string_buffer(length)
@@ -13,10 +19,23 @@ class DataBuffer(object):
 
     @property
     def data_buffer(self):
+        """ 
+        This function is a method of the DataBuffer class and is used to return a data buffer
+        
+        Returns:
+            The returned value is a data buffer, which can be used to store formatted data
+        """
         return self._data_buf
 
     @property
     def addr(self):
+        """
+        This function is a method of the DataBuffer class and is used to return the address of the data buffer
+        If the length of the data buffer is greater than 0, the function returns the address of the data buffer, otherwise it returns 0
+
+        Returns:
+            The returned value is an integer, representing the address of the data buffer
+        """
         if self.__len > 0:
             return (addressof(self._data_buf))
         return 0
@@ -27,9 +46,27 @@ class DataBuffer(object):
 
     @data_buffer.setter
     def data_buffer(self, value: bytes):
+        """
+        This method is used to set the value of the data buffer for the Format object.
+
+        Parameters:
+            value (bytes): The value that the data buffer will be set to. This must be a bytes object.
+
+        Returns:
+            None
+        """
         self._data_buf.value = bytes(value)
 
     def get_data_buffer(self):
+        """
+        This method is used to return the data buffer.
+
+        Parameters:
+            None
+
+        Returns:
+            bytes: The data buffer.
+        """
         return self._data_buf
 
 

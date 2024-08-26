@@ -137,7 +137,19 @@ def format_print_identify(cmd, dev='', print_type='normal', show_status=False):
     else:
         raise NotImplementedError("Not Support type: %s" % print_type)
 
-def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal', show_status=False):
+def format_print_smart(cmd_read_data, cmd_thread, print_type='normal', show_status=False) -> None:
+    """
+    This function is used to print format smart information.
+
+    Parameters:
+    cmd_read_data: Contains smart reading data.
+    cmd_thread: Contains smart thread information.
+    print_type: Specifies the printing type, including 'normal', 'json', 'hex', and 'raw'.
+    show_status: A Boolean value indicating whether to display status information.
+
+    Returns:
+    None.
+    """
     if show_status and print_type != 'json':
         print ('Smart Read Data Status:')
         print ('')
@@ -159,11 +171,6 @@ def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal', s
         for i in range(0, 359, 12):
             ID = data[i]
             if ID:
-                attr_name = SMART_ATTR[ID] if ID in SMART_ATTR else 'Unknown_Attribute'
-                flag = data[i+1:i+3]
-                value = data[i+3]
-                worst = data[i+4]
-                raw_value = data[i+5:i+11]
                 target["content"]["vendor_spec"][ID] = {"AttrName": SMART_ATTR[ID] if ID in SMART_ATTR else 'Unknown_Attribute',
                                              "Flag": scsi_ba_to_int(data[i+1:i+3], 'little'),
                                              "Value": data[i+3],
@@ -186,13 +193,13 @@ def format_print_smart(cmd_read_data, cmd_thread, dev='', print_type='normal', s
             print_fomrat = '%3s %-25s %#-6x %-6s %-6s %-10s %s'
             for ID,value in target["content"]["vendor_spec"].items():
                 print (print_fomrat %
-                      (ID,                                          # ID
-                       value["AttrName"],                              # ATTRIBUTE_NAME
-                       value["Flag"], # FLAG
-                       value["Value"],                               # VALUE
-                       value["Worst"],                               # WORST
-                       value["Thresh"],                   # THRESHOLD
-                       value["RawValue"])           # RAW_VALUE0
+                      (ID,                      # ID
+                       value["AttrName"],       # ATTRIBUTE_NAME
+                       value["Flag"],           # FLAG
+                       value["Value"],          # VALUE
+                       value["Worst"],          # WORST
+                       value["Thresh"],         # THRESHOLD
+                       value["RawValue"])       # RAW_VALUE0
                        )
         else:
             json_print(target)

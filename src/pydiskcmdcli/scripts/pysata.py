@@ -40,6 +40,11 @@ def _debug_info_print(cmd):
         print ("Return raw sense data: %s" % ' '.join(["%x" % b for b in cmd.raw_sense_data]))
     print ("")
 
+def _sending_cmd_info(dev_path: str, cmd_name: str) -> None:
+    print ('issuing %s command' % cmd_name)
+    print ('Device: %s' % dev_path)
+    print ('')
+
 def version():
     print ("pysata version %s" % Version)
 
@@ -153,9 +158,8 @@ def check_power_mode():
         ##
         script_check(options, admin_check=True)
         ##
+        _sending_cmd_info(dev, "check power mode")
         with SATA(init_device(dev, open_t='ata'), 512) as d:
-            print ('issuing check power mode command')
-            print ("%s:" % d.device._file_name)
             cmd = d.check_power_mode()
             ##
             if options.debug:
@@ -210,9 +214,8 @@ def read_dma_ext():
         ##
         script_check(options, admin_check=True)
         ##
-        print ('issuing read DMA EXT command.')
+        _sending_cmd_info(dev, "read DMA EXT")
         with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
-            print ("%s:" % d.device._file_name)
             cmd = d.read_DMAEXT16(options.slba, options.nlb)
             cmd.check_return_status()
             if options.show_status:
@@ -243,9 +246,8 @@ def read_verify_sector():
         ##
         script_check(options, admin_check=True)
         ##
-        print ('issuing read verify sector(s) command.')
+        _sending_cmd_info(dev, "read verify sector(s)")
         with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
-            print ("%s:" % d.device._file_name)
             cmd = d.read_verify_sector(options.slba, options.nlb)
             cmd.check_return_status(success_hint=True)
             if options.show_status:
@@ -278,6 +280,7 @@ def write_dma_ext():
         ##
         script_check(options, danger_check=True, admin_check=True)
         ##
+        _sending_cmd_info(dev, "write DMA EXT")
         with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
             # check data
             if options.data:
@@ -299,9 +302,6 @@ def write_dma_ext():
             else:
                 parser.error("Lack of input data")
             # issue command
-            print ('issuing write DMA EXT command')
-            print ("%s:" % d.device._file_name)
-            print ('')
             cmd = d.write_DMAEXT16(options.slba, options.nlb, options.data)
             cmd.check_return_status()
             if options.show_status:
@@ -334,6 +334,7 @@ def write_log():
         dev = sys.argv[2]
         ##
         script_check(options, danger_check=True, admin_check=True)
+        _sending_cmd_info(dev, "write log")
         with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
             ## check data
             data = None
@@ -354,9 +355,6 @@ def write_log():
                 else:
                     pass
             ##
-            print ('issuing write log command')
-            print ("%s:" % d.device._file_name)
-            print ('')
             cmd = d.write_log(options.count, options.log_address, options.page_number, data)
             cmd.check_return_status()
             if options.show_status:
@@ -377,9 +375,8 @@ def flush():
         ##
         script_check(options, admin_check=True)
         ##
+        _sending_cmd_info(dev, "flush")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing flush command')
-            print ("%s:" % d.device._file_name)
             cmd = d.flush()
             cmd.check_return_status()
             if options.show_status:
@@ -400,9 +397,8 @@ def accessible_max_address():
         ##
         script_check(options, admin_check=True)
         ##
+        _sending_cmd_info(dev, "accessible max address")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing accessible max address command')
-            print ("%s:" % d.device._file_name)
             cmd = d.getAccessibleMaxAddress()
             cmd.check_return_status()
             if options.show_status:
@@ -446,9 +442,7 @@ def identify():
         script_check(options, admin_check=True)
         ##
         if options.output_format != 'json':
-            print ('issuing identify command')
-            print ('Device: %s' % dev)
-            print ('')
+            _sending_cmd_info(dev, "identify")
         with SATA(init_device(dev, open_t='ata')) as d:
             cmd = d.identify()
         cmd.check_return_status(raise_if_fail=not options.ignore_error)
@@ -473,9 +467,7 @@ def self_test():
         ##
         with SATA(init_device(dev, open_t='ata')) as d:
             if options.self_test == "short":
-                print ('issuing selftest command - short test')
-                print ("%s:" % d.device._file_name)
-                print ('')
+                _sending_cmd_info(dev, "selftest command - short test")
                 cmd = d.smart_read_data()
                 cmd.check_return_status()
                 data = cmd.result
@@ -484,9 +476,7 @@ def self_test():
                 cmd2 = d.smart_exe_offline_imm(0x01)
                 cmd2.check_return_status()
             else:
-                print ('issuing selftest command - long test')
-                print ("%s:" % d.device._file_name)
-                print ('')
+                _sending_cmd_info(dev, "selftest command - long test")
                 cmd = d.smart_read_data()
                 cmd.check_return_status()
                 data = cmd.result
@@ -521,10 +511,8 @@ def read_log():
         ##
         script_check(options, admin_check=True)
         ##
+        _sending_cmd_info(dev, "read-log")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing read-log command')
-            print ("%s:" % d.device._file_name)
-            print ('')
             cmd = d.read_log(options.log_address, options.count, page_number=options.page_number, feature=options.feature)
         cmd.check_return_status()
         if options.show_status:
@@ -573,9 +561,7 @@ def set_feature():
         ## check device
         dev = sys.argv[2]
         ##
-        print ('issuing set-feature command')
-        print ('Device: %s' % dev)
-        print ('')
+        _sending_cmd_info(dev, "set-feature")
         with SATA(init_device(dev, open_t='ata')) as d:
             cmd = d.set_feature(options.feature, options.count, options.lba)
         cmd.check_return_status()
@@ -603,10 +589,8 @@ def smart_read_log():
         ##
         script_check(options, admin_check=True)
         ##
+        _sending_cmd_info(dev, "smart-read-log")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing smart-read-log command')
-            print ("%s:" % d.device._file_name)
-            print ('')
             cmd = d.smart_read_log(options.log_address, options.count)
         cmd.check_return_status()
         if options.show_status:
@@ -646,9 +630,7 @@ def smart():
         from pydiskcmdcli.sata_spec import SMART_KEY
         #
         if options.output_format != 'json':
-            print ('issuing smart command')
-            print ('Device: %s' % dev)
-            print ('')
+            _sending_cmd_info(dev, "smart")
         with SATA(init_device(dev, open_t='ata')) as d:
             cmd_read_data = d.smart_read_data(SMART_KEY)
             cmd_read_data.check_return_status()
@@ -678,9 +660,7 @@ def smart_return_status():
         ##
         script_check(options, admin_check=True)
         #
-        print ('issuing smart-return-status command')
-        print ('Device: %s' % dev)
-        print ('')
+        _sending_cmd_info(dev, "smart-return-status")
         with SATA(init_device(dev, open_t='ata')) as d:
             cmd = d.smart_return_status()
         cmd.check_return_status()
@@ -713,9 +693,8 @@ def standby_imm():
         ##
         script_check(options, admin_check=True)
         ##
+        _sending_cmd_info(dev, "standby immediate")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing standby immediate command')
-            print ("%s:" % d.device._file_name)
             cmd = d.standby_imm()
         cmd.check_return_status()
         if options.show_status:
@@ -753,9 +732,8 @@ def trim():
         ##
         print ("Note: If you want trim command works, lba_description need 4k aligned!")
         print ('')
+        _sending_cmd_info(dev, "data set management(known as trim)")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing data set management(known as trim) command')
-            print ("%s:" % d.device._file_name)
             cmd = d.trim(lba_description)
         cmd.check_return_status()
         if options.show_status:
@@ -782,9 +760,8 @@ def download_fw():
         if not os.path.isfile(options.fw_file):
             parser.error("Firmware file Not Exist.")
         ##
+        _sending_cmd_info(dev, "download microcode")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing download microcode command')
-            print ("%s:" % d.device._file_name)
             rc = d.download_fw(options.fw_file, transfer_size=options.xfer, feature=options.code)
             if rc == 0:
                 print ("Success to download firmware.")
@@ -818,9 +795,8 @@ Important: To use this command, libata.allow_tpm must be set to 1 in linux.
         ##
         script_check(options, admin_check=True)
         ##
+        _sending_cmd_info(dev, "trusted receive")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing trusted receive command')
-            print ("%s:" % d.device._file_name)
             try:
                 cmd = d.trusted_receive(options.protocol, options.alloclen, options.sp, INC_512=options.INC_512)
                 cmd.check_return_status()
@@ -904,9 +880,8 @@ def sanitize():
         else:
             raise RuntimeError("feature(%s) invalid" % options.feature)
         ##
+        _sending_cmd_info(dev, "sanitize")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing sanitize command')
-            print ("%s:" % d.device._file_name)
             cmd = d.sanitize(options.feature, count, lba)
         cmd.check_return_status()
         return_descriptor = cmd.ata_status_return_descriptor
@@ -959,9 +934,8 @@ def write_uncorrectable():
         ##
         script_check(options, admin_check=True)
         ##
+        _sending_cmd_info(dev, "write-uncorrectable")
         with SATA(init_device(dev, open_t='ata')) as d:
-            print ('issuing download microcode command')
-            print ("%s:" % d.device._file_name)
             cmd = d.write_uncorrectable_ext(options.feature, options.count, options.lba)
         cmd.check_return_status(success_hint=True, )
     else:
