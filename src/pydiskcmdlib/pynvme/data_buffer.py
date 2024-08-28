@@ -42,6 +42,19 @@ class DataBuffer(object):
 
     @property
     def data_length(self):
+        """
+        Get the length of the data buffer
+
+        This method returns the length of the data buffer, which is represented by the private attribute "__len".
+
+        Returns:
+            int: The length of the data buffer
+
+        Usage:
+            data_buffer = DataBuffer(10)
+            length = data_buffer.data_length()
+            print("Length of the data buffer:", length)
+        """
         return self.__len
 
     @data_buffer.setter

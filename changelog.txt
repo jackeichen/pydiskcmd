@@ -11,6 +11,9 @@ Version 0.3.3(Not Release)
   * change pydiskcmdlib.pysata version from 0.2 -> 0.3
     * add decode Fixed format sense data
     * add scsi sense_key,asc,ascq check
+  * introduce MarsCode to generate annotation
+  * fix a bug that pynvme list will abort if a device is in Resource temporarily
+    unavailable state
 
 Version 0.3.2
   * fix a mistake in smart simulation and improve the code for it

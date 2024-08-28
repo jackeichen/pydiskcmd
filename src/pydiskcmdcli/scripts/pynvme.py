@@ -106,20 +106,28 @@ def _list():
     ##
     script_check(options, admin_check=True)
     ##
-    print_format = "%-20s %-20s %-40s %-9s %-26s %-16s %-8s"
-    print (print_format % ("Node", "SN", "Model", "Namespace", "Usage", "Format", "FW Rev"))
-    print (print_format % ("-"*20, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
+    print_format = "%-20s %-10s %-20s %-40s %-9s %-26s %-16s %-8s"
+    print (print_format % ("Node", "Status", "SN", "Model", "Namespace", "Usage", "Format", "FW Rev"))
+    print (print_format % ("-"*20, "-"*10, "-"*20, "-"*40, "-"*9, "-"*26, "-"*16, "-"*8))
     from pydiskcmdcli.system.lin_os_tool import scan_nvme_ctrls
     from pydiskcmdcli.utils.string_utils import decode_bytes,string_strip
     scsi_ba_to_int = nvme_format_print.scsi_ba_to_int
     if os_type == 'Linux':
         for ctrl_name,ctrl_info in scan_nvme_ctrls().items():
-            with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
-                cmd_id_ctrl = d.id_ctrl()
-            result = nvme_format_print.nvme_id_ctrl_decode(cmd_id_ctrl.data)
-            sn = string_strip(decode_bytes(result.get("SN")), b'\x00'.decode(), ' ')
-            mn = string_strip(decode_bytes(result.get("MN")), b'\x00'.decode(), ' ')
-            fw = string_strip(decode_bytes(result.get("FR")), b'\x00'.decode(), ' ')
+            status = 'normal'
+            try:
+                with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
+                    cmd_id_ctrl = d.id_ctrl()
+                result = nvme_format_print.nvme_id_ctrl_decode(cmd_id_ctrl.data)
+            except:
+                sn = '-'
+                mn = '-'
+                fw = '-'
+                status = 'fault'
+            else:
+                sn = string_strip(decode_bytes(result.get("SN")), b'\x00'.decode(), ' ')
+                mn = string_strip(decode_bytes(result.get("MN")), b'\x00'.decode(), ' ')
+                fw = string_strip(decode_bytes(result.get("FR")), b'\x00'.decode(), ' ')
             ##
             namespaces = ctrl_info.get_namespaces()
             for ns_name in sorted(namespaces.keys()):
@@ -128,25 +136,32 @@ def _list():
                 ns_id = ns_info.ns_id
                 ## Get information now!
                 ## send identify controller and identify namespace
-                with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
-                    cmd_id_ns = d.id_ns(ns_info.ns_id)
-                ## para data
-                result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
-                #
-                lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
-                meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
-                lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
-                _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
-                #
-                NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
-                NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
-                usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
+                try:
+                    with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
+                        cmd_id_ns = d.id_ns(ns_info.ns_id)
+                except:
+                    usage = '-'
+                    _format = '-'
+                    status = 'fault'
+                else:
+                    ## para data
+                    result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
+                    #
+                    lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
+                    meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
+                    lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
+                    _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
+                    #
+                    NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
+                    NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
+                    usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
                 if options.output_format == "normal":
-                    print (print_format % (node, sn, mn, ns_id, usage, _format, fw))
+                    print (print_format % (node, status, sn, mn, ns_id, usage, _format, fw))
     elif os_type == 'Windows':
         from  pydiskcmdcli.system.win_os_tool import scan_all_physical_drive
         for node in sorted([i for i in scan_all_physical_drive()]):
-            ns_id = '-'  # windows should - , 
+            ns_id = '-'  # windows should - ,
+            status = 'normal' 
             ## Get information now!
             # send identify namespace, get the information
             # if physical drive cannot execute nvme identify namespace command,
@@ -158,24 +173,30 @@ def _list():
             except:
                 # may a non-nvme device, or an abnormal device,
                 #
-                continue
-            # para data
-            result = nvme_format_print.nvme_id_ctrl_decode(cmd_id_ctrl.data)
-            sn = string_strip(decode_bytes(result.get("SN")), b'\x00'.decode(), ' ')
-            mn = string_strip(decode_bytes(result.get("MN")), b'\x00'.decode(), ' ')
-            fw = string_strip(decode_bytes(result.get("FR")), b'\x00'.decode(), ' ')
-            #
-            result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
-            lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
-            meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
-            lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
-            _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
-            #
-            NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
-            NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
-            usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
+                sn = '-'
+                mn = '-'
+                usage = '-'
+                _format = '-'
+                fw = '-'
+                status = 'fault'
+            else:
+                # para data
+                result = nvme_format_print.nvme_id_ctrl_decode(cmd_id_ctrl.data)
+                sn = string_strip(decode_bytes(result.get("SN")), b'\x00'.decode(), ' ')
+                mn = string_strip(decode_bytes(result.get("MN")), b'\x00'.decode(), ' ')
+                fw = string_strip(decode_bytes(result.get("FR")), b'\x00'.decode(), ' ')
+                #
+                result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
+                lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
+                meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
+                lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
+                _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
+                #
+                NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
+                NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
+                usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
             if options.output_format == "normal":
-                print (print_format % (node, sn, mn, ns_id, usage, _format, fw))
+                print (print_format % (node, status, sn, mn, ns_id, usage, _format, fw))
     else:
         raise RuntimeError("OS %s Not support command list" % os_type)
 
