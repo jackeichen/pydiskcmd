@@ -277,11 +277,13 @@ class PCICapID(object):
 
 
 class PCICap(object):
-    PCICapTable = {0x01: PowerManagementCap,
-                   0x10: PCIeCap,
+    PCICapTable = {PowerManagementCap.cap_id: PowerManagementCap,
+                   PCIeCap.cap_id: PCIeCap,
                    }
-    def __init__(self, raw_data):
+    def __init__(self, raw_data, pci_config_header=None):
+
         self.__raw_data = raw_data
+        self.__pci_config_header = pci_config_header
         self.__pci_cap_decode = {}
         self.read_config()
 
@@ -296,6 +298,7 @@ class PCICap(object):
     def read_config(self):
         offset = 0
         cap_start = False
+        # type 1 to scan the pci cap data
         while (offset < 192):
             pci_cap_id = PCICapID(self.__raw_data[offset:offset+PCICapID.length])
             ##
@@ -317,6 +320,63 @@ class PCICap(object):
                     cap_start = True
                 else:
                     offset += PCICapID.length
+        # PCI Power Management Capability Structure is required for all PCI Express devices,
+        # if PowerManagementCap is not in the PCI cap list, scan the pci cap data again
+        if 0x01 not in self.__pci_cap_decode:
+            # type 2 to scan the pci cap data
+            all_possiable_cap = {}
+            for i in range(48):
+                cap_id = self.__raw_data[4*i]
+                nex_cap = self.__raw_data[4*i+1]
+                if cap_id == 1 and (0x39 < nex_cap < 0xFD) and (nex_cap % 4 == 0):
+                    # maybe valid Power Management Capability Structure
+                    possiable_cap_list = []
+                    possiable_cap_list.append((cap_id, nex_cap))
+                    #
+                    temp = nex_cap - 64
+                    while True:
+                        if self.__raw_data[temp] > 0:
+                            # check next cap
+                            if (0x39 < self.__raw_data[temp+1] < 0xFD) and (self.__raw_data[temp+1] % 4 == 0):
+                                possiable_cap_list.append((self.__raw_data[temp], self.__raw_data[temp+1]))
+                                temp = self.__raw_data[temp+1] - 64
+                                continue
+                            elif self.__raw_data[temp+1] == 0:
+                                possiable_cap_list.append((self.__raw_data[temp], self.__raw_data[temp+1]))
+                                all_possiable_cap[4*i+64] = possiable_cap_list
+                        break
+            if all_possiable_cap:
+                # check it
+                for first_offset in list(all_possiable_cap.keys()):
+                    possiable_cap_list = all_possiable_cap[first_offset]
+                    last_cap_offset = first_offset
+                    for cap_id, nex_cap in possiable_cap_list:
+                        if cap_id in PCICap.PCICapTable:
+                            pm_len = nex_cap - last_cap_offset
+                            if 0 < pm_len < PCICap.PCICapTable[cap_id].length or (
+                                pm_len < 0 and last_cap_offset + 64 + PCICap.PCICapTable[cap_id].length > 0xFF
+                            ):
+                                all_possiable_cap.pop(first_offset)
+                        last_cap_offset = nex_cap    
+            else:
+                for i in range(47):
+                    cap_id = self.__raw_data[4*i]
+                    nex_cap = self.__raw_data[4*i+1]
+                    if cap_id == 1 and nex_cap == 0:
+                        all_possiable_cap[4*i+64] = [cap_id, nex_cap]
+                        break
+            if len(all_possiable_cap) != 1:
+                print (all_possiable_cap)
+                raise ValueError("Invalid PCI Capability Structure, cannot decode it.")
+            for first_offset,possiable_cap_list in all_possiable_cap.items():
+                offset = first_offset - 64
+                for cap_id, nex_cap in possiable_cap_list:
+                    if cap_id in PCICap.PCICapTable:
+                        func = PCICap.PCICapTable.get(cap_id)
+                        self.__pci_cap_decode[cap_id] = func(self.__raw_data[offset:offset+func.length])
+                    else:
+                        self.__pci_cap_decode[cap_id] = PCICapID(self.__raw_data[offset:offset+PCICapID.length])  ## TODO
+                    offset = nex_cap - 64
 
 
 class PCIeExtendCap(object):  # TODO
