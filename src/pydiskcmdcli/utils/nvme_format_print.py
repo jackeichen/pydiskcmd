@@ -432,7 +432,7 @@ def format_print_sanitize_log(raw_data, dev='', print_type='normal'):
             if t == 0xFFFFFFFF:
                 return " (No time period reported)"
             elif t == 0:
-                return " (Sanitize is background running)"
+                return " (Sanitize designed to be background running)"
             else:
                 return ""
         result = decode_sanitize_log(raw_data)

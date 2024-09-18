@@ -14,6 +14,7 @@ Version 0.3.3(Not Release)
   * introduce MarsCode to generate annotation
   * fix a bug that pynvme list will abort if a device is in Resource temporarily
     unavailable state
+  * improve pypci, fix a bug that cannot decode some nvme disks' pcie capabilities data
 
 Version 0.3.2
   * fix a mistake in smart simulation and improve the code for it
