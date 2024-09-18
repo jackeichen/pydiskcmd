@@ -6,7 +6,7 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.3.3(Not Release)
+Version 0.3.3(2024.9.18)
   * improve plugin code
   * change pydiskcmdlib.pysata version from 0.2 -> 0.3
     * add decode Fixed format sense data
