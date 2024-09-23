@@ -137,6 +137,16 @@ Note:
     * Only some log page and identify is tested, which command support denpends on the card driver;
     * May need update driver if error occurs;
 
+Feature support
+---------------
+
+| Feature            | OS under test       | NVMe Supported | ATA Supported |
+|--------------------|---------------------|----------------|---------------|
+| [Intel VROC]       | Windows Server 2019 | D              | N             |
+| [Intel RST]        | Windows 10          | N              | N             |
+
+Y: support, N: Non-support, D: Developing, T: Under Testing
+
 
 Building and installing
 =======================
@@ -517,6 +527,15 @@ A python/construct wrapper for sgio to replace cython-sgio
 * https://github.com/goodes/python-sgio
 
 
+Reference Documents
+===================
+* https://community.intel.com/cipcp26785/attachments/cipcp26785/devcloud/9717/1/743971_Intel_VROC_IOCTLs_UG_Rev1p0.pdf
+
+
 Support
 =======
 If any support or ideas, open an issue, or contact author by email: Eric-1128@outlook.com
+
+
+[Intel VROC]: https://www.intel.com/content/www/us/en/software/virtual-raid-on-cpu-vroc.html
+[Intel RST]: https://www.intel.com/content/www/us/en/support/products/55005/technologies/intel-rapid-storage-technology-intel-rst.html
