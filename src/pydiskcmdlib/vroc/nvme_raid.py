@@ -35,6 +35,9 @@ class NVMeDisk(object):
     def __init__(self, dev, vrocDiskID: int):
         self.device = dev
         self._vrocDiskID = vrocDiskID
+        #
+        ret = self.id_ctrl()
+        self.__ctrl_identify_info = ret.data
 
     def __enter__(self):
         return self
@@ -44,6 +47,10 @@ class NVMeDisk(object):
                  exc_val,
                  exc_tb):
         self.device.close()
+
+    @property
+    def ctrl_identify_info(self):
+        return self.__ctrl_identify_info
 
     def execute(self, cmd, check_return_status=False):
         """

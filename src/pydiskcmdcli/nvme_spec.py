@@ -387,6 +387,11 @@ def nvme_power_management_cq_decode(data):
 def nvme_error_log_decode(data):
     error_log_entry_list = []
     offset = 0
+    # data should be 64 bytes aligned
+    index = len(data) % 64
+    if index > 0:
+        data = data[0:-index]
+    #
     while True:
         if offset >= len(data):
             break

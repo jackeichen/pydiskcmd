@@ -37,7 +37,11 @@ def _win_nvme_vroc_print_help():
         print ("The following are all implemented sub-commands:")
         print ("")
         print ("  list                          List All NVME VROC disks")
+        print ("  id-ctrl                       Send NVMe Identify Controller")
+        print ("  id-ns                         Send NVMe Identify Namespace, display structure")
         print ("  smart-log                     Retrieve SMART Log, show it")
+        print ("  error-log                     Retrieve Error Log, show it")
+        print ("  get-feature                   Get feature and show the resulting value")
         print ("  version                       Shows Windows NVMe VROC plugin version")
         print ("  help                          Display this help")
         print ("")
@@ -107,6 +111,56 @@ def _win_nvme_vroc_list():
         for disk in vroc_ctrl.get_journaling_disks():
             list_disk(ctrl_path, raid_type, disk)
 
+def _id_ctrl():
+    usage="usage: %prog id-ctrl <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-U", "--uuid-index", type="int", dest="uuid_index", action="store", default=0,
+        help="UUID index")
+    parser_update(parser, add_output=["normal", "hex", "raw", "json"])
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[3].strip().split('/')
+        ctrl_path,vrocDiskID = dev
+        vrocDiskID = int(vrocDiskID, 16)
+        ##
+        script_check(options, admin_check=True)
+        with NVMeDisk(init_device(ctrl_path, open_t='vroc'), vrocDiskID) as d:
+            cmd = d.id_ctrl(uuid=options.uuid_index)
+        cmd.check_return_status(raise_if_fail=True)
+        nvme_format_print.format_print_id_ctrl(cmd.data, print_type=options.output_format)
+    else:
+        parser.print_help()
+
+def _id_ns():
+    usage="usage: %prog id-ns <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store",default=1,
+        help="identifier of desired namespace. Default 1")
+    parser.add_option("-U", "--uuid-index", type="int", dest="uuid_index", action="store", default=0,
+        help="UUID index")
+    parser_update(parser, add_output=["normal", "hex", "raw", "json"])
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[3].strip().split('/')
+        ctrl_path,vrocDiskID = dev
+        vrocDiskID = int(vrocDiskID, 16)
+        ## check namespace
+        if not isinstance(options.namespace_id, int) or options.namespace_id < 1:
+            parser.error("namespace id input error.")
+        ##
+        script_check(options, admin_check=True)
+        with NVMeDisk(init_device(ctrl_path, open_t='vroc'), vrocDiskID) as d:
+            cmd = d.id_ns(options.namespace_id, uuid=options.uuid_index)
+        cmd.check_return_status(raise_if_fail=True)
+        ##
+        nvme_format_print.format_print_id_ns(cmd.data, print_type=options.output_format)
+    else:
+        parser.print_help()
+
 def _win_nvme_vroc_smart_log():
     usage="usage: %prog vroc smart-log <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -129,9 +183,111 @@ def _win_nvme_vroc_smart_log():
     else:
         parser.print_help()
 
+def _error_log():
+    usage="usage: %prog vroc error-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal", "hex", "raw", "json"])
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[3].strip().split('/')
+        ctrl_path,vrocDiskID = dev
+        vrocDiskID = int(vrocDiskID, 16)
+        ##
+        script_check(options, admin_check=True)
+        with NVMeDisk(init_device(ctrl_path, open_t='vroc'), vrocDiskID) as d:
+            cmd = d.error_log_entry()
+        cmd.check_return_status(raise_if_fail=True)
+        ##
+        nvme_format_print.format_print_error_log(cmd.data, dev=dev, print_type=options.output_format)
+    else:
+        parser.print_help()
+
+def _get_feature_power_management(device_context, options):
+    cmd = device_context.get_feature(2, sel=options.sel)
+    return cmd
+
+def _get_feature_lba_range_type(device_context, options):
+    options.data_len = 64
+    cmd = device_context.get_feature(3, sel=options.sel, data_length=options.data_len)
+    return cmd
+
+def _get_feature():
+    usage="usage: %prog get-feature <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="identifier of desired namespace")
+    parser.add_option("-f", "--feature-id", type="int", dest="feature_id", action="store", default=0,
+        help="feature identifier")
+    parser.add_option("-s", "--sel", type="int", dest="sel", action="store", default=0,
+        help="[0-3]: current/default/saved/supported")
+    parser.add_option("-l", "--data-len", type="int", dest="data_len", action="store", default=0,
+        help="buffer len if data is returned through host memory buffer")
+    parser.add_option("-c", "--cdw11", type="int", dest="cdw11", action="store", default=0,
+        help="dword 11 for interrupt vector config")
+    parser_update(parser, add_output=["normal", "hex", "raw"])
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[3].strip().split('/')
+        ctrl_path,vrocDiskID = dev
+        vrocDiskID = int(vrocDiskID, 16)
+        #
+        if options.feature_id < 1:
+            parser.error("You should give a valid feature id")
+        ##
+        script_check(options, admin_check=True)
+        result = {}
+        with NVMeDisk(init_device(ctrl_path, open_t='vroc'), vrocDiskID) as d:
+            if options.feature_id == 2:
+                cmd = _get_feature_power_management(d, options)
+                result = nvme_format_print.nvme_power_management_cq_decode(cmd.cq_cmd_spec)
+            elif options.feature_id == 3:
+                cmd = _get_feature_lba_range_type(d, options)
+            else:
+                cmd = d.get_feature(options.feature_id,
+                                    nsid=options.namespace_id,
+                                    sel=options.sel,
+                                    cdw11=options.cdw11,
+                                    data_length=options.data_len)
+        cmd.check_return_status(raise_if_fail=True)
+        ##
+        if options.output_format == "hex":
+            print ("cmd spec data: %#x" % cmd.cq_cmd_spec)
+            print ('')
+            if options.data_len > 0:
+                print ('')
+                print ("cmd data:")
+                format_dump_bytes(cmd.data)
+        elif options.output_format == "normal":
+            if result:
+                for k,v in result.items():
+                    print ("%-5s: %s" % (k,v))
+            else:
+                print ("cmd spec data: %#x" % cmd.cq_cmd_spec)
+                print ('')
+                if options.data_len > 0:
+                    print ('')
+                    print ("cmd data:")
+                    format_dump_bytes(cmd.data)
+        else:
+            print ("cmd spec data: %#x" % cmd.cq_cmd_spec)
+            print ('')
+            if options.data_len > 0:
+                print ('')
+                print ("cmd data:")
+                print (cmd.data)
+    else:
+        parser.print_help()
 
 plugin_win_nvme_vroc_commands_dict = {"list": _win_nvme_vroc_list,
+                                      "id-ctrl": _id_ctrl,
+                                      "id-ns": _id_ns,
                                       "smart-log": _win_nvme_vroc_smart_log,
+                                      "error-log": _error_log,
+                                      "get-feature": _get_feature,
                                       "version": _win_nvme_vroc_print_ver,
                                       "help": _win_nvme_vroc_print_help,}
 
