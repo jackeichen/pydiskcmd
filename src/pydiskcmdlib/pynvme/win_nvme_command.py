@@ -461,7 +461,6 @@ class NVME_COMMAND_DWORD0(Structure):
         if value < 2:
             self.MIDV = (self.MIDV & 0x7F) + (value << 7)
 
-
 # typedef struct {
 #   NVME_COMMAND_DWORD0 CDW0;
 #   ULONG               NSID;

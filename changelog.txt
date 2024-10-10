@@ -6,8 +6,15 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.3.3(2024.9.18)
+Version 0.3.4(Not Release)
+  * add windows VROC(RSTe) support
+  * add --debug feature
+  * fix a bug in encode_dict
+  * introduce Intel RST in pydiskcmdlib
+
+Version 0.3.3
   * improve plugin code
+  * add lenovo plugin
   * change pydiskcmdlib.pysata version from 0.2 -> 0.3
     * add decode Fixed format sense data
     * add scsi sense_key,asc,ascq check

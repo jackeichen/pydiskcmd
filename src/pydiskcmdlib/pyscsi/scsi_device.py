@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmdlib import os_type
+from pydiskcmdlib import log
 
 if os_type == "Windows":
     ########################################
@@ -20,6 +21,7 @@ if os_type == "Windows":
                      device,
                      readwrite=True,
                      detect_replugged=True):
+            log.debug("Opening SCSi device %s, read write flag is %s, detect replugged is %s" % (device, readwrite, detect_replugged))
             self._opcodes = scsi_enum_command.spc
             super(SCSIDevice, self).__init__(device, readwrite, detect_replugged)
 
@@ -29,6 +31,7 @@ if os_type == "Windows":
 
             :param cmd: a Command Structure
             """
+            log.debug("Sending SCSi Command: %s" % " ".join(["%X" % i for i in cmd.cdb]))
             ## create SCSIPassThroughDirect Or SCSIPassThroughDirectWithBuffer
             # will transfer SCSICommand to windows mode command
             cdb = (ctypes.c_ubyte * 16).from_buffer_copy(
@@ -77,6 +80,7 @@ if os_type == "Windows":
             # SCSICheckCondition(bytearray(header_with_buffer.sense))
             if en_raw_sense:
                 cmd.raw_sense_data = bytearray(header_with_buffer.sense)
+            log.debug("Sense Data: %s" % " ".join(["%X" % i for i in cmd.raw_sense_data]) if cmd.raw_sense_data else 'NA')
             return cmd
 
 elif os_type == "Linux":

@@ -4,6 +4,7 @@
 from pydiskcmdlib.device.device import DeviceBase
 from pyscsi.pyscsi import scsi_device
 from pyscsi.pyscsi.scsi_device import SCSIDevice,get_inode
+from pydiskcmdlib import log
 # cython-sgio is not the only choise, if it is not installed,
 # and then python-sgio will be imported(locate in pydiskcmdlib)
 # The Source Code is from https://github.com/goodes/python-sgio
@@ -37,6 +38,9 @@ else:
         Import the sgio from cython-sgio OR python-sgio
         """
         def __init__(self, *args, **kwargs):
+            log.debug("Opening SCSi device %s, read write flag is %s, detect replugged is %s" % (args[0], 
+                                                                                                 kwargs.get("readwrite"), 
+                                                                                                 kwargs.get("detect_replugged")))
             SCSIDevice.__init__(self, *args, **kwargs)
 
         @property
@@ -54,12 +58,13 @@ else:
                     self.close()
                 finally:
                     self.open()
-
+            log.debug("Sending SCSi Command: %s" % " ".join(["%X" % i for i in cmd.cdb]))
             result = sgio.execute(self._file, cmd.cdb, cmd.dataout, cmd.datain, return_sense_buffer=en_raw_sense)
             if en_raw_sense:
                 resid,cmd.raw_sense_data = result
             else:
                 resid = result
+            log.debug("Sense Data: %s" % " ".join(["%X" % i for i in cmd.raw_sense_data]) if cmd.raw_sense_data else 'NA')
             return resid
 
 

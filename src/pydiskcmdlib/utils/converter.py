@@ -176,9 +176,10 @@ def encode_dict(data_dict,
                 result[bytepos + i] ^= v[i]
         elif val[0] == 'b' and val[2] > 0:
             offset, length = val[1:]
+            fixed_length = min(length, len(value))
             if isinstance(value, str):
                 value = value.encode()
-            result[offset:offset + length] = value
+            result[offset:offset + fixed_length] = value[0:fixed_length]
         elif val[0] == 'w' and val[2] > 0:
             offset, length = val[1:]
             result[offset:offset + length * 2] = value

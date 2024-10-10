@@ -13,7 +13,7 @@ from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
 from pyscsi.pyscsi import scsi_enum_inquiry as INQUIRY
 from pyscsi.pyscsi.scsi_enum_getlbastatus import P_STATUS
 from pydiskcmdcli import version as Version
-from . import parser_update,script_check
+from . import parser_update,script_check,func_debug_info
 from pydiskcmdcli.exceptions import (
     CommandSequenceError,
     CommandNotSupport,
@@ -21,17 +21,8 @@ from pydiskcmdcli.exceptions import (
     UserDefinedError,
     FunctionNotImplementError,
 )
+from pydiskcmdcli import log
 
-
-def _debug_info_print(cmd):
-    print ("")
-    if cmd.cdb:
-        print ("Sending Command: %s" % ' '.join(["%x" % b for b in cmd.cdb]))
-    if cmd.sense:
-        print ("Return sense: %s" % ' '.join(["%x" % b for b in cmd.sense]))
-    if cmd.raw_sense_data:
-        print ("Return raw sense data: %s" % ' '.join(["%x" % b for b in cmd.raw_sense_data]))
-    print ("")
 
 def version():
     print ("pyscsi version %s" % Version)
@@ -77,8 +68,6 @@ def print_help():
 
 def _inquiry_standard(s, options):
     cmd = s.inquiry(alloclen=options.alloclen)
-    if options.debug:
-        _debug_info_print(cmd)
     if options.output_format == 'normal':
         i = cmd.result
         print('Standard INQUIRY')
@@ -303,6 +292,7 @@ def _no_match_inq(s, options):
     else:
         print (cmd.datain)
 ###################
+@func_debug_info
 def inq():
     usage="usage: %prog inq <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -369,6 +359,7 @@ def inq():
     else:
         parser.print_help()
 ############################ .decode(encoding="utf-8", errors="strict")
+@func_debug_info
 def _list():
     usage="usage: %prog list <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -628,8 +619,6 @@ def log_sense():
                     # Fixed the length to 
                     # print ("Fixed alloclen %s->%s" % (options.alloclen, log_len))
                     cmd = d.logsense(options.page, sub_page_code=options.subpage, sp=0, pc=options.page_ctrl, parameter=0, alloclen=log_len, control=0)
-        if options.debug:
-            _debug_info_print(cmd)
         ##
         if options.output_format == "normal":
             log_page = LogSenseAttr.get((options.page, options.subpage))
@@ -1024,8 +1013,8 @@ def pyscsi():
                 if not isinstance(e, (lib_BaseError, cli_BaseError)):
                     e = NonpydiskcmdError(str(e))
                 print (str(e))
-                # import traceback
-                # traceback.print_exc()
+                import traceback
+                log.debug(traceback.format_exc())
                 sys.exit(e.exit_code)
             else:
                 if (ret is not None) and ret > 0:

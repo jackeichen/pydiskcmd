@@ -28,6 +28,7 @@ from pydiskcmdlib.pynvme.cdb_nvme_reset import Reset
 from pydiskcmdlib.pynvme.cdb_nvme_subsys_reset import SubsysReset
 from pydiskcmdlib.exceptions import *
 from pydiskcmdlib.pynvme.data_buffer import DataBuffer
+from pydiskcmdlib import log
 
 class NVMe(object):
     def __init__(self, dev):
@@ -107,7 +108,11 @@ class NVMe(object):
         :return: CommandDecoder type
         """
         try:
+            log.debug("Sending NVMe %s: %s" % ("command" if cmd.cdb_struc else "Request",
+                                               " ".join(["%X" % i for i in cmd.cdb_struc]) if cmd.cdb_struc else cmd.req_id,
+                                              ))
             self.device.execute(cmd)
+            log.debug("Completion Queue Status: %X, Command Specific Data: %X" % (cmd.cq_status, cmd.cq_cmd_spec))
             if check_return_status:
                 cmd.check_return_status()
         except Exception as e:

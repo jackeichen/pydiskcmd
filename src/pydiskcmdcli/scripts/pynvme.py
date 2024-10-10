@@ -17,7 +17,7 @@ from pydiskcmdcli.utils import nvme_format_print
 from pydiskcmdcli import os_type
 from pydiskcmdcli import version as Version
 from pydiskcmdcli.plugins import nvme_plugins
-from . import parser_update,script_check
+from . import parser_update,script_check,func_debug_info
 from pydiskcmdcli.exceptions import (
     CommandSequenceError,
     CommandNotSupport,
@@ -25,6 +25,7 @@ from pydiskcmdcli.exceptions import (
     UserDefinedError,
     FunctionNotImplementError,
 )
+from pydiskcmdcli import log
 
 
 def version():
@@ -97,6 +98,7 @@ def print_help():
         print ("")
         print ("See 'pynvme <plugin> help' for more information on a plugin")
 
+@func_debug_info
 def _list():
     usage="usage: %prog list"
     parser = optparse.OptionParser(usage)
@@ -200,6 +202,7 @@ def _list():
     else:
         raise RuntimeError("OS %s Not support command list" % os_type)
 
+@func_debug_info
 def _list_subsys():
     usage="usage: %prog list-subsys"
     parser = optparse.OptionParser(usage)
@@ -249,6 +252,7 @@ def smart_log():
     else:
         parser.print_help()
 
+@func_debug_info
 def id_ctrl():
     usage="usage: %prog id-ctrl <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -269,6 +273,7 @@ def id_ctrl():
     else:
         parser.print_help()
 
+@func_debug_info
 def id_ns():
     usage="usage: %prog id-ns <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -1805,8 +1810,8 @@ def pynvme():
                 if not isinstance(e, (lib_BaseError, cli_BaseError)):
                     e = NonpydiskcmdError(str(e))
                 print (str(e))
-                # import traceback
-                # traceback.print_exc()
+                import traceback
+                log.debug(traceback.format_exc())
                 sys.exit(e.exit_code)
             else:
                 if (ret is not None) and ret > 0:

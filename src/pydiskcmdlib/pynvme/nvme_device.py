@@ -6,6 +6,8 @@
 import traceback
 from pydiskcmdlib import os_type
 from pydiskcmdlib.exceptions import *
+from pydiskcmdlib import log
+
 ## This is cmd type
 
 if os_type == "Linux":
@@ -16,6 +18,7 @@ if os_type == "Linux":
                      device,
                      readwrite=False,
                      detect_replugged=True):
+            log.debug("Opening NVMe device %s, read write flag %s, detect replugged %s" % (device, readwrite, detect_replugged))
             super(NVMeDevice, self).__init__(device, readwrite, detect_replugged)
 
         def execute(self, cmd):
@@ -35,6 +38,7 @@ elif os_type == "Windows":
                      device,
                      readwrite=True,
                      detect_replugged=True):
+            log.debug("Opening NVMe device %s, read write flag is %s, detect replugged is %s" % (device, readwrite, detect_replugged))
             super(NVMeDevice, self).__init__(device, readwrite, detect_replugged)
 
         def execute(self, cmd):

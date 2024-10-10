@@ -6,6 +6,8 @@ os_type = platform.system()
 import sys
 local_byteorder = sys.byteorder
 ##
+from .log import Log
+log = Log("pydiskcmdlib")
 from .__version__ import version_format,version
 from .pyscsi import *
 from .pynvme import *

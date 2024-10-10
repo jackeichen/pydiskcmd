@@ -28,17 +28,9 @@ from pydiskcmdcli.exceptions import (
 from pydiskcmdcli import os_type
 from pydiskcmdcli import version as Version
 from pydiskcmdcli.plugins import ata_plugins
-from . import parser_update,script_check
+from . import parser_update,script_check,func_debug_info
+from pydiskcmdcli import log
 
-def _debug_info_print(cmd):
-    print ("")
-    if cmd.cdb:
-        print ("Sending Command: %s" % ' '.join(["%x" % b for b in cmd.cdb]))
-    if cmd.sense:
-        print ("Return sense: %s" % ' '.join(["%x" % b for b in cmd.sense]))
-    if cmd.raw_sense_data:
-        print ("Return raw sense data: %s" % ' '.join(["%x" % b for b in cmd.raw_sense_data]))
-    print ("")
 
 def _sending_cmd_info(dev_path: str, cmd_name: str) -> None:
     print ('issuing %s command' % cmd_name)
@@ -89,6 +81,7 @@ def print_help():
         print ("")
         print ("See 'pysata help <command>' or 'pysata <command> --help' for more information on a sub-command")
 
+@func_debug_info
 def _list():
     usage="usage: %prog list <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -144,6 +137,7 @@ def _list():
     else:
         raise RuntimeError("OS %s Not support command list" % os_type)
 
+@func_debug_info
 def check_power_mode():
     usage="usage: %prog check-PowerMode <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -161,9 +155,6 @@ def check_power_mode():
         _sending_cmd_info(dev, "check power mode")
         with SATA(init_device(dev, open_t='ata'), 512) as d:
             cmd = d.check_power_mode()
-            ##
-            if options.debug:
-                _debug_info_print(cmd)
             ##
             return_descriptor = cmd.ata_status_return_descriptor
             if options.show_status:
@@ -425,6 +416,7 @@ def accessible_max_address():
     else:
         parser.print_help()
 
+@func_debug_info
 def identify():
     usage="usage: %prog identify <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -635,13 +627,8 @@ def smart():
             cmd_read_data = d.smart_read_data(SMART_KEY)
             cmd_read_data.check_return_status()
             ##
-            if options.debug:
-                _debug_info_print(cmd_read_data)
             cmd_thread = d.smart_read_thresh()
             cmd_thread.check_return_status()
-            ##
-            if options.debug:
-                _debug_info_print(cmd_thread)
         ##
         format_print_smart(cmd_read_data, cmd_thread, print_type=options.output_format, show_status=options.show_status)
     else:
@@ -1029,8 +1016,8 @@ def pysata():
                 if not isinstance(e, (lib_BaseError, cli_BaseError)):
                     e = NonpydiskcmdError(str(e))
                 print (str(e))
-                # import traceback
-                # traceback.print_exc()
+                import traceback
+                log.debug(traceback.format_exc())
                 sys.exit(e.exit_code)
             else:
                 if (ret is not None) and ret > 0:

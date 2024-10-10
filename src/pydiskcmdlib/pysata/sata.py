@@ -5,6 +5,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 ###
+import os
 import binascii
 from pydiskcmdlib.utils.converter import translocate_bytearray
 from pyscsi.pyscsi.scsi_enum_command import spc, sbc, smc, ssc, mmc
@@ -36,6 +37,7 @@ from pydiskcmdlib.pysata.ata_cdb_writeDMAEXT16 import WriteDMAEXT16
 from pydiskcmdlib.pysata.ata_cdb_read_verify_sectors import ReadVerifySectorEXT
 from pydiskcmdlib.pysata.ata_cdb_writelog import WriteLogExt
 from pydiskcmdlib.pysata.ata_cdb_write_uncorrectable import WriteUncorrectableEXT
+from pydiskcmdlib import log
 ##
 
 class SATA(object):
@@ -121,7 +123,17 @@ class SATA(object):
         :param cmd: a SCSICommand object
         """
         try:
+            _cdb = cmd.unmarshall_cdb(cmd.cdb)
+            log.debug("Sending ATA Command: Command %Xh, Device %Xh, LBA %Xh, Count %Xh, Feature %Xh" % (_cdb.get("command"),
+                                                                                                         _cdb.get("device"),
+                                                                                                         _cdb.get("lba"),
+                                                                                                         _cdb.get("count"),
+                                                                                                         _cdb.get("fetures")))
             self._execute(cmd)
+            ata_status_return = cmd.get_ata_status_return()
+            if ata_status_return:
+                log.debug('''Return Status: 
+%s''' % os.linesep.join(['    %s: %s' % (k,v) for k,v in ata_status_return.items()]))
             if check_return_status:
                 cmd.ata_status_return_descriptor
         except Exception as e:
