@@ -10,7 +10,15 @@ Version 0.3.4(Not Release)
   * add windows VROC(RSTe) support
   * add --debug feature
   * fix a bug in encode_dict
-  * introduce Intel RST in pydiskcmdlib
+  Version 0.3.4(Not Release)
+  * add windows VROC(RSTe) support
+  * add --debug feature
+  * fix a bug in encode_dict
+  * introduce some new features in pydiskcmdlib:
+     * CSMI (Common Storage Management Interface),
+        may used by Intel RST SATA/NVMe, AMD RAID
+     * Intel RST NVMe Command
+  * New plugin csmi for pydiskcmdcli.pyscsi
 
 Version 0.3.3
   * improve plugin code

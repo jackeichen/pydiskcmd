@@ -4,6 +4,7 @@
 from .ocp import ocp
 from .parse_cmd import parse_cmd
 from .vroc import win_nvme_vroc
+from .csmi import win_csmi
 
 nvme_plugins = { "ocp": ocp,
                  "vroc": win_nvme_vroc,}
@@ -11,4 +12,4 @@ nvme_plugins = { "ocp": ocp,
 ata_plugins = {}
 
 scsi_plugins = {"parse-cmd": parse_cmd,
-                }
+                "csmi": win_csmi,}

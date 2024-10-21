@@ -138,7 +138,7 @@ class CommandNotSupport(BaseError):
 
 class CommandNotImplement(BaseError):
     def __init__(self, message):
-        super(CommandNotSupport, self).__init__(message, 4, 1)
+        super(CommandNotSupport, self).__init__(message, 4, 2)
 
 class CommandDataStrucError(BaseError):
     def __init__(self, message):

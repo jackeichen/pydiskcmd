@@ -155,6 +155,8 @@ def encode_dict(data_dict,
         if key not in check_dict:
             continue
         value = data_dict[key]
+        if value is None:
+            continue
 
         val = check_dict[key]
         if len(val) == 2:

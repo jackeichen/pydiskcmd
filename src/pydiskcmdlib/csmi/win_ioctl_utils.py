@@ -1,0 +1,101 @@
+# SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+from enum import Enum
+from pydiskcmdlib.os.win_ioctl_utils import (
+    CTL_CODE,
+    METHOD_BUFFERED,
+    FILE_ANY_ACCESS,
+)
+
+class CSMISignature(Enum):
+    CSMI_SAS_SIGNATURE = "CSMISAS"
+    CSMI_ALL_SIGNATURE = "CSMIALL"
+    CSMI_RAID_SIGNATURE = "CSMIARY"
+
+
+class CSMI_Control_Code(Enum):
+    # Control Codes requiring CSMI_ALL_SIGNATURE
+    CC_CSMI_SAS_GET_DRIVER_INFO   =  1
+    CC_CSMI_SAS_GET_CNTLR_CONFIG  =  2
+    CC_CSMI_SAS_GET_CNTLR_STATUS  =  3
+    CC_CSMI_SAS_FIRMWARE_DOWNLOAD =  4
+    # Control Codes requiring CSMI_RAID_SIGNATURE
+    CC_CSMI_SAS_GET_RAID_INFO      = 10
+    CC_CSMI_SAS_GET_RAID_CONFIG    = 11
+    CC_CSMI_SAS_GET_RAID_FEATURES  = 12
+    CC_CSMI_SAS_SET_RAID_CONTROL   = 13
+    CC_CSMI_SAS_GET_RAID_ELEMENT   = 14
+    CC_CSMI_SAS_SET_RAID_OPERATION = 15
+    # Control Codes requiring CSMI_SAS_SIGNATURE
+    CC_CSMI_SAS_GET_PHY_INFO       = 20
+    CC_CSMI_SAS_SET_PHY_INFO       = 21
+    CC_CSMI_SAS_GET_LINK_ERRORS    = 22
+    CC_CSMI_SAS_SMP_PASSTHRU       = 23
+    CC_CSMI_SAS_SSP_PASSTHRU       = 24
+    CC_CSMI_SAS_STP_PASSTHRU       = 25
+    CC_CSMI_SAS_GET_SATA_SIGNATURE = 26
+    CC_CSMI_SAS_GET_SCSI_ADDRESS   = 27
+    CC_CSMI_SAS_GET_DEVICE_ADDRESS = 28
+    CC_CSMI_SAS_TASK_MANAGEMENT    = 29
+    CC_CSMI_SAS_GET_CONNECTOR_INFO = 30
+    CC_CSMI_SAS_GET_LOCATION       = 31
+    # Control Codes requiring CSMI_PHY_SIGNATURE
+    CC_CSMI_SAS_PHY_CONTROL        = 60
+
+
+class CSMI_TIMEOUT(Enum):
+    default = 60
+    CSMI_ALL_TIMEOUT = 60
+    CSMI_SAS_TIMEOUT = 60
+    CSMI_RAID_TIMEOUT = 60
+
+#define CSMI_SAS_STATUS_SUCCESS 0
+#define CSMI_SAS_STATUS_FAILED 1
+#define CSMI_SAS_STATUS_BAD_CNTL_CODE 2
+#define CSMI_SAS_STATUS_INVALID_PARAMETER 3
+#define CSMI_SAS_STATUS_WRITE_ATTEMPTED 4
+class CSMI_SAS_STATUS(Enum):
+    # Return codes for all IOCTL's regardless of class 
+    # (IoctlHeader.ReturnCode)
+    CSMI_SAS_STATUS_SUCCESS = 0
+    CSMI_SAS_STATUS_FAILED = 1
+    CSMI_SAS_STATUS_BAD_CNTL_CODE = 2
+    CSMI_SAS_STATUS_INVALID_PARAMETER = 3
+    CSMI_SAS_STATUS_WRITE_ATTEMPTED = 4
+
+#define IOCTL_INTEL_NVME_PASS_THROUGH CTL_CODE(0xf000, 0xA02, METHOD_BUFFERED, FILE_ANY_ACCESS);
+IOCTL_NVME_PASS_THROUGH = CTL_CODE(0xF000, 0xA02, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+# Download Flag bits (uDownloadFlags)
+class Download_Flags(Enum):
+    #define CSMI_SAS_FWD_VALIDATE       0x00000001
+    #define CSMI_SAS_FWD_SOFT_RESET     0x00000002
+    #define CSMI_SAS_FWD_HARD_RESET     0x00000004
+    CSMI_SAS_FWD_VALIDATE = 0x00000001
+    CSMI_SAS_FWD_SOFT_RESET = 0x00000002
+    CSMI_SAS_FWD_HARD_RESET = 0x00000004
+
+# Firmware Download Status (usStatus)
+class Download_Status(Enum):
+    #define CSMI_SAS_FWD_SUCCESS        0
+    #define CSMI_SAS_FWD_FAILED         1
+    #define CSMI_SAS_FWD_USING_RROM     2
+    #define CSMI_SAS_FWD_REJECT         3
+    #define CSMI_SAS_FWD_DOWNREV        4
+    CSMI_SAS_FWD_SUCCESS = 0
+    CSMI_SAS_FWD_FAILED = 1
+    CSMI_SAS_FWD_USING_RROM = 2
+    CSMI_SAS_FWD_REJECT = 3
+    CSMI_SAS_FWD_DOWNREV = 4
+
+# Firmware Download Severity (usSeverity)
+class Download_Severity(Enum):
+    #define CSMI_SAS_FWD_INFORMATION    0
+    #define CSMI_SAS_FWD_WARNING        1
+    #define CSMI_SAS_FWD_ERROR          2
+    #define CSMI_SAS_FWD_FATAL          3
+    CSMI_SAS_FWD_INFORMATION = 0
+    CSMI_SAS_FWD_WARNING = 1
+    CSMI_SAS_FWD_ERROR = 2
+    CSMI_SAS_FWD_FATAL = 3
