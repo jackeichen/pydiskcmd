@@ -116,52 +116,53 @@ def _list():
     scsi_ba_to_int = nvme_format_print.scsi_ba_to_int
     if os_type == 'Linux':
         for ctrl_name,ctrl_info in scan_nvme_ctrls().items():
+            log.debug("Find NVMe controller device %s" % ctrl_info.dev_path)
             status = 'normal'
             try:
                 with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
                     cmd_id_ctrl = d.id_ctrl()
                 result = nvme_format_print.nvme_id_ctrl_decode(cmd_id_ctrl.data)
-            except:
-                sn = '-'
-                mn = '-'
-                fw = '-'
-                status = 'fault'
+            except Exception as e:
+                log.debug("Init device %s error occurs, may not a nvme device or controller down" % ctrl_info.dev_path)
+                log.debug(str(e))
             else:
                 sn = string_strip(decode_bytes(result.get("SN")), b'\x00'.decode(), ' ')
                 mn = string_strip(decode_bytes(result.get("MN")), b'\x00'.decode(), ' ')
                 fw = string_strip(decode_bytes(result.get("FR")), b'\x00'.decode(), ' ')
-            ##
-            namespaces = ctrl_info.get_namespaces()
-            for ns_name in sorted(namespaces.keys()):
-                ns_info = namespaces[ns_name]
-                node = ns_info.dev_path
-                ns_id = ns_info.ns_id
-                ## Get information now!
-                ## send identify controller and identify namespace
-                try:
-                    with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
-                        cmd_id_ns = d.id_ns(ns_info.ns_id)
-                except:
-                    usage = '-'
-                    _format = '-'
-                    status = 'fault'
-                else:
-                    ## para data
-                    result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
-                    #
-                    lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
-                    meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
-                    lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
-                    _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
-                    #
-                    NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
-                    NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
-                    usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
-                if options.output_format == "normal":
-                    print (print_format % (node, status, sn, mn, ns_id, usage, _format, fw))
+                ##
+                namespaces = ctrl_info.get_namespaces()
+                for ns_name in sorted(namespaces.keys()):
+                    ns_info = namespaces[ns_name]
+                    node = ns_info.dev_path
+                    ns_id = ns_info.ns_id
+                    ## Get information now!
+                    # send identify controller and identify namespace
+                    try:
+                        with NVMe(init_device(ctrl_info.dev_path, open_t='nvme')) as d:
+                            cmd_id_ns = d.id_ns(ns_info.ns_id)
+                    except Exception as e:
+                        log.debug("Init device %s namespace id %d error occurs, may not a nvme device or controller down" % (ctrl_info.dev_path, ns_info.ns_id))
+                        log.debug(str(e))
+                        usage = '-'
+                        _format = '-'
+                        status = 'fault'
+                    else:
+                        result = nvme_format_print.nvme_id_ns_decode(cmd_id_ns.data)
+                        #
+                        lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
+                        meta_size = scsi_ba_to_int(lbaf.get("MS"), 'little')
+                        lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
+                        _format = "%-6sB + %-3sB" % (2 ** lba_data_size, meta_size)
+                        #
+                        NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
+                        NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
+                        usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
+                    if options.output_format == "normal":
+                        print (print_format % (node, status, sn, mn, ns_id, usage, _format, fw))
     elif os_type == 'Windows':
         from  pydiskcmdcli.system.win_os_tool import scan_all_physical_drive
         for node in sorted([i for i in scan_all_physical_drive()]):
+            log.debug("Find device %s" % node)
             ns_id = '-'  # windows should - ,
             status = 'normal' 
             ## Get information now!
@@ -172,15 +173,11 @@ def _list():
                 with NVMe(init_device(node, open_t='nvme')) as d:
                     cmd_id_ctrl = d.id_ctrl()
                     cmd_id_ns = d.id_ns()
-            except:
+            except Exception as e:
                 # may a non-nvme device, or an abnormal device,
                 #
-                sn = '-'
-                mn = '-'
-                usage = '-'
-                _format = '-'
-                fw = '-'
-                status = 'fault'
+                log.debug("Init device %s error occurs, may not a nvme deivce" % node)
+                log.debug(str(e))
             else:
                 # para data
                 result = nvme_format_print.nvme_id_ctrl_decode(cmd_id_ctrl.data)
@@ -197,8 +194,8 @@ def _list():
                 NUSE_B = scsi_ba_to_int(result.get("NUSE"), 'little') * (2 ** lba_data_size)
                 NCAP_B = scsi_ba_to_int(result.get("NCAP"), 'little') * (2 ** lba_data_size)
                 usage = "%-6s / %-6s" % (human_read_capacity(NUSE_B), human_read_capacity(NCAP_B))
-            if options.output_format == "normal":
-                print (print_format % (node, status, sn, mn, ns_id, usage, _format, fw))
+                if options.output_format == "normal":
+                    print (print_format % (node, status, sn, mn, ns_id, usage, _format, fw))
     else:
         raise RuntimeError("OS %s Not support command list" % os_type)
 
@@ -389,6 +386,7 @@ def telemetry_log():
         help="Pick which telemetry data area to report. Default is 3 to fetch areas 1-3. Valid options are 1, 2, 3, 4.")
     parser.add_option("-U", "--uuid-index", type="int", dest="uuid_index", action="store", default=0,
         help="UUID index")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -454,6 +452,7 @@ def fw_download():
         help="transfer chunksize in byte")
     parser.add_option("-o", "--offset", type="int", dest="offset", action="store", default=0,
         help="starting dword offset, default 0")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -519,6 +518,7 @@ def fw_commit():
         help="firmware slot to sctive")
     parser.add_option("-a", "--action", type="int", dest="action", action="store", default=0,
         help="active action")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -734,6 +734,7 @@ self-test command:                                     \
 0x2 Start a extended device self-test operation        \
 0xe Start a vendor specific device self-test operation \
 0xf abort the device self-test")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -884,6 +885,7 @@ def set_feature():
         help="feature cdw12, if used")
     parser.add_option("-s", "--save", dest="save", action="store_false", default=False,
         help="specifies that the controller shall save the attribute")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -940,6 +942,7 @@ def nvme_create_ns():
         help="command set identifier (CSI)")
     parser.add_option("", "--number", type="int", dest="number", action="store", default=1,
         help="Total number of namespaces to create, default 1")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -1030,13 +1033,14 @@ def nvme_attach_ns():
 
     parser.add_option("-c", "--controllers", dest="ctrl_list", action="store", default='',
         help="The comma separated list of controller identifiers to attach the namesapce to.")
+    parser_update(parser, add_force=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
         ##
-        script_check(options, admin_check=True)
+        script_check(options, admin_check=True, danger_check=True)
         #
         if options.ctrl_list:
             ctrl_list = options.ctrl_list.split(',')
@@ -1081,13 +1085,14 @@ def nvme_detach_ns():
 2:5         delete namepace id 2,3,4")
     parser.add_option("-c", "--controllers", dest="ctrl_list", action="store", default='',
         help="The comma separated list of controller identifiers to detach the namesapce from.")
+    parser_update(parser, add_force=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
         ## check device
         dev = sys.argv[2]
         ##
-        script_check(options, admin_check=True)
+        script_check(options, admin_check=True, danger_check=True)
         #
         ctrl_list = []
         if options.ctrl_list:
@@ -1273,6 +1278,7 @@ def verify():
         help="64-bit addr of first block to access")
     parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
         help="number of blocks (zeroes based) on device to access")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -1345,6 +1351,7 @@ def flush():
     parser = optparse.OptionParser(usage)
     parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0xFFFFFFFF,
         help="Indicate the namespace in which the device flush has to be carried out")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -1424,6 +1431,7 @@ def get_log():
         help="command set identifier")
     parser.add_option("", "--output-format", type="choice", dest="output_format", action="store", choices=["hex", "raw"],default="hex",
         help="Output format: hex|raw, default normal")
+    parser_update(parser, add_output=["hex", "raw"])
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -1622,6 +1630,7 @@ def compare():
         help="number of blocks (zeroes based) on device to access")
     parser.add_option("-f", "--data-file", type="str", dest="dfile", action="store", default='',
         help="File(Read first) containing the data to write")
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
