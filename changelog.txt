@@ -6,11 +6,7 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.3.4(Not Release)
-  * add windows VROC(RSTe) support
-  * add --debug feature
-  * fix a bug in encode_dict
-  Version 0.3.4(Not Release)
+Version 0.3.4
   * add windows VROC(RSTe) support
   * add --debug feature
   * fix a bug in encode_dict
