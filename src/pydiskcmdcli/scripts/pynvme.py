@@ -1431,7 +1431,7 @@ def get_log():
         help="command set identifier")
     parser.add_option("", "--output-format", type="choice", dest="output_format", action="store", choices=["hex", "raw"],default="hex",
         help="Output format: hex|raw, default normal")
-    parser_update(parser, add_output=["hex", "raw"])
+    parser_update(parser)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])

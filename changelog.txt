@@ -6,6 +6,9 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
+Version 0.3.5 (Not Related)
+  * fix a bug that conflict argument in 'pynvme get-log'
+
 Version 0.3.4
   * add windows VROC(RSTe) support
   * add --debug feature
