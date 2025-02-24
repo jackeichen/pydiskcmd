@@ -87,9 +87,9 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
                     self.data['ata_pass_thr_fixed_format'] = self.unmarshall_ata_fixed_format_sense_data(sense[8:12],
                                                                                                          sense[16:20])
                 else:
-                    # TODO: check the sense data in Linux kernel 6.11 or newer
-                    # do nothing for now
-                    pass
+                    # This code contributed by LeeJeffrey
+                    self.data['ata_pass_thr_fixed_format'] = self.unmarshall_ata_fixed_format_sense_data(scsi_int_to_ba(self.data["information"]),
+                                                                                                         scsi_int_to_ba(self.data["command_specific_information"]))
             elif self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR and os_type == "Windows": # TODO
                 self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
             else:
