@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+import platform
 from pydiskcmdlib.utils.enum import Enum
 from pydiskcmdlib.utils.converter import scsi_int_to_ba
 from pydiskcmdlib.exceptions import ExecuteCmdErr,SenseDataCheckErr
@@ -12,6 +13,25 @@ from pyscsi.pyscsi.scsi_sense import (
     SENSE_FORMAT_CURRENT_DESCRIPTOR,
     SENSE_FORMAT_CURRENT_FIXED,
 )
+
+
+def GetLinuxKernelVer():
+    # it usually like '5.14.0-430.el9.x86_64'
+    """
+    Retrieve the major and minor version numbers of the Linux kernel.
+    
+    This function extracts the major and minor version numbers from the kernel release string.
+    The release string typically follows the format 'x.y.z-...', where 'x' is the major version
+    and 'y' is the minor version.
+    
+    Returns:
+        tuple: A tuple containing the major and minor version numbers as integers, or None if
+               the system is not Linux or the version string does not contain enough parts.
+    """
+    if os_type == 'Linux':
+        kernel_ver = platform.release().split(".")
+        if len(kernel_ver) > 2:
+            return int(kernel_ver[0]), int(kernel_ver[1])
 
 
 class ATACheckReturnDescriptorCondition(SCSICheckCondition):
@@ -59,6 +79,17 @@ class ATACheckReturnDescriptorCondition(SCSICheckCondition):
                                                                                                          scsi_int_to_ba(self.data["command_specific_information"]))
                 else:
                     raise SenseDataCheckErr("Not support decode response code %#x" % self.response_code)
+            # it is from https://github.com/torvalds/linux/blob/v5.15/drivers/ata/libata-scsi.c/#L854-#L937
+            # try to decode the fixed format sense data
+            elif os_type == "Linux" and self.response_code == SENSE_FORMAT_CURRENT_FIXED:
+                kernel_ver = GetLinuxKernelVer()
+                if kernel_ver and kernel_ver < (6, 11):
+                    self.data['ata_pass_thr_fixed_format'] = self.unmarshall_ata_fixed_format_sense_data(sense[8:12],
+                                                                                                         sense[16:20])
+                else:
+                    # TODO: check the sense data in Linux kernel 6.11 or newer
+                    # do nothing for now
+                    pass
             elif self.response_code == SENSE_FORMAT_CURRENT_DESCRIPTOR and os_type == "Windows": # TODO
                 self.data['ata_pass_thr_return_descriptor'] = self.unmarshall_extend_ata_status_return_descriptor_data(sense[8:])
             else:
