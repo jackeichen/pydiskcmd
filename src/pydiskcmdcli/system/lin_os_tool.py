@@ -157,8 +157,15 @@ class NVMeNS(object):
     @property
     def ns_id(self):
         nsid = None
-        with open(os.path.join(self._blk_path, 'nsid'), 'r') as f:
-            nsid = int(f.read().strip())
+        if os.path.exists(os.path.join(self._blk_path, 'nsid')):
+            with open(os.path.join(self._blk_path, 'nsid'), 'r') as f:
+                nsid = int(f.read().strip())
+        else:
+            # adapt to old kernel, like 3.10
+            # parse the namespace name string
+            numbers = re.findall(r'\d+', self.ns_name)
+            if len(numbers) > 1:
+                nsid = int(numbers[1])
         return nsid
 
     @property
