@@ -23,7 +23,7 @@ class Flush(ATACommand16):
     """
     def __init__(self):
         ATACommand16.__init__(self,
-                              0,        # fetures
+                              0,         # fetures
                               0,         # count
                               0,         # lba
                               0,         # device

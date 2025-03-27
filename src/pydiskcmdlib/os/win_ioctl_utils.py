@@ -93,7 +93,6 @@ class SRBStatusCode(Enum):
     SRB_STATUS_AUTOSENSE_VALID = 0x80
 ### SRBStatusCode end ###
 
-
 ### FIRMWARE_STATUS start ###
 class FIRMWARE_STATUS(Enum):
     COMMAND_ABORT = 133
@@ -142,3 +141,9 @@ INTELNVM_SIGNATURE = "IntelNvm"
 IOCTL_NVME_PASS_THROUGH = CTL_CODE(0xF000, 0xA02, METHOD_BUFFERED, FILE_ANY_ACCESS)
 class RST_NVME_PASS_THROUGH_VERSION(Enum):
     default = 1
+
+### ATA Data ###ATA_DATA_Transfer_Direction
+class ATA_DATA_TRANSFER_DIRECTION(Enum):
+    NO_DATA = 0
+    DATA_IN = 1
+    DATA_OUT = 2

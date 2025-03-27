@@ -62,7 +62,7 @@ class Identify16(ATACommand16):
     """
     _standard_bits =  Identify_Info
 
-    def __init__(self):
+    def __init__(self, ck_cond=1):
         ##
         # count is not used by identify in ATA command set,
         # so use it in ATAPassthrouh16, for setting transfer length
@@ -77,6 +77,7 @@ class Identify16(ATACommand16):
                               2,         # t_length
                               1,         # t_dir 
                               extend=0,
+                              ck_cond=ck_cond,
                               )         
 
     @classmethod

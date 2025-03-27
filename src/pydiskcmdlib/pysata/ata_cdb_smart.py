@@ -72,7 +72,8 @@ class SmartReadData16(ATACommand16):
     _standard_bits = SMART_KEY
 
     def __init__(self,
-                 smart_key=None):
+                 smart_key=None,
+                 ck_cond=1,):
         ##
         # count is not used by samrt read data in ATA command set,
         # so use it in ATAPassthrouh16, for setting transfer length
@@ -87,7 +88,8 @@ class SmartReadData16(ATACommand16):
                               2,           # t_length
                               1,           # t_dir
                               extend=0,
-                              )                     
+                              ck_cond=ck_cond,
+                              )
 
         if smart_key:
             SmartReadData._standard_bits.update(smart_key)

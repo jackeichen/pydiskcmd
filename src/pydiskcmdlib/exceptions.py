@@ -128,6 +128,10 @@ class BaseError(Exception):
         return (self._code + (self._subcode << 4) if self._subcode is not None else self._code)
 
 
+class DeviceNotFound(BaseError):
+    def __init__(self, message):
+        super(DeviceNotFound, self).__init__(message, 3, 1)
+
 class DeviceTypeError(BaseError):
     def __init__(self, message):
         super(DeviceTypeError, self).__init__(message, 3, 2)
