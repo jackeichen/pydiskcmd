@@ -117,7 +117,7 @@ Note:
 
 RAID/HBA Support
 ----------------
-Only HBA Card and RAID JBOD mode under test. Do Not support RAID Mode.
+Only HBA Card and RAID JBOD mode under test. Limited support RAID Mode.
 
 The configuration should matrixed support with smartie. See raid_support_matrix_with_smartie.txt for 
 details.
@@ -131,6 +131,15 @@ details.
 | ThinkSystem   940  | CentOS 8.4   | Yes            | Yes           |
 | ThinkSystem   4350 | CentOS 8.4   | Yes            | Yes           |
 | ThinkSystem   5350 | CentOS 8.4   | Yes            | Yes           |
+
+Broadcom RAID
+-------------
+The bellow command is avaliable in ThinkSystem 940, as well as Broadcom RAID 9440 and 9560.
+
+  * SCSI inquiry
+  * SATA identify&smart_read_data
+
+More commands is on the way.
 
 Note:
 
@@ -319,6 +328,7 @@ The following are all implemented sub-commands:
 
 The following are all installed plugin extensions:
   parse-cmd                   Parse the CDB and sense code
+  csmi                        Common Storage Management Interface (CSMI) plugin
 
 The following are pyscsi cli management interface:
   cli-info                   Shows pyscsi information
