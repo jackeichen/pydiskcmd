@@ -133,7 +133,7 @@ class SmartReadThresh16(ATACommand16):
     """
     A class to send smart command to a ATA device
     """
-    def __init__(self):
+    def __init__(self, ck_cond=1):
         ##
         # count is not used by samrt read thresh in ATA command set,
         # so use it in ATAPassthrouh12, for setting transfer length
@@ -148,6 +148,7 @@ class SmartReadThresh16(ATACommand16):
                               2,           # t_length
                               1,           # t_dir
                               extend=0,
+                              ck_cond=ck_cond,
                               )           
 
 

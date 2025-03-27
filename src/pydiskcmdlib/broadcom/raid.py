@@ -19,11 +19,14 @@ from pydiskcmdlib.os.lin_utils import get_host_ids
 from pydiskcmdlib import log
 from pydiskcmdlib.exceptions import DeviceNotFound,CommandDataStrucError
 ##
+from pyscsi.utils.converter import get_opcode
 from pyscsi.pyscsi.scsi_enum_command import spc, sbc
 from pydiskcmdlib.utils.converter import translocate_bytearray
 from pyscsi.pyscsi.scsi_command import SCSICommand
 from pyscsi.pyscsi.scsi_cdb_inquiry import Inquiry
+from pyscsi.pyscsi.scsi_cdb_readcapacity16 import ReadCapacity16
 from pydiskcmdlib.pysata.ata_cdb_smart import SmartReadData16
+from pydiskcmdlib.pysata.ata_cdb_smart import SmartReadThresh16 
 from pydiskcmdlib.pysata.ata_cdb_identify import Identify16
 from pydiskcmdlib import log
 
@@ -112,7 +115,7 @@ class PhysicalDriveBase(object):
                 raise DeviceNotFound("cannot open /dev/megaraid_sas_ioctl_node or /dev/megadev0")
         ##
         self.sbc_opcodes = sbc
-        self.sbc_opcodes = spc
+        self.spc_opcodes = spc
 
     @property
     def device_id(self):
@@ -227,11 +230,20 @@ class SATADrive(PhysicalDriveBase):
         cmd.unmarshall()
         return cmd
 
+    def smart_thread(self):
+        cmd = SmartReadThresh16(ck_cond=0)
+        self.scsi_passthrough_cmd(cmd)
+        return cmd
+
 
 class SASDrive(PhysicalDriveBase):
     def __init__(self, bus_no, device_id, blocksize=0,  device=None):
         super(SASDrive, self).__init__(bus_no, device_id, device=device)
         self._blocksize = blocksize
+        # auto detect blocksize
+        if self._blocksize == 0:
+            cap = self.readcapacity16().result
+            self._blocksize = cap["block_length"]
 
     @property
     def protocal(self):
@@ -259,6 +271,20 @@ class SASDrive(PhysicalDriveBase):
         except Exception as e:
             raise e
         cmd.unmarshall(evpd=evpd)
+        return cmd
+
+    def readcapacity16(self, **kwargs):
+        """
+        Returns a ReadCapacity16 Instance
+
+        :param kwargs: a dict with key/value pairs
+                       alloc_len = 32, size of requested datain
+        :return: a ReadCapacity16 instance
+        """
+        opcode = next(get_opcode(self.sbc_opcodes, "9E"))
+        cmd = ReadCapacity16(opcode=opcode, **kwargs)
+        self.scsi_passthrough_cmd(cmd)
+        cmd.unmarshall()
         return cmd
 
 
