@@ -8,6 +8,8 @@ versions of pydiskcmd and detailed changes.
 
 Version 0.3.5 (Not Related)
   * fix a bug that conflict argument in 'pynvme get-log'
+  * add support MegaRAID(Broadcom RAID) for pydiskcmdlib
+  * add plugin megaraid for pydiskcmdcli
 
 Version 0.3.4
   * add windows VROC(RSTe) support

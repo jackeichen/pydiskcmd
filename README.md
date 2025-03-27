@@ -289,6 +289,9 @@ The following are all implemented sub-commands:
   version                     Shows the program version
   help                        Display this help
 
+The following are all installed plugin extensions:
+  megaraid                    MegaRAID extensions
+
 The following are pysata cli management interface:
   cli-info                    Shows pysata information
   cli-autocmd                 Enable or Update the command completion
@@ -329,6 +332,7 @@ The following are all implemented sub-commands:
 The following are all installed plugin extensions:
   parse-cmd                   Parse the CDB and sense code
   csmi                        Common Storage Management Interface (CSMI) plugin
+  megaraid                    MegaRAID extensions
 
 The following are pyscsi cli management interface:
   cli-info                   Shows pyscsi information
