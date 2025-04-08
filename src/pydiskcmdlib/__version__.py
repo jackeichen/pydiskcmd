@@ -4,7 +4,7 @@
 
 major = 0
 minor = 3
-revision = 1
+revision = 2
 ## version format
 version_format = (major, minor, revision)
 ## version in string format

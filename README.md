@@ -34,11 +34,10 @@ projects from github.
 Why pydiskcmd
 -------------
 The pydiskcmd is easily installed. In most case, all you need is the python environment(
-sometimes python-devel is need) and python module Cython. Benefit from python
-(a cross-platform and high-level programming language) and OS level ioctl support, installing 
-pydiskcmd Does Not need to configure the compiling environment(like C/C++ code). The 
-long-term work in the development is to reduce the sofware dependency, to make installation 
-as simple as possible.
+sometimes python-devel is need). Benefit from python (a cross-platform and high-level 
+programming language) and OS level ioctl support, installing pydiskcmd Does Not need to 
+configure the compiling environment(like C/C++ code). The long-term work in the development 
+is to reduce the sofware dependency, to make installation as simple as possible.
 
 The pydiskcmdlib provides a flexible and friendly middle-level API, as well as some low-level 
 components to use. With the help of it, user could build their own raw command, send it to 
@@ -166,7 +165,6 @@ Sofware Requirements:
 
 Python3 Module Requirements:
 
-    * Cython(Required)
     * cython-sgio(Optional, can skip, but need latest version from github if used in linux)
 
 Online build and install from the repository:
