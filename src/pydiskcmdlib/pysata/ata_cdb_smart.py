@@ -201,7 +201,8 @@ class SmartReadLog16(ATACommand16):
     """
     def __init__(self,
                  count,
-                 log_address):
+                 log_address,
+                 ck_cond=1):
         #      
         lba_filed = log_address + (0xC24F << 8)
         ##
@@ -215,6 +216,7 @@ class SmartReadLog16(ATACommand16):
                               2,           # t_length
                               1,           # t_dir
                               extend=0,    # 28 bit command 
+                              ck_cond=ck_cond,
                               )
 
 class SmartReturnStatus(ATACommand16):

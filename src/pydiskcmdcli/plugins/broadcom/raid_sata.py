@@ -24,6 +24,7 @@ from pydiskcmdcli.utils.ata_format_print import (
     format_print_smart,
     format_print_set_feature_guide,
     )
+from pydiskcmdlib.exceptions import DeviceTypeError
 ##
 CliVer = "0.1"
 
@@ -44,6 +45,8 @@ def _megaraid_print_help():
         print ("  list                          List all SATA devices attached to Broadcom RAID controllers")
         print ("  identify                      Get identify information")
         print ("  smart                         Get smart information")
+        print ("  read-log                      Get the GPL Log and show it")
+        print ("  smart-read-log                Get the smart Log and show it")
         print ("  version                       Shows plugin version")
         print ("  help                          Display this help")
         print ("")
@@ -52,6 +55,15 @@ def _megaraid_print_help():
 def _megaraid_print_ver():
     print ("MegaRAID Plugin Version: %s" % CliVer)
     print ("")
+
+def get_valid_device(dev: str):
+    g = re.fullmatch(r"c(\d+),d(\d+)", dev)
+    if g:
+        bus_no = int(g.group(1))
+        device_id = int(g.group(2))
+    else:
+        raise DeviceTypeError("Invalid device: %s" % dev)
+    return bus_no,device_id
 
 def _megaraid_list():
     usage="usage: %prog megaraid list [OPTIONS]"
@@ -106,13 +118,7 @@ def _megaraid_identify():
     if len(sys.argv) > 3:
         (options, args) = parser.parse_args(sys.argv[3:])
         ## check device
-        dev = sys.argv[3]
-        g = re.fullmatch(r"c(\d+),d(\d+)", dev)
-        if g:
-            bus_no = int(g.group(1))
-            device_id = int(g.group(2))
-        else:
-            parser.error("Invalid device: %s" % dev)
+        bus_no,device_id = get_valid_device(sys.argv[3])
         ##
         script_check(options, admin_check=True)
         ##
@@ -131,13 +137,7 @@ def _megaraid_smart():
     if len(sys.argv) > 3:
         (options, args) = parser.parse_args(sys.argv[3:])
         ## check device
-        dev = sys.argv[3]
-        g = re.fullmatch(r"c(\d+),d(\d+)", dev)
-        if g:
-            bus_no = int(g.group(1))
-            device_id = int(g.group(2))
-        else:
-            parser.error("Invalid device: %s" % dev)
+        bus_no,device_id = get_valid_device(sys.argv[3])
         ##
         script_check(options, admin_check=True)
         ##
@@ -151,10 +151,91 @@ def _megaraid_smart():
     else:
         parser.print_help()
 
+def _megaraid_read_log():
+    usage="usage: %prog megaraid read-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-l", "--log-address", type="int", dest="log_address", action="store", default=0,
+        help="Log address to read")
+    parser.add_option("-p", "--page-number", type="int", dest="page_number", action="store", default=0,
+        help="Page number offset in this log address")
+    parser.add_option("-c", "--count", type="int", dest="count", action="store", default=1,
+        help="Read log data transfer length, 512 Bytes per count")
+    parser.add_option("-f", "--feature", type="int", dest="feature", action="store", default=0,
+        help="Specify a feature in read log")
+    parser_update(parser, add_output=["normal", "hex", "raw"])
+
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ## check device
+        bus_no,device_id = get_valid_device(sys.argv[3])
+        ##
+        script_check(options, admin_check=True)
+        ##
+        device = SATADrive(bus_no, device_id)
+        cmd = device.read_log(options.log_address, options.count, page_number=options.page_number, feature=options.feature)
+        ##
+        if cmd.datain:
+            if options.output_format == "normal":
+                func = read_log_format_print_set.get(options.log_address)
+                if func:
+                    if options.log_address == 0x07:
+                        func(cmd.datain, options.page_number)
+                    else:
+                        func(cmd.datain)
+                else:
+                    format_dump_bytes(cmd.datain) 
+            elif options.output_format == "raw":
+                print (cmd.datain)
+            else:
+                format_dump_bytes(cmd.datain) 
+        else:
+            print ("Something wrong while read log, no data read from log page.")
+    else:
+        parser.print_help()
+
+def _megaraid_smart_read_log():
+    usage="usage: %prog megaraid smart-read-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-l", "--log-address", type="int", dest="log_address", action="store", default=0,
+        help="Log address to read")
+    parser.add_option("-c", "--count", type="int", dest="count", action="store", default=1,
+        help="Read log data transfer length, 512 Bytes per count")
+    parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
+        help="Show status return value")
+    parser_update(parser, add_output=["normal", "hex", "raw"])
+
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ## check device
+        bus_no,device_id = get_valid_device(sys.argv[3])
+        ##
+        script_check(options, admin_check=True)
+        ##
+        device = SATADrive(bus_no, device_id)
+        ##
+        cmd = device.smart_read_log(options.log_address, options.count)
+        if cmd.datain:
+            if options.output_format == "normal":
+                func = smart_read_log_format_print_set.get(options.log_address)
+                if func:
+                    func(cmd.datain)
+                else:
+                    format_dump_bytes(cmd.datain) 
+            elif options.output_format == "raw":
+                print (cmd.datain)
+            else:
+                format_dump_bytes(cmd.datain) 
+        else:
+            print ("Something wrong while read log, no data read from log page.")
+    else:
+        parser.print_help()
+
 
 plugin_megaraid_commands_dict = {"list": _megaraid_list,
                                  "identify": _megaraid_identify,
                                  "smart": _megaraid_smart,
+                                 "read-log": _megaraid_read_log,
+                                 "smart-read-log": _megaraid_smart_read_log,
                                  "version": _megaraid_print_ver,
                                  "help": _megaraid_print_help,}
 

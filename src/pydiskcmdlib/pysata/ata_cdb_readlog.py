@@ -27,7 +27,8 @@ class ReadLogExt(ATACommand16):
                  count,
                  log_address,
                  page_number,
-                 feature=0):
+                 feature=0,
+                 ck_cond=1):
         lba = log_address + ((page_number & 0xFF) << 8) + (((page_number >> 8) & 0xFF) << 32)
         ATACommand16.__init__(self,
                               feature,   # fetures
@@ -37,4 +38,6 @@ class ReadLogExt(ATACommand16):
                               0x2F,      # command
                               0x04,      # protocal
                               2,         # t_length
-                              1)         # t_dir 
+                              1,         # t_dir 
+                              ck_cond=ck_cond,  # check condition
+                              ) 

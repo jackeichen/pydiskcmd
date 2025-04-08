@@ -28,6 +28,8 @@ from pyscsi.pyscsi.scsi_cdb_readcapacity16 import ReadCapacity16
 from pydiskcmdlib.pysata.ata_cdb_smart import SmartReadData16
 from pydiskcmdlib.pysata.ata_cdb_smart import SmartReadThresh16 
 from pydiskcmdlib.pysata.ata_cdb_identify import Identify16
+from pydiskcmdlib.pysata.ata_cdb_smart import SmartReadLog16
+from pydiskcmdlib.pysata.ata_cdb_readlog import ReadLogExt
 from pydiskcmdlib import log
 
 # linux_smart_interface::megasas_pd_add_list(int bus_no, smart_device_list & devlist)
@@ -232,6 +234,16 @@ class SATADrive(PhysicalDriveBase):
 
     def smart_thread(self):
         cmd = SmartReadThresh16(ck_cond=0)
+        self.scsi_passthrough_cmd(cmd)
+        return cmd
+
+    def smart_read_log(self, log_address, count):
+        cmd = SmartReadLog16(count, log_address, ck_cond=0)
+        self.scsi_passthrough_cmd(cmd)
+        return cmd
+
+    def read_log(self, log_address, count, page_number=0, feature=0):
+        cmd = ReadLogExt(count, log_address, page_number, feature=feature, ck_cond=0)
         self.scsi_passthrough_cmd(cmd)
         return cmd
 
