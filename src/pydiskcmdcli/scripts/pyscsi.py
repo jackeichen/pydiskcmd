@@ -458,6 +458,8 @@ def sync():
         help="Whether wait the command finish or not, default 0: wait")
     parser.add_option("-g", "--group-number", type="int", dest="group_number", action="store", default=0,
         help="The group into which attributes associated with the command")
+    parser_update(parser, add_debug=True)
+
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -484,6 +486,7 @@ def read16():
         help="Transfer Length in blocks. Default 1")
     parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
         help="To fix the block size of the device. Default 0")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
