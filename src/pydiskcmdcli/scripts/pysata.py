@@ -66,6 +66,7 @@ def print_help():
         print ("  sanitize                    Send sanitize command")
         print ("  standby                     Send standby command")
         print ("  read                        Send a read command to disk")
+        print ("  read-sectors                Send a read sector(s) command to disk")
         print ("  read-verify-sector          Send read verify sector(s) command")
         print ("  write                       Send a write command to disk") 
         print ("  write-uncorrectable         Send a write uncorrectable command to disk") 
@@ -200,6 +201,7 @@ def read_dma_ext():
         help="To fix the block size of the device. Default 0")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -221,6 +223,35 @@ def read_dma_ext():
     else:
         parser.print_help()
 
+def read_sectors():
+    usage="usage: %prog read-sectors <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-s", "--start-block", type="int", dest="slba", action="store", default=0,
+        help="Logical Block Address to write to. Default 0")
+    parser.add_option("-c", "--block-count", type="int", dest="nlb", action="store", default=1,
+        help="Transfer Length in blocks. Default 1")
+    parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
+        help="To fix the block size of the device. Default 0")
+    parser_update(parser, add_debug=True)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, admin_check=True)
+        ##
+        _sending_cmd_info(dev, "read sectors EXT")
+        with SATA(init_device(dev, open_t='ata'), blocksize=options.bs) as d:
+            cmd = d.read_sectors_ext(options.slba, options.nlb)
+            cmd.check_return_status()
+            print ('')
+            print ('Data Out:')
+            print ('len: %d' % (len(cmd.datain)))
+            print (cmd.datain)
+    else:
+        parser.print_help()
+
 def read_verify_sector():
     usage="usage: %prog read-verify-sector <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -232,6 +263,7 @@ def read_verify_sector():
         help="To fix the block size of the device. Default 0")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -361,6 +393,7 @@ def flush():
     parser = optparse.OptionParser(usage)
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -383,6 +416,7 @@ def accessible_max_address():
     parser = optparse.OptionParser(usage)
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -452,6 +486,7 @@ def self_test():
         help="Start a self test, short|long")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -545,6 +580,7 @@ def set_feature():
         help="The guideline for set feature command")
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -642,6 +678,7 @@ def smart_return_status():
     parser = optparse.OptionParser(usage)
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -675,6 +712,7 @@ def standby_imm():
     parser = optparse.OptionParser(usage)
     parser.add_option("", "--show_status", dest="show_status", action="store_true", default=False,
         help="Show status return value")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -740,6 +778,7 @@ def download_fw():
         help="The subcommand code to use, default 3")
     parser.add_option("-x", "--xfer", type=int, dest="xfer", action="store", default=0x200,
         help="Transfer chunksize.")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -913,6 +952,7 @@ def write_uncorrectable():
         help="The number of logical sectors to be marked. A value of 0000h indicates that 65 536 logical sectors, default is 8")
     parser.add_option("-l", "--lba", type=int, dest="lba", action="store", default=0,
         help="LBA of first logical sector to be marked.")
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -960,6 +1000,7 @@ commands_dict = {"list": _list,
                  "smart-read-log": smart_read_log,
                  "sanitize": sanitize,
                  "read": read_dma_ext,
+                 "read-sectors": read_sectors,
                  "read-verify-sector": read_verify_sector,
                  "write": write_dma_ext,
                  "write-uncorrectable": write_uncorrectable,

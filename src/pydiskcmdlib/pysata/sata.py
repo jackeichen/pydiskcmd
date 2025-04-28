@@ -35,6 +35,7 @@ from pydiskcmdlib.pysata.ata_cdb_softreset import SoftReset
 from pydiskcmdlib.pysata.ata_cdb_TrustedReceive import TrustedReceiveDMA
 from pydiskcmdlib.pysata.ata_cdb_writeDMAEXT16 import WriteDMAEXT16
 from pydiskcmdlib.pysata.ata_cdb_read_verify_sectors import ReadVerifySectorEXT
+from pydiskcmdlib.pysata.ata_cdb_read_sectors_ext import ReadSectorsEXT16
 from pydiskcmdlib.pysata.ata_cdb_writelog import WriteLogExt
 from pydiskcmdlib.pysata.ata_cdb_write_uncorrectable import WriteUncorrectableEXT
 from pydiskcmdlib import log
@@ -244,6 +245,19 @@ class SATA(object):
         :return: a read16 instance
         """
         cmd = ReadDMAEXT16(lba, tl, self.blocksize)
+        self.execute(cmd)
+        return cmd
+
+    def read_sectors_ext(self, lba, tl):
+        """
+        Returns a Read16 Instance
+
+        :param lba: Logical Block Address to write to
+        :param tl: Transfer Length in blocks
+
+        :return: a read16 instance
+        """
+        cmd = ReadSectorsEXT16(lba, tl, self.blocksize)
         self.execute(cmd)
         return cmd
 
