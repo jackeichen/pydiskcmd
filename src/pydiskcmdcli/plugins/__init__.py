@@ -7,9 +7,11 @@ from .vroc import win_nvme_vroc
 from .csmi import win_csmi
 from .broadcom import meraraid_sata
 from .broadcom import meraraid_scsi
+from .pcie import pci
 
 nvme_plugins = { "ocp": ocp,
-                 "vroc": win_nvme_vroc,}
+                 "vroc": win_nvme_vroc,
+                 "pci":pci,}
 
 ata_plugins = {"megaraid": meraraid_sata}
 

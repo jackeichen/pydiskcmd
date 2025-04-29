@@ -11,6 +11,9 @@ Version 0.3.5 (Not Related)
   * add support MegaRAID(Broadcom RAID) for pydiskcmdlib
   * add plugin megaraid for pydiskcmdcli
   * remove module Cython in setup.cfg
+  * enhence the ATA sense data decode
+  * fix some bugs
+  * add new plugin pci, to replace pynvme pcie command
 
 Version 0.3.4
   * add windows VROC(RSTe) support

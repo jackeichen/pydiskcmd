@@ -112,7 +112,8 @@ class NVMe(object):
                                                " ".join(["%X" % i for i in cmd.cdb_struc]) if cmd.cdb_struc else cmd.req_id,
                                               ))
             self.device.execute(cmd)
-            log.debug("Completion Queue Status: %X, Command Specific Data: %X" % (cmd.cq_status, cmd.cq_cmd_spec))
+            if (cmd.cq_status is not None) and (cmd.cq_cmd_spec is not None):
+                log.debug("Completion Queue Status: %X, Command Specific Data: %X" % (cmd.cq_status, cmd.cq_cmd_spec))
             if check_return_status:
                 cmd.check_return_status()
         except Exception as e:

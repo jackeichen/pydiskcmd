@@ -33,11 +33,11 @@ projects from github.
 
 Why pydiskcmd
 -------------
-The pydiskcmd is easily installed. In most case, all you need is the python environment(
-sometimes python-devel is need). Benefit from python (a cross-platform and high-level 
-programming language) and OS level ioctl support, installing pydiskcmd Does Not need to 
-configure the compiling environment(like C/C++ code). The long-term work in the development 
-is to reduce the sofware dependency, to make installation as simple as possible.
+The pydiskcmd is easily installed. In most case, all you need is the python environment. 
+Benefit from python (a cross-platform and high-level programming language) and OS level 
+ioctl support, installing pydiskcmd Does Not need to configure the compiling environment
+(like C/C++ code). The long-term work in the development is to reduce the sofware dependency, 
+to make installation as simple as possible.
 
 The pydiskcmdlib provides a flexible and friendly middle-level API, as well as some low-level 
 components to use. With the help of it, user could build their own raw command, send it to 
@@ -194,7 +194,7 @@ command to get help:
     $ pynvme help
 
 ```
-pynvme-0.3.0
+pynvme-0.3.6
 usage: pynvme <command> [<device>] [<args>]
 
 The '<device>' may be either an NVMe character device (ex: /dev/nvme0) or an
@@ -230,12 +230,16 @@ The following are all implemented sub-commands:
   format                Format namespace with new block format
   sanitize              Submit a sanitize command
   device-self-test      Perform the necessary tests to observe the performance
-  pcie                  Get device PCIe status, show it
+  pcie                  Get device PCIe status, show it(Obseleted, see plugin pci)
   show-regs             Shows the controller registers or properties. Requires character device
   flush                 Submit a flush command, return results
   read                  Submit a read command, return results
   verify                Submit a verify command, return results
   write                 Submit a write command, return results
+  write-zeroes          Submit a write zeroes command, return results
+  write-uncor           Submit a write uncorrectable command, return results
+  compare               Submit a Compare command, return results
+  dsm                   Submit a Data Set Management command, return results
   get-lba-status        Submit a Get LBA Status command, return results
   version               Shows the program version
   help                  Display this help
@@ -245,6 +249,7 @@ See 'pynvme help <command>' or 'pynvme <command> --help' for more information on
 The following are all installed plugin extensions:
   ocp                   OCP cloud SSD extensions
   vroc                  Windows NVMe VROC support
+  pci                   Linux PCIe SSD extensions
 
 The following are pynvme cli management interface:
   cli-info              Shows pynvme information
@@ -537,6 +542,11 @@ pyPCIe provides a quick way to read/write registers in PCIe Base Address Registe
 A python/construct wrapper for sgio to replace cython-sgio
 
 * https://github.com/goodes/python-sgio
+
+A tool to control and monitor storage systems using the Self-Monitoring, Analysis and Reporting 
+Technology System (SMART) built into most modern ATA/SATA, SCSI/SAS and NVMe disks
+
+* https://github.com/smartmontools/smartmontools
 
 
 Reference Documents

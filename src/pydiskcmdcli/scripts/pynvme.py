@@ -72,7 +72,7 @@ def print_help():
         print ("  format                Format namespace with new block format")
         print ("  sanitize              Submit a sanitize command")
         print ("  device-self-test      Perform the necessary tests to observe the performance")
-        print ("  pcie                  Get device PCIe status, show it")
+        print ("  pcie                  Get device PCIe status, show it(Obseleted, see plugin pci)")
         print ("  show-regs             Shows the controller registers or properties. Requires character device")
         print ("  flush                 Submit a flush command, return results")
         print ("  read                  Submit a read command, return results")
@@ -90,7 +90,8 @@ def print_help():
         print ("")
         print ("The following are all installed plugin extensions:")
         print ("  ocp                   OCP cloud SSD extensions")
-        print ("  vroc                  Windows NVMe VROC support") 
+        print ("  vroc                  Windows NVMe VROC support")
+        print ("  pci                   Linux PCIe SSD extensions")
         print ("")
         print ("The following are pynvme cli management interface:")
         print ("  cli-info              Shows pynvme information")
@@ -1571,6 +1572,7 @@ def pcie():
 def reset():
     usage="usage: %prog reset <device>"
     parser = optparse.OptionParser(usage)
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])
@@ -1587,6 +1589,7 @@ def reset():
 def subsystem_reset():
     usage="usage: %prog subsystem-reset <device>"
     parser = optparse.OptionParser(usage)
+    parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
         (options, args) = parser.parse_args(sys.argv[2:])

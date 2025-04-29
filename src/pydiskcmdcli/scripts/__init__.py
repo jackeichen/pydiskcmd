@@ -30,7 +30,7 @@ def script_check(options, danger_check=False, admin_check=False, delay_act=False
             print (str(e))
             print ("")
             sys.exit(e.exit_code)
-    if danger_check and not options.force:
+    if danger_check and hasattr(options, 'force') and (not options.force):
         if delay_act:
             try:
                 for i in range(3):
