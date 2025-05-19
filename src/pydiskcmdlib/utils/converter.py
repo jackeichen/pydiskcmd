@@ -133,6 +133,76 @@ def decode_bits(data,
                 value = ba_to_ascii_string(value)
         result_dict.update({key: value})
 
+def decode_bits_iterative(data,
+                          check_dict,
+                          result_dict,
+                          byteorder='big'):
+    """
+    Iteratively decode bits from the given data based on the check dictionary.
+
+    :param data: A buffer containing the bits to decode.
+    :param check_dict: A dict mapping field-names to notation tuples or nested dictionaries.
+    :param result_dict: A dict to store the decoded results.
+    :param byteorder: A string specifying the byte order ('big' or 'little'), default is 'big'.
+    """
+    for key in check_dict.keys():
+        # Notation format:
+        #
+        # If the length is 2 we have the legacy notation [bitmask, offset]
+        # Example: 'sync': [0x10, 7],
+        #
+        # >2-tuples is the new style of notation.
+        # These tuples always consist of at least three elements, where the
+        # first element is a string that describes the type of value.
+        #
+        # 'b': Byte array blobs
+        # ----------------
+        # ('b', offset, length)
+        # Example: 't10_vendor_identification': ('b', 8, 8),
+        #
+        val = check_dict[key]
+        if isinstance(val, (list, tuple)):
+            if len(val) == 2:
+                bitmask, byte_pos = val
+                _num = 1
+                _bm = bitmask
+                while _bm > 0xff:
+                    _bm >>= 8
+                    _num += 1
+                value = scsi_ba_to_int(data[byte_pos:byte_pos + _num],byteorder=byteorder)
+                while not bitmask & 0x01:
+                    bitmask >>= 1
+                    value >>= 1
+                value &= bitmask
+            elif val[0] == 'b':
+                offset, length = val[1:3]
+                value = data[offset:offset + length]
+            elif val[0] == 'bb':
+                bit_offset, bit_length = val[1:3]
+                if isinstance(data, bytes):
+                    _tmp = scsi_ba_to_int(data, 'little')
+                value = (_tmp >> bit_offset) & (2**bit_length-1)
+            elif val[0] == 'w':
+                offset, length = val[1:3]
+                value = data[offset:offset + length * 2]
+            elif val[0] == 'dw':
+                offset, length = val[1:3]
+                value = data[offset:offset + length * 4]
+            ##
+            if len(val) > 3:
+                if val[3] == 'int_l':
+                    value = scsi_ba_to_int(value, 'little')
+                elif val[3] == 'int_b':
+                    value = scsi_ba_to_int(value, 'big')
+                elif val[3] == 'str_ascii':
+                    value = ba_to_ascii_string(value)
+            result_dict.update({key: value})
+        elif isinstance(val, dict):
+            result_dict[key] = {}
+            decode_bits_iterative(data, val, result_dict[key], byteorder=byteorder)
+        else:
+            raise TypeError(f"Unknown type {type(val)}")
+
 
 def encode_dict(data_dict,
                 check_dict,

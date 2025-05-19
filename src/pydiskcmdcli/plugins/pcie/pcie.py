@@ -7,6 +7,7 @@ import optparse
 
 from pydiskcmdcli import os_type
 from pydiskcmdcli.utils import nvme_format_print
+from pydiskcmdcli.utils.format_print import format_dump_bytes,json_print
 from pydiskcmdcli.scripts import parser_update,script_check,func_debug_info
 from pydiskcmdcli import log
 
@@ -48,7 +49,7 @@ def _pci_update_pci_ids():
     script_check(options)
     #
     from pydiskcmdcli.utils.update_pci_ids import update_pci_ids_online
-    return update_pci_ids_online(print_detail=True)
+    return update_pci_ids_online()
 
 def _pci_power():
     usage="usage: %prog pci power <device> [OPTIONS]"
@@ -128,9 +129,9 @@ def _pci_power():
 def _pci_config_get():
     usage="usage: %prog pci config-get <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-s", "--show", type="choice", dest="show", action="store", choices=["simple",], default="simple",
-        help="Show the devcie PCIe information.")
-    parser_update(parser, add_output=["normal", "hex", "raw"])
+    parser.add_option("-a", dest="all", action="store_true", default=False,
+        help="Show the detail pcie configuration space information. Default is False.")
+    parser_update(parser, add_output=["normal", "hex", "raw", "json"])
     #
     if len(sys.argv) > 3:
         (options, args) = parser.parse_args(sys.argv[3:])
@@ -148,22 +149,38 @@ def _pci_config_get():
             except Exception as e:
                 print (str(e))
             else:
-                bus_address = pcie_dev.address
-                print ("Device %s mapped to pcie address %s" % (dev, bus_address))
-                print ('')
-                ##
-                if options.show == "simple":
-                    if options.output_format == 'normal':
+                if options.output_format != "json":
+                    print ("Device %s mapped to pcie address %s" % (dev, pcie_dev.address))
+                    print ("")
+                if not options.all:
+                    if options.output_format == "normal":
                         pcie_dev.simple_info_print()
+                    elif options.output_format == 'json':
+                        pcie_info = {"device": {"name": dev, "pcie_address": pcie_dev.address},
+                                        }
+                        pcie_info.update(pcie_dev.dump_simple_info())
+                        json_print(pcie_info)
+                    else:
+                        print ("Only support normal and json format @ simple show.")
+                else:
+                    if options.output_format == "normal":
+                        pcie_dev.detail_info_print()
+                    elif options.output_format == 'json':
+                        pcie_info = {"device": {"name": dev, "pcie_address": pcie_dev.address},
+                                        }
+                        pcie_info.update(pcie_dev.dump_detail_info())
+                        json_print(pcie_info)
                     elif options.output_format == 'hex':
                         nvme_format_print.format_dump_bytes(pcie_dev.raw_data, byteorder='obverse')
                     else:
                         print (bytes(pcie_dev.raw_data))
+                return 0
         else:
             print ("Device is offline")
             print ("")
     else:
         parser.print_help()
+    return 1
 
 plugin_pci_commands_dict = {"update-pci-ids": _pci_update_pci_ids,
                             "power": _pci_power,

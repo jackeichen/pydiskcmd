@@ -14,6 +14,7 @@ Version 0.3.5 (Not Related)
   * enhence the ATA sense data decode
   * fix some bugs
   * add new plugin pci, to replace pynvme pcie command
+  * refactored code to pypci.pci_decode
 
 Version 0.3.4
   * add windows VROC(RSTe) support

@@ -122,7 +122,7 @@ class PCIeConfig(object):
 
     @property
     def pcie_cap(self):
-        return self._pcie_config_space.PCICap.pci_cap_deocde.get(0x10)
+        return self._pcie_config_space.PCICap.pci_cap_decode.get(0x10)
 
     @property
     def pcie_extend_cap(self):
@@ -192,6 +192,44 @@ class NVMePCIe(PCIeConfig):
                               EXPRESS_SPEED.get(self.pcie_cap.link_cap.decode_data["MaxLinkSpeed"]), self.pcie_cap.link_cap.decode_data["MaxLinkWidth"],
                               )
 
+    def dump_simple_info(self):
+        pcie_info = {"bus_address": self.address,
+                     "locate_to": {"slot": None, "dev_type": "Unknown"},
+                     "dev_type": "Unknown",
+                     "class_id": None,
+                     "dev_desp": "Unknown",
+                     "vid": None,
+                     "did": None,
+                     "ssvid": None,
+                     "ssdid": None,
+                     "speed": {"capable": None, "current": None},
+                     "width": {"capable": None, "current": None},
+        }
+        parent = self.get_parent()
+        if parent and parent.pcie_cap:
+            pcie_info["locate_to"]["slot"] = parent.pcie_cap.slot_cap.decode_data["PhysicalSlotNumber"]
+            pcie_info["locate_to"]["dev_type"] = EXPRESS_TYPES.get(parent.pcie_cap.cap_reg.decode_data["DevOrPortType"])
+        pcie_info["class_id"] = self.pci_header.decode_data["ClassCode"]
+        pcie_info["dev_type"] = EXPRESS_TYPES.get(self.pcie_cap.cap_reg.decode_data["DevOrPortType"])
+        pcie_info["vid"] = self.pci_header.decode_data["VendorID"]
+        pcie_info["did"] = self.pci_header.decode_data["DeviceID"]
+        pcie_info["ssvid"] = self.pci_header.decode_data["SubsystemVendorID"]
+        pcie_info["ssdid"] = self.pci_header.decode_data["SubsystemDeviceID"]
+        def format_pci_ids(pci_id: int) -> str:
+            return ("%x" % pci_id).zfill(4)
+        for f in pci_ids_locations:
+            if os.path.isfile(f):
+                dev_name = ", ".join(get_pci_descriptation(f, 
+                                                           format_pci_ids(pcie_info["vid"]), 
+                                                           device_id=format_pci_ids(pcie_info["did"]), 
+                                                           subvd_id=(format_pci_ids(pcie_info["ssvid"]),format_pci_ids(pcie_info["ssdid"]))))
+                pcie_info["dev_desp"] = dev_name
+        pcie_info["speed"]["capable"] = EXPRESS_SPEED.get(self.pcie_cap.link_cap.decode_data["MaxLinkSpeed"])
+        pcie_info["speed"]["current"] = EXPRESS_SPEED.get(self.pcie_cap.link_status.decode_data["LinkSpeed"])
+        pcie_info["width"]["capable"] = self.pcie_cap.link_cap.decode_data["MaxLinkWidth"]
+        pcie_info["width"]["current"] = self.pcie_cap.link_status.decode_data["LinkWidth"]
+        return pcie_info
+
     def simple_info_print(self):
         print ("%-11s: %s" % ("Bus address", self.address))
         ## slot is parent physical slot number
@@ -203,11 +241,11 @@ class NVMePCIe(PCIeConfig):
             up_dev_type  = EXPRESS_TYPES.get(parent.pcie_cap.cap_reg.decode_data["DevOrPortType"])
         print ("%-11s: slot %d, %s" % ("Locate To", slot, up_dev_type))
         print ("%-11s: %s" % ("Device Type", EXPRESS_TYPES.get(self.pcie_cap.cap_reg.decode_data["DevOrPortType"])))
-        print ("%-11s: %#x (%s)" % ("Class ID", scsi_ba_to_int(self.pci_header.decode_data["ClassCode"], byteorder='little'), CLASSCODE_NAME.get(scsi_ba_to_int(self.pci_header.decode_data["ClassCode"], byteorder='little'))))
-        vendor_id = scsi_ba_to_int(self.pci_header.decode_data["VendorID"], byteorder='little')
-        device_id = scsi_ba_to_int(self.pci_header.decode_data["DeviceID"], byteorder='little')
-        subvendor_id = scsi_ba_to_int(self.pci_header.decode_data["SubsystemVendorID"], byteorder='little')
-        subdevice_id = scsi_ba_to_int(self.pci_header.decode_data["SubsystemDeviceID"], byteorder='little')
+        print ("%-11s: %#x (%s)" % ("Class ID", self.pci_header.decode_data["ClassCode"], CLASSCODE_NAME.get(self.pci_header.decode_data["ClassCode"])))
+        vendor_id = self.pci_header.decode_data["VendorID"]
+        device_id = self.pci_header.decode_data["DeviceID"]
+        subvendor_id = self.pci_header.decode_data["SubsystemVendorID"]
+        subdevice_id = self.pci_header.decode_data["SubsystemDeviceID"]
         dev_name = 'Unknown'
         def format_pci_ids(pci_id: int) -> str:
             return ("%x" % pci_id).zfill(4)
@@ -222,6 +260,102 @@ class NVMePCIe(PCIeConfig):
                                                                      self.pcie_cap.link_status.decode_data["LinkWidth"],
                                                                      self.pcie_cap.link_cap.decode_data["MaxLinkWidth"],
                                                                      ))
+
+    def dump_detail_info(self):
+        def check_byte(dict_data):
+            temp = {}
+            for k,v in dict_data.items():
+                if isinstance(v, bytes):
+                    temp[k] = str(v)
+                elif isinstance(v, dict):
+                    check_byte(v)
+                else:
+                    temp[k] = v
+            return temp
+        def get_pcie_cap_info(cap):
+            result = {}
+            unk_cap_id = 0
+            for k,v in cap.items():
+                if v.name != "Unsupported":
+                    result[v.name] = check_byte(v.decode_data)
+                else:
+                    result["unk_cap_%d" % unk_cap_id] = check_byte(v.decode_data)
+                    unk_cap_id += 1
+            return result
+        pcie_info = {"pci_header": self.pci_header.decode_data,
+                     "pcie_cap": get_pcie_cap_info(self.pci_cap.decode_data),
+                     "pcie_ext_cap": get_pcie_cap_info(self.pcie_extend_cap.decode_data),
+                    }
+        return pcie_info
+
+    def detail_info_print(self):
+        vendor_id = self.pci_header.decode_data["VendorID"]
+        device_id = self.pci_header.decode_data["DeviceID"]
+        subvendor_id = self.pci_header.decode_data["SubsystemVendorID"]
+        subdevice_id = self.pci_header.decode_data["SubsystemDeviceID"]
+        dev_name = 'Unknown'
+        def format_pci_ids(pci_id: int) -> str:
+            return ("%x" % pci_id).zfill(4)
+        for f in pci_ids_locations:
+            if os.path.isfile(f):
+                dev_name = ", ".join(get_pci_descriptation(f, format_pci_ids(vendor_id), device_id=format_pci_ids(device_id), subvd_id=(format_pci_ids(subvendor_id),format_pci_ids(subdevice_id))))
+        #
+        print ("%-12s %s" % (self.address, dev_name))
+        for k,v in self.pci_header.decode_data.items():
+            temp = ""
+            if isinstance(v, int):
+                temp += "\t%s: 0x%X" % (k, v)
+            elif isinstance(v, dict):
+                _temp = "\t%s: " % k
+                for m,n in v.items():
+                    if len((_temp + "%s[%x] " % (m,n))) <= 100:
+                        _temp += "%s[%x] " % (m,n)
+                    else:
+                        temp += _temp
+                        _temp = "\n\t\t%s[%x] " % (m,n)
+                temp += _temp
+            if temp:
+                print (temp)
+        #
+        for k,v in self.pci_cap.decode_data.items():
+            print ("\tCapabilities [%s-%s]: %s" % (("%x" % v.locate_offset) if isinstance(v.locate_offset, int) else "?",
+                                                   ("%x" % (v.locate_offset + v.length)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
+                                                   v.name,))
+            for k,v in v.decode_data.items():
+                temp = ""
+                if isinstance(v, int):
+                    temp += "\t\t%s: 0x%X" % (k, v)
+                elif isinstance(v, dict):
+                    _temp = "\t\t%s: " % k
+                    for m,n in v.items():
+                        if len((_temp + "%s[%x] " % (m,n))) <= 100:
+                            _temp += "%s[%x] " % (m,n)
+                        else:
+                            temp += _temp
+                            _temp = "\n\t\t\t%s[%x] " % (m,n)
+                    temp += _temp
+                if temp:
+                    print (temp)
+        #
+        for k,v in self.pcie_extend_cap.decode_data.items():
+            print ("\tExtended Capabilities [%s-%s]: %s" % (("%x" % v.locate_offset) if isinstance(v.locate_offset, int) else "?",
+                                                             ("%x" % (v.locate_offset + v.length)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
+                                                             v.name,))
+            for k,v in v.decode_data.items():
+                temp = ""
+                if isinstance(v, int):
+                    temp += "\t\t%s: 0x%X" % (k, v)
+                elif isinstance(v, dict):
+                    _temp = "\t\t%s: " % k
+                    for m,n in v.items():
+                        if len((_temp + "%s[%x] " % (m,n))) <= 100:
+                            _temp += "%s[%x] " % (m,n)
+                        else:
+                            temp += _temp
+                            _temp = "\n\t\t\t%s[%x] " % (m,n)
+                    temp += _temp
+                if temp:
+                    print (temp)
 
 
 class PCIeBar(object):
