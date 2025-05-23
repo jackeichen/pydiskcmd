@@ -1065,11 +1065,434 @@ class SecondaryPCIeCap(CapDataBase):
         return self.decode_data.get("NextCapabilityPointer")
 
 
+class DataLinkFeatureExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "DLCap": {
+                  "LocScaledFlCtlSup": [0x01, 4],
+                  "DLExchEn": [0x80, 7],
+              },
+              "DLSta": {
+                  "RmtDLSup": [0x01, 8],
+                  "RmtDLSUpValid": [0x80, 11],
+              },
+    }
+    length = 12
+    name = 'Data Link Feature Extended Capability'
+    cap_id = 0x25
+    def __init__(self, raw_data, offset):
+        super(DataLinkFeatureExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class PLGen4ExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Gen4Cap": [0xFFFFFFFF, 4],
+              "Gen4Ctl": [0xFFFFFFFF, 8],
+              "Gen4Sta": [0xFFFFFFFF, 12],
+              "LocDataPMSta": [0xFFFFFFFF, 16],
+              "1stRetimerPMSta": [0xFFFFFFFF, 20],
+              "2ndRetimerPMSta": [0xFFFFFFFF, 24],
+              "EqCtl": {"L0": [0xFF, 32],
+                        "L1": [0xFF, 33],
+                        "L2": [0xFF, 34],
+                        "L3": [0xFF, 35],
+                        "L4": [0xFF, 36],
+                        "L5": [0xFF, 37],
+                        "L6": [0xFF, 38],
+                        "L7": [0xFF, 39],
+                        "L8": [0xFF, 40],
+                        "L9": [0xFF, 41],
+                        "L10": [0xFF, 42],
+                        "L11": [0xFF, 43],
+                        "L12": [0xFF, 44],
+                        "L13": [0xFF, 45],
+                        "L14": [0xFF, 46],
+                        "L15": [0xFF, 47],
+                        "L16": [0xFF, 48],
+                        "L17": [0xFF, 49],
+                        "L18": [0xFF, 50],
+                        "L19": [0xFF, 51],
+                        "L20": [0xFF, 52],
+                        "L21": [0xFF, 53],
+                        "L22": [0xFF, 54],
+                        "L23": [0xFF, 55],
+                        "L24": [0xFF, 56],
+                        "L25": [0xFF, 57],
+                        "L26": [0xFF, 58],
+                        "L27": [0xFF, 59],
+                        "L28": [0xFF, 60],
+                        "L29": [0xFF, 61],
+                        "L30": [0xFF, 62],
+                        "L31": [0xFF, 63],
+                        },
+    }
+    length = 64
+    name = 'Physical Layer 16.0 GT/s Extended Capability'
+    cap_id = 0x26
+    def __init__(self, raw_data, offset):
+        super(PLGen4ExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class PLGen5ExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Gen5Cap": [0xFFFFFFFF, 4],
+              "Gen5Ctl": [0xFFFFFFFF, 8],
+              "Gen5Sta": [0xFFFFFFFF, 12],
+              "RxModData1": [0xFFFFFFFF, 16],
+              "RxModData2": [0xFFFFFFFF, 20],
+              "TxModData1": [0xFFFFFFFF, 24],
+              "TxModData2": [0xFFFFFFFF, 28],
+              "EqCtl": {"L0": [0xFF, 32],
+                        "L1": [0xFF, 33],
+                        "L2": [0xFF, 34],
+                        "L3": [0xFF, 35],
+                        "L4": [0xFF, 36],
+                        "L5": [0xFF, 37],
+                        "L6": [0xFF, 38],
+                        "L7": [0xFF, 39],
+                        "L8": [0xFF, 40],
+                        "L9": [0xFF, 41],
+                        "L10": [0xFF, 42],
+                        "L11": [0xFF, 43],
+                        "L12": [0xFF, 44],
+                        "L13": [0xFF, 45],
+                        "L14": [0xFF, 46],
+                        "L15": [0xFF, 47],
+                        "L16": [0xFF, 48],
+                        "L17": [0xFF, 49],
+                        "L18": [0xFF, 50],
+                        "L19": [0xFF, 51],
+                        "L20": [0xFF, 52],
+                        "L21": [0xFF, 53],
+                        "L22": [0xFF, 54],
+                        "L23": [0xFF, 55],
+                        "L24": [0xFF, 56],
+                        "L25": [0xFF, 57],
+                        "L26": [0xFF, 58],
+                        "L27": [0xFF, 59],
+                        "L28": [0xFF, 60],
+                        "L29": [0xFF, 61],
+                        "L30": [0xFF, 62],
+                        "L31": [0xFF, 63]
+              },
+    }
+    length = 64
+    name = 'Physical Layer 32.0 GT/s Extended Capability'
+    cap_id = 0x2A
+    def __init__(self, raw_data, offset):
+        super(PLGen5ExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class LaneMargineRxExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "PortCap": [0xFFFF, 4],
+              "PortSta": [0xFFFF, 6],
+              "LaneCtl": {"lane0": [0xFFFF, 8],
+                          "lane1": [0xFFFF, 12],
+                          "lane2": [0xFFFF, 16],
+                          "lane3": [0xFFFF, 20],
+                          "lane4": [0xFFFF, 24],
+                          "lane5": [0xFFFF, 28],
+                          "lane6": [0xFFFF, 32],
+                          "lane7": [0xFFFF, 36],
+                          "lane8": [0xFFFF, 40],
+                          "lane9": [0xFFFF, 44],
+                          "lane10": [0xFFFF, 48],
+                          "lane11": [0xFFFF, 52],
+                          "lane12": [0xFFFF, 56],
+                          "lane13": [0xFFFF, 60],
+                          "lane14": [0xFFFF, 64],
+                          "lane15": [0xFFFF, 68],
+                          "lane16": [0xFFFF, 72],
+                          "lane17": [0xFFFF, 76],
+                          "lane18": [0xFFFF, 80],
+                          "lane19": [0xFFFF, 84],
+                          "lane20": [0xFFFF, 88],
+                          "lane21": [0xFFFF, 92],
+                          "lane22": [0xFFFF, 96],
+                          "lane23": [0xFFFF, 100],
+                          "lane24": [0xFFFF, 104],
+                          "lane25": [0xFFFF, 108],
+                          "lane26": [0xFFFF, 112],
+                          "lane27": [0xFFFF, 116],
+                          "lane28": [0xFFFF, 120],
+                          "lane29": [0xFFFF, 124],
+                          "lane30": [0xFFFF, 128],
+                          "lane31": [0xFFFF, 132],
+                          },
+              "LaneSta": {"lane0": [0xFFFF, 10],
+                          "lane1": [0xFFFF, 14],
+                          "lane2": [0xFFFF, 18],
+                          "lane3": [0xFFFF, 22],
+                          "lane4": [0xFFFF, 26],
+                          "lane5": [0xFFFF, 30],
+                          "lane6": [0xFFFF, 34],
+                          "lane7": [0xFFFF, 38],
+                          "lane8": [0xFFFF, 42],
+                          "lane9": [0xFFFF, 46],
+                          "lane10": [0xFFFF, 50],
+                          "lane11": [0xFFFF, 54],
+                          "lane12": [0xFFFF, 58],
+                          "lane13": [0xFFFF, 62],
+                          "lane14": [0xFFFF, 66],
+                          "lane15": [0xFFFF, 70],
+                          "lane16": [0xFFFF, 74],
+                          "lane17": [0xFFFF, 78],
+                          "lane18": [0xFFFF, 82],
+                          "lane19": [0xFFFF, 86],
+                          "lane20": [0xFFFF, 90],
+                          "lane21": [0xFFFF, 94],
+                          "lane22": [0xFFFF, 98],
+                          "lane23": [0xFFFF, 102],
+                          "lane24": [0xFFFF, 106],
+                          "lane25": [0xFFFF, 110],
+                          "lane26": [0xFFFF, 114],
+                          "lane27": [0xFFFF, 118],
+                          "lane28": [0xFFFF, 122],
+                          "lane29": [0xFFFF, 126],
+                          "lane30": [0xFFFF, 130],
+                          "lane31": [0xFFFF, 134],
+                          },
+    }
+    length = 136
+    name = 'Lane Margining at the Receiver Extended Capability'
+    cap_id = 0x27
+    def __init__(self, raw_data, offset):
+        super(LaneMargineRxExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class LTRExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "MaxSnoopLat": {"LatValue": [0x3FF, 4],
+                              "LatScale": [0x1C, 5],},
+              "MaxNonSnoopLat": {"LatValue": [0x3FF, 6],
+                                 "LatScale": [0x1C, 7],},
+    }
+    length = 8
+    name = 'Latency Tolerance Reporting (LTR) Extended Capability'
+    cap_id = 0x18
+    def __init__(self, raw_data, offset):
+        super(LTRExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class L1PMSubstatesExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "L1Cap": {"PCI-PM_L1.2": [0x01, 4],
+                        "PCI-PM_L1.1": [0x02, 4],
+                        "ASPM_L1.2": [0x04, 4],
+                        "ASPM_L1.1": [0x08, 4],
+                        "L1PMSubstates": [0x10, 4],
+                        "LinkAct": [0x20, 4],
+                        "PortCMRT": [0xFF, 5],
+                        "PortTPOScale": [0x03, 6],
+                        "PortTPOValue": [0xF8, 6],
+                        },
+              "L1Ctl1": {"PCI-PM_L1.2": [0x01, 8],
+                         "PCI-PM_L1.1": [0x02, 8],
+                         "ASPM_L1.2": [0x04, 8],
+                         "ASPM_L1.1": [0x08, 8],
+                         "LinkActInt": [0x10, 8],
+                         "LinkAct": [0x20, 8],
+                         "CMRT": [0xFF, 9],
+                         "LTR_L1.2_TH_Value": [0x3FF, 10],
+                         "LTR_L1.2_TH_Scale": [0xE0, 11],
+                         },
+              "L1Ctl2": {"TPOScale": [0x03, 12],
+                         "TPOValue": [0xF8, 12],
+                         },
+              "L1Sta": {"LinkAct": [0x01, 16],
+                        },
+    }
+    length = 20
+    name = 'L1 PM Substates Extended Capability'
+    cap_id = 0x1E
+    def __init__(self, raw_data, offset):
+        super(L1PMSubstatesExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class ARIExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "ARICap": {"MFVCFunc": [0x01, 4],
+                         "ACSFunc": [0x02, 4],
+                         "NextFunc": [0xFF, 5],
+                         },
+              "ARICtl": {"MFVCFuncEn": [0x01, 6],
+                         "ACSFuncEn": [0x02, 6],
+                         "FuncGroup": [0x70, 6],
+                         },
+    }
+    length = 8
+    name = 'ARI Extended Capability'
+    cap_id = 0x0E
+    def __init__(self, raw_data, offset):
+        super(ARIExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class DevSNExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "SNLower": [0xFFFFFFFF, 4],
+              "SNUpper": [0xFFFFFFFF, 8],
+    }
+    length = 12
+    name = 'Device Serial Number Extended Capability'
+    cap_id = 0x03
+    def __init__(self, raw_data, offset):
+        super(DevSNExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class VenorSpecExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "VSHeader": {"VSECID": [0xFFFF, 4],
+                           "VSECLen": [0xFFF0, 6],
+              },
+              "VSReg": ('b', 8, 12),
+    }
+    length = 20
+    name = 'Vendor-Specific Extended Capability'
+    cap_id = 0x0B
+    def __init__(self, raw_data, offset):
+        super(VenorSpecExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
 class PCIeExtendCap(object): # PCIe Extended Capabilities
     PCIeExtendCapTable = {SRIOVCap.cap_id: SRIOVCap,
                           AERCap.cap_id: AERCap,
                           NPEMCap.cap_id: NPEMCap,
                           SecondaryPCIeCap.cap_id: SecondaryPCIeCap,
+                          DataLinkFeatureExtendCap.cap_id: DataLinkFeatureExtendCap,
+                          PLGen4ExtendCap.cap_id: PLGen4ExtendCap,
+                          PLGen5ExtendCap.cap_id: PLGen5ExtendCap,
+                          LaneMargineRxExtendCap.cap_id: LaneMargineRxExtendCap,
+                          LTRExtendCap.cap_id: LTRExtendCap,
+                          L1PMSubstatesExtendCap.cap_id: L1PMSubstatesExtendCap,
+                          ARIExtendCap.cap_id: ARIExtendCap,
+                          DevSNExtendCap.cap_id: DevSNExtendCap,
+                          VenorSpecExtendCap.cap_id: VenorSpecExtendCap,
                           }
     locate_offset = 256
     def __init__(self, raw_data):

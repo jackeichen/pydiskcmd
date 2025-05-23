@@ -268,7 +268,7 @@ class NVMePCIe(PCIeConfig):
                 if isinstance(v, bytes):
                     temp[k] = str(v)
                 elif isinstance(v, dict):
-                    check_byte(v)
+                    temp[k] = check_byte(v)
                 else:
                     temp[k] = v
             return temp
