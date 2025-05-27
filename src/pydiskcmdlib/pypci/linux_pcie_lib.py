@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
+import re
 from mmap import mmap, PAGESIZE
 try:
     from mmap import PROT_READ
@@ -175,9 +176,21 @@ class NVMePCIe(PCIeConfig):
 
     @property
     def address(self):
-        with open(os.path.join(NVMePCIe.PCIeBasePath % self.__ctrl_name, 'address'), 'r') as f:
-            address = f.read()
-        return address.strip()
+        temp_file = os.path.join(NVMePCIe.PCIeBasePath % self.__ctrl_name, 'address')
+        if os.path.isfile(temp_file):
+            with open(temp_file, 'r') as f:
+                address = f.read()
+            return address.strip()
+        # for old linux kernel
+        temp_file = "/sys/class/nvme/%s" % self.__ctrl_name
+        if os.path.islink(temp_file):
+            temp = []
+            for i in os.readlink(temp_file).split("/"):
+                g = re.match(r'([0-9a-zA-Z]+:[0-9a-zA-Z]{2}:[0-9a-zA-Z]{2}.[0-9a-zA-Z]{1})', i)
+                if g:
+                    temp.append(g.group(1))
+            if temp:
+                return temp[-1]
 
     @property
     def express_aer(self):
@@ -319,7 +332,7 @@ class NVMePCIe(PCIeConfig):
         #
         for k,v in self.pci_cap.decode_data.items():
             print ("\tCapabilities [%s-%s]: %s" % (("%x" % v.locate_offset) if isinstance(v.locate_offset, int) else "?",
-                                                   ("%x" % (v.locate_offset + v.length)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
+                                                   ("%x" % (v.locate_offset + v.length - 1)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
                                                    v.name,))
             for k,v in v.decode_data.items():
                 temp = ""
@@ -339,7 +352,7 @@ class NVMePCIe(PCIeConfig):
         #
         for k,v in self.pcie_extend_cap.decode_data.items():
             print ("\tExtended Capabilities [%s-%s]: %s" % (("%x" % v.locate_offset) if isinstance(v.locate_offset, int) else "?",
-                                                             ("%x" % (v.locate_offset + v.length)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
+                                                             ("%x" % (v.locate_offset + v.length - 1)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
                                                              v.name,))
             for k,v in v.decode_data.items():
                 temp = ""

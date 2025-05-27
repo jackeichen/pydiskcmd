@@ -18,14 +18,22 @@ def is_linuxAdmin():
         return False
 
 def map_pcie_addr_by_nvme_ctrl_path(dev_path: str):
-    addr = None
     if check_nvme_if_ctrl_path(dev_path):
         path = PCIeMappingPath % dev_path.lstrip("/dev/")
         if os.path.exists(path):
             with open(path, 'r') as f:
                 addr = f.read()
-            addr = addr.strip()
-    return addr
+            return addr.strip()
+        # for old linux kernel
+        path = "/sys/class/nvme/%s" % dev_path.lstrip("/dev/")
+        if os.path.islink(path):
+            temp = []
+            for i in os.readlink(path).split("/"):
+                g = re.match(r'([0-9a-zA-Z]+:[0-9a-zA-Z]{2}:[0-9a-zA-Z]{2}.[0-9a-zA-Z]{1})', i)
+                if g:
+                    temp.append(g.group(1))
+            if temp:
+                return temp[-1]
 
 def check_nvme_if_ns_path(dev_path: str):
     return (dev_path.startswith("/dev/") and get_nvme_device_type(dev_path) == 1)

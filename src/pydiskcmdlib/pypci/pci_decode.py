@@ -6,25 +6,12 @@ from pydiskcmdlib.utils.converter import (
     scsi_ba_to_int,
     decode_bits_iterative,
 )
+from pydiskcmdlib import log
 # Layout of the Configuration Space and format of individual configuration registers are depicted following the
 # little-endian convention.
 
 class PCIConfigHeader(object):
     ## Heander common bitmap locates in DWrod 0 ~ 5
-    # HeaderCommonBitmask = {"VendorID": ('b', 0, 2),
-    #                        "DeviceID": ('b', 2, 2),
-    #                        "Command": ('b', 4, 2),
-    #                        "Status": ('b', 6, 2),
-    #                        "RevisionID": ('b', 8, 1),
-    #                        "ClassCode": ('b', 9, 3),
-    #                        "CacheLineSize": ('b', 12, 1),
-    #                        "LatTimer": ('b', 13, 1),
-    #                        "HeaderType": ('b', 14, 1),
-    #                        "BIST": ('b', 15, 1),
-    #                        "CapPointer": ('b', 52, 1),
-    #                        "InterruptLine": ('b', 60, 1),
-    #                        "InterruptPin": ('b', 61, 1),
-    #                        }
     HeaderCommonBitmask = {"VendorID": [0xFFFF, 0],
                            "DeviceID": [0xFFFF, 2],
                            "Command": {
@@ -72,19 +59,6 @@ class PCIConfigHeader(object):
                            "InterruptPin": [0xFF, 61],
                            }
     ## Type 0 self bitmap, DWrod 6 ~ 15
-    # T0Bitmask = {"BaseAddr_0": ('b', 16, 4),
-    #              "BaseAddr_1": ('b', 20, 4),
-    #              "BaseAddr_2": ('b', 24, 4),
-    #              "BaseAddr_3": ('b', 28, 4),
-    #              "BaseAddr_4": ('b', 32, 4),
-    #              "BaseAddr_5": ('b', 36, 4),
-    #              "CardBusCISPointer": ('b', 40, 4),
-    #              "SubsystemVendorID": ('b', 44, 2),
-    #              "SubsystemDeviceID": ('b', 46, 2),
-    #              "ExpROMBaseAddr": ('b', 48, 4),
-    #              "MinGnt": ('b', 62, 1),
-    #              "MaxLat": ('b', 63, 1),
-    #              }
     T0Bitmask = {"BaseAddr_0": [0xFFFFFFFF, 16],
                  "BaseAddr_1": [0xFFFFFFFF, 20],
                  "BaseAddr_2": [0xFFFFFFFF, 24],
@@ -104,26 +78,6 @@ class PCIConfigHeader(object):
                  "MaxLat": [0xFF, 63],
                  }
     ## Type 1 self bitmap, DWrod 6 ~ 15
-    # T1Bitmask = {"BaseAddr_0": ('b', 16, 4),
-    #              "BaseAddr_1": ('b', 20, 4),
-    #              "PriBusNum": ('b', 24, 1),
-    #              "SecBusNum": ('b', 25, 1),
-    #              "SubBusNum": ('b', 26, 1),
-    #              "SecLatTimer": ('b', 27, 1),
-    #              "IOBase": ('b', 28, 1),
-    #              "IOLimit": ('b', 29, 1),
-    #              "SecStatus": ('b', 30, 2),
-    #              "MemoryBase": ('b', 32, 2),
-    #              "MemoryLimit": ('b', 34, 2),
-    #              "PrefetchableMemBase": ('b', 36, 2),
-    #              "PrefetchableMemLimit": ('b', 38, 2),
-    #              "PrefetchableBaseU": ('b', 40, 4),
-    #              "PrefetchableLimitU": ('b', 44, 4),
-    #              "IOBaseU": ('b', 48, 2),
-    #              "IOLimitU": ('b', 50, 2),
-    #              "ExpROMBaseAddr": ('b', 56, 4),
-    #              "BridgeControl": ('b', 62, 2),
-    #              }
     T1Bitmask = {"BaseAddr_0": [0xFFFFFFFF, 16],
                  "BaseAddr_1": [0xFFFFFFFF, 20],
                  "PriBusNum": [0xFF, 24],
@@ -295,31 +249,6 @@ class PCIeSlotCap(CapDataBase):
 
 
 class PCIeCap(CapDataBase):
-    # BitMap = {"CapabilityID": [0xFF, 0],
-    #           "NextCapabilityPointer": [0xFF, 1],
-    #           "PCIeCapRegister": ('b', 2, 2),
-    #           "DeviceCap": ('b', 4, 4),
-    #           "DeviceControl": ('b', 8, 2),
-    #           "DeviceStatus": ('b', 10, 2),
-    #           "LinkCap": ('b', 12, 4),
-    #           "LinkControl": ('b', 16, 2),
-    #           "LinkStatus": ('b', 18, 2),
-    #           "SlotCap": ('b', 20, 4),
-    #           "SlotControl": ('b', 24, 2),
-    #           "SlotStatus": ('b', 26, 2),
-    #           "RootControl": ('b', 28, 2),
-    #           "RootCap": ('b', 30, 2),
-    #           "RootStatus": ('b', 32, 4),
-    #           "DeviceCap2": ('b', 36, 4),
-    #           "DeviceControl2": ('b', 40, 2),
-    #           "DeviceStatus2": ('b', 42, 2),
-    #           "LinkCap2": ('b', 44, 4),
-    #           "LinkControl2": ('b', 48, 2),
-    #           "LinkStatus2": ('b', 50, 2),
-    #           "SlotCap2": ('b', 52, 4),
-    #           "SlotControl2": ('b', 56, 2),
-    #           "SlotStatus2": ('b', 58, 2),
-    #           }
     BitMap = {"CapabilityID": [0xFF, 0],
               "NextCapabilityPointer": [0xFF, 1],
               "PCIeCapRegister": {
@@ -731,8 +660,10 @@ class PCICap(object):
         Read the pci cap data
         """
         offset = self.__pci_config_header.decode_data.get("CapPointer")
-        if 0x39 < offset < 0xFF:
-            for i in range(48):
+        for i in range(48):
+            # check offset
+            if 0x3F < offset < 0xFF:
+                #
                 _self_locate = self._get_self_locate(offset)
                 pci_cap_id = PCICapID(self.__raw_data[_self_locate:_self_locate+PCICapID.length], offset)
                 if pci_cap_id.CapabilityID in PCICap.PCICapTable:
@@ -746,9 +677,9 @@ class PCICap(object):
                 ## Get next cap
                 offset = pci_cap_id.NextCapabilityPointer
             else:
-                raise ValueError("Incorrect PCI Capabilities Data.")
+                raise ValueError("Incorrect PCI Capabilities Data offset(%#x)." % offset)
         else:
-            raise ValueError("Invalid Capabilities Pointer.")
+            raise ValueError("Incorrect PCI Capabilities Data.")
 
 ################ PCI and PCIe Capabilities End #########################
 ################ PCIe Extend Capabilities Start#########################
@@ -1479,6 +1410,119 @@ class VenorSpecExtendCap(CapDataBase):
         return self.decode_data.get("NextCapabilityPointer")
 
 
+class PowerBudgetingExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "DataSelect":[0xFF, 4],
+              "Data": {"BasePower": [0xFF, 8],
+                       "DataScale": [0x03, 9],
+                       "PMSubSta": [0x1C, 9],
+                       "PMSta": [0x60, 9],
+                       "Type": [0x380, 9],
+                       "PowerRail": [0x1C, 10],
+              },
+              "Cap": {"SystemAlloc": [0x01, 12],
+                      },
+    }
+    length = 16
+    name = 'Power Budgeting Extended Capability'
+    cap_id = 0x04
+    def __init__(self, raw_data, offset):
+        super(PowerBudgetingExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class DOEExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "DOECap":{"IntSup": [0x01, 4],
+                        "IntMsgNum": [0xFFE, 4],
+                        "AttMechSup": [0x10, 5],
+                        "AsyncMsgSup": [0x20, 5],
+                        },
+              "DOECtl":{"Abort": [0x01, 8],
+                        "IntEn": [0x02, 8],
+                        "AttNotNeed": [0x04, 8],
+                        "AsyncMsgEn": [0x08, 8],
+                        "Go": [0x80, 11],
+                        },
+              "DOESta":{"Busy": [0x01, 12],
+                        "IntSta": [0x02, 12],
+                        "Error": [0x04, 12],
+                        "AsyncMsgSta": [0x08, 12],
+                        "At_Att": [0x10, 12],
+                        "DataObjReady": [0x80, 15],
+                        },
+              "DOEWriteMailbox":['b', 16, 4],
+              "DOEReadMailbox":['b', 20, 4],
+    }
+    length = 24
+    name = 'Data Object Exchange Extended Capability'
+    cap_id = 0x2E
+    def __init__(self, raw_data, offset):
+        super(DOEExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class TPHReqExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "ReqCap":{"NoST": [0x01, 4],
+                        "IntVec": [0x02, 4],
+                        "DevSpec": [0x04, 4],
+                        "ExtTPHReq": [0x01, 5],
+                        "STTableLoc": [0x06, 5],
+                        "STTableSize": [0x7FF, 6],
+
+                        },
+              "ReqCtl":{"STMod": [0x07, 8],
+                        "TPHReqEn": [0x03, 9],
+                        },
+    }
+    length = 12
+    name = 'TPH Requester Extended Capability'
+    cap_id = 0x17
+    def __init__(self, raw_data, offset):
+        super(TPHReqExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
 class PCIeExtendCap(object): # PCIe Extended Capabilities
     PCIeExtendCapTable = {SRIOVCap.cap_id: SRIOVCap,
                           AERCap.cap_id: AERCap,
@@ -1493,6 +1537,9 @@ class PCIeExtendCap(object): # PCIe Extended Capabilities
                           ARIExtendCap.cap_id: ARIExtendCap,
                           DevSNExtendCap.cap_id: DevSNExtendCap,
                           VenorSpecExtendCap.cap_id: VenorSpecExtendCap,
+                          PowerBudgetingExtendCap.cap_id: PowerBudgetingExtendCap,
+                          DOEExtendCap.cap_id: DOEExtendCap,
+                          TPHReqExtendCap.cap_id: TPHReqExtendCap,
                           }
     locate_offset = 256
     def __init__(self, raw_data):
@@ -1517,13 +1564,16 @@ class PCIeExtendCap(object): # PCIe Extended Capabilities
         Read the pcie extend cap data
         """
         offset = 0x100
-        if 0xFF < offset < 0x1000:
-            for i in range(960):
+        for i in range(960):
+            # check offset
+            if 0xFF < offset < 0xFFF:
                 _self_locate = self._get_self_locate(offset)
                 pci_extend_cap_id = PCIeExtendCapID(self.__raw_data[_self_locate:_self_locate+PCIeExtendCapID.length], offset)
                 if pci_extend_cap_id.CapabilityID in PCIeExtendCap.PCIeExtendCapTable:
                     func = PCIeExtendCap.PCIeExtendCapTable.get(pci_extend_cap_id.CapabilityID)
-                    self.__pcie_extend_cap_decode[pci_extend_cap_id.CapabilityID] = func(self.__raw_data[_self_locate:_self_locate+func.length], offset)
+                    data_len = min(func.length, pci_extend_cap_id.NextCapabilityPointer-offset) if (pci_extend_cap_id.NextCapabilityPointer-offset) > 0 else func.length
+                    self.__pcie_extend_cap_decode[pci_extend_cap_id.CapabilityID] = func(self.__raw_data[_self_locate:_self_locate+data_len], offset)
+                    self.__pcie_extend_cap_decode[pci_extend_cap_id.CapabilityID].length = data_len
                 else:
                     self.__pcie_extend_cap_decode[pci_extend_cap_id.CapabilityID] = pci_extend_cap_id # Unknown Capability
                 ## no other items
@@ -1532,9 +1582,9 @@ class PCIeExtendCap(object): # PCIe Extended Capabilities
                 ## Get next cap
                 offset = pci_extend_cap_id.NextCapabilityPointer
             else:
-                raise ValueError("Incorrect PCIe Extend Capabilities Data.")
+                raise ValueError("Incorrect PCIe Extended Capabilities Data offset(%#x)." % offset)
         else:
-            raise ValueError("Invalid PCIe Extend Capabilities Pointer.")
+            raise ValueError("Incorrect PCIe Extended Capabilities Data.")
 ################ PCIe Extend Capabilities End #########################
 
 class PCIConfigSpace(object):
