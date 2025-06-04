@@ -15,6 +15,9 @@ If you still want to use it, keep your tool version less than 0.3.0.
 
 pydiskcmd
 =========
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jackeichen/pydiskcmd)
+
 pydiskcmd is a disk command tool for python3. It can send command to SATA/SAS/NVMe 
 disk, as also as monitor the disk health.
 
