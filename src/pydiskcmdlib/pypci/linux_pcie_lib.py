@@ -332,7 +332,7 @@ class NVMePCIe(PCIeConfig):
         #
         for k,v in self.pci_cap.decode_data.items():
             print ("\tCapabilities [%s-%s]: %s" % (("%x" % v.locate_offset) if isinstance(v.locate_offset, int) else "?",
-                                                   ("%x" % (v.locate_offset + v.length - 1)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
+                                                   ("%x" % (v.locate_offset + v.data_len - 1)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
                                                    v.name,))
             for k,v in v.decode_data.items():
                 temp = ""
@@ -352,7 +352,7 @@ class NVMePCIe(PCIeConfig):
         #
         for k,v in self.pcie_extend_cap.decode_data.items():
             print ("\tExtended Capabilities [%s-%s]: %s" % (("%x" % v.locate_offset) if isinstance(v.locate_offset, int) else "?",
-                                                             ("%x" % (v.locate_offset + v.length - 1)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
+                                                             ("%x" % (v.locate_offset + v.data_len - 1)) if (isinstance(v.locate_offset, int) and v.cap_id > 0) else "?",
                                                              v.name,))
             for k,v in v.decode_data.items():
                 temp = ""

@@ -185,6 +185,12 @@ You can uninstall it by run:
     $ pip uninstall pydiskcmd
 
 
+Documents
+=========
+
+No time to fix up the docs right now, you may ask DeepWiki to find something useful.
+
+
 Usage
 =====
 Three executable programs should be added to environment variables after installation.

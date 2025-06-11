@@ -1,6 +1,7 @@
 # # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+from enum import Enum
 from pydiskcmdlib.utils.converter import (
     decode_bits,
     scsi_ba_to_int,
@@ -9,6 +10,9 @@ from pydiskcmdlib.utils.converter import (
 from pydiskcmdlib import log
 # Layout of the Configuration Space and format of individual configuration registers are depicted following the
 # little-endian convention.
+#
+# Code by PCIe Spec NCB-PCI_Express_Base_6.3
+#
 
 class PCIConfigHeader(object):
     ## Heander common bitmap locates in DWrod 0 ~ 5
@@ -147,6 +151,73 @@ class PCIConfigHeader(object):
         return self.__pci_config_header["HeaderType"]
 
 ################ Capabilities Data Property ########################
+# Capability lists 
+class PCI_CAP_ID(Enum):
+    PCI_CAP_ID_Null = 0x00              # No Capability
+    PCI_CAP_ID_PM = 0x01     # Power Management
+    PCI_CAP_ID_AGP = 0x02    # Accelerated Graphics Port
+    PCI_CAP_ID_VPD = 0x03    # Vital Product Data
+    PCI_CAP_ID_SLOTID = 0x04 # Slot Identification
+    PCI_CAP_ID_MSI = 0x05    # Message Signalled Interrupts
+    PCI_CAP_ID_CHSWP = 0x06  # CompactPCI HotSwap
+    PCI_CAP_ID_PCIX = 0x07   # PCI-X
+    PCI_CAP_ID_HT = 0x08     # HyperTransport
+    PCI_CAP_ID_VNDR = 0x09   # Vendor-Specific
+    PCI_CAP_ID_DBG = 0x0A    # Debug port
+    PCI_CAP_ID_CCRC = 0x0B   # CompactPCI Central Resource Control
+    PCI_CAP_ID_SHPC = 0x0C   # PCI Standard Hot-Plug Controller
+    PCI_CAP_ID_SSVID = 0x0D  # Bridge subsystem vendor/device ID
+    PCI_CAP_ID_AGP3 = 0x0E   # AGP Target PCI-PCI bridge
+    PCI_CAP_ID_SECDEV = 0x0F # Secure Device
+    PCI_CAP_ID_EXP = 0x10    # PCI Express
+    PCI_CAP_ID_MSIX = 0x11   # MSI-X
+    PCI_CAP_ID_SATA = 0x12   # SATA Data/Index Conf.
+    PCI_CAP_ID_AF = 0x13     # PCI Advanced Features
+    PCI_CAP_ID_EA = 0x14     # PCI Enhanced Allocation
+    PCI_CAP_ID_FPB = 0x15    # PCI Flattening Portal Bridge
+
+# Extended Capabilities (PCI-X 2.0 and Express)
+class PCI_EXT_CAP_ID(Enum):
+    PCI_EXT_CAP_ID_Null = 0x00                   # No Capability
+    PCI_EXT_CAP_ID_ERR = 0x01     # Advanced Error Reporting
+    PCI_EXT_CAP_ID_VC = 0x02      # Virtual Channel Capability
+    PCI_EXT_CAP_ID_DSN = 0x03     # Device Serial Number
+    PCI_EXT_CAP_ID_PWR = 0x04     # Power Budgeting
+    PCI_EXT_CAP_ID_RCLD = 0x05    # Root Complex Link Declaration
+    PCI_EXT_CAP_ID_RCILC = 0x06   # Root Complex Internal Link Control
+    PCI_EXT_CAP_ID_RCEC = 0x07    # Root Complex Event Collector
+    PCI_EXT_CAP_ID_MFVC = 0x08    # Multi-Function VC Capability
+    PCI_EXT_CAP_ID_VC9 = 0x09     # same as _VC
+    PCI_EXT_CAP_ID_RCRB = 0x0A    # Root Complex RB?
+    PCI_EXT_CAP_ID_VNDR = 0x0B    # Vendor-Specific
+    PCI_EXT_CAP_ID_CAC = 0x0C     # Config Access - obsolete
+    PCI_EXT_CAP_ID_ACS = 0x0D     # Access Control Services
+    PCI_EXT_CAP_ID_ARI = 0x0E     # Alternate Routing ID
+    PCI_EXT_CAP_ID_ATS = 0x0F     # Address Translation Services
+    PCI_EXT_CAP_ID_SRIOV = 0x10   # Single Root I/O Virtualization
+    PCI_EXT_CAP_ID_MRIOV = 0x11   # Multi Root I/O Virtualization
+    PCI_EXT_CAP_ID_MCAST = 0x12   # Multicast
+    PCI_EXT_CAP_ID_PRI = 0x13     # Page Request Interface
+    PCI_EXT_CAP_ID_AMD_XXX = 0x14 # Reserved for AMD
+    PCI_EXT_CAP_ID_REBAR = 0x15   # Resizable BAR
+    PCI_EXT_CAP_ID_DPA = 0x16     # Dynamic Power Allocation
+    PCI_EXT_CAP_ID_TPH = 0x17     # TPH Requester
+    PCI_EXT_CAP_ID_LTR = 0x18     # Latency Tolerance Reporting
+    PCI_EXT_CAP_ID_SECPCI = 0x19  # Secondary PCIe Capability
+    PCI_EXT_CAP_ID_PMUX = 0x1A    # Protocol Multiplexing
+    PCI_EXT_CAP_ID_PASID = 0x1B   # Process Address Space ID
+    PCI_EXT_CAP_ID_DPC = 0x1D     # Downstream Port Containment
+    PCI_EXT_CAP_ID_L1SS = 0x1E    # L1 PM Substates
+    PCI_EXT_CAP_ID_PTM = 0x1F     # Precision Time Measurement
+    PCI_EXT_CAP_ID_DVSEC = 0x23   # Designated Vendor-Specific
+    PCI_EXT_CAP_ID_DLF = 0x25     # Data Link Feature
+    PCI_EXT_CAP_ID_PL_16GT = 0x26 # Physical Layer 16.0 GT/s
+    PCI_EXT_CAP_ID_NPEM = 0x29    # Native PCIe Enclosure Management
+    PCI_EXT_CAP_ID_PL_32GT = 0x2A # Physical Layer 32.0 GT/s
+    PCI_EXT_CAP_ID_DOE = 0x2E     # Data Object Exchange
+    PCI_EXT_CAP_ID_PL_64GT = 0x31 # Physical Layer 64.0 GT/s
+
+
 class CapDataBase(object):
     BitMap = {}
     length = 0
@@ -155,6 +226,7 @@ class CapDataBase(object):
     def __init__(self, raw_data, offset=None):
         self.__raw_data = raw_data
         self.__offset = offset
+        #
         self.__cap_data_decode = {}
         decode_bits_iterative(raw_data, self.BitMap, self.__cap_data_decode, byteorder='little')
 
@@ -173,6 +245,10 @@ class CapDataBase(object):
     @property
     def decode_data(self):
         return self.__cap_data_decode
+
+    @property
+    def data_len(self):
+        return len(self.__raw_data)
 ################ PCI and PCIe Capabilities Start#########################
 class PCICapID(CapDataBase):
     BitMap = {"CapabilityID": [0xFF, 0],
@@ -181,6 +257,25 @@ class PCICapID(CapDataBase):
     length = 4
     def __init__(self, raw_data, offset):
         super(PCICapID, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class NullCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFF, 0],
+              "NextCapabilityPointer": [0xFF, 1],
+              }
+    length = 2
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_Null.value
+    name = "Null Capability"
+    def __init__(self, raw_data, offset):
+        super(NullCap, self).__init__(raw_data, offset=offset)
 
     @property
     def CapabilityID(self):
@@ -464,7 +559,7 @@ class PCIeCap(CapDataBase):
               "SlotStatus2": [0xFFFF, 58],
               }
     name = "PCIExpressCap"
-    cap_id = 0x10
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_EXP.value
     length = 60
     def __init__(self, raw_data, offset):
         super(PCIeCap, self).__init__(raw_data, offset=offset)
@@ -488,7 +583,7 @@ class PCIeCap(CapDataBase):
 
 class PowerManagementCap(CapDataBase):
     length = 8
-    cap_id = 0x01
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_PM.value
     BitMap = {"CapabilityID": [0xFF, 0],
               "NextCapabilityPointer": [0xFF, 1],
               # Power Management Capabilities
@@ -527,7 +622,7 @@ class PowerManagementCap(CapDataBase):
 
 class MSICap(CapDataBase):
     length = 24  # Give a max length
-    cap_id = 0x05
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_MSI.value
     name = "MSICapability"
     BitMap = {"CapabilityID": [0xFF, 0],
               "NextCapabilityPointer": [0xFF, 1],
@@ -579,7 +674,7 @@ class MSICap(CapDataBase):
 
 class MSIXCap(CapDataBase):
     length = 12 
-    cap_id = 0x11
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_MSIX.value
     name = "MSI-X Capability and Table Structure"
     BitMap = {"CapabilityID": [0xFF, 0],
               "NextCapabilityPointer": [0xFF, 1],
@@ -611,10 +706,103 @@ class SubIDCap(CapDataBase):
               "SSID": [0xFFFF, 6],
               }
     length = 8
-    cap_id = 0x0D
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_SSVID.value
     name = "Subsystem ID and Sybsystem Vendor ID Capability"
     def __init__(self, raw_data, offset):
         super(SubIDCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class FPBCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFF, 0],
+              "NextCapabilityPointer": [0xFF, 1],
+              "Cap": [0xFFFFFFFF, 4],
+              "RIDCtl1": [0xFFFFFFFF, 8],
+              "RIDCtl2": [0xFFFFFFFF, 12],
+              "MemLowCtl": [0xFFFFFFFF, 16],
+              "MemHighCtl1": [0xFFFFFFFF, 20],
+              "MemHighCtl2": [0xFFFFFFFF, 24],
+              "VecAccessCtl": [0xFFFFFFFF, 28],
+              "VecAccessData": [0xFFFFFFFF, 32],
+              }
+    length = 36
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_FPB.value
+    name = "FPB Capability"
+    def __init__(self, raw_data, offset):
+        super(FPBCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class EnhancedAllocCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFF, 0],
+              "NextCapabilityPointer": [0xFF, 1],
+              "NumEntries": [0x3F, 2],
+              }
+    length = 4
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_EA.value
+    name = "Enhanced Allocation Capability"
+    def __init__(self, raw_data, offset):
+        super(EnhancedAllocCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class VenorSpecCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFF, 0],
+              "NextCapabilityPointer": [0xFF, 1],
+              "Len": [0xFF, 2],
+              "VSReg": ('b', 3, 13),
+    }
+    length = 16
+    name = 'Vendor-Specific Capability'
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_VNDR.value
+    def __init__(self, raw_data, offset):
+        super(VenorSpecCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class VPDCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFF, 0],
+              "NextCapabilityPointer": [0xFF, 1],
+              "VPDAddress": [0xFFFF, 2],
+              "VPDData": [0xFFFFFFFF, 4],
+              }
+    length = 8
+    cap_id = PCI_CAP_ID.PCI_CAP_ID_VPD.value
+    name = "Vital Product Data Capability"
+    def __init__(self, raw_data, offset):
+        super(VPDCap, self).__init__(raw_data, offset=offset)
 
     @property
     def CapabilityID(self):
@@ -631,6 +819,11 @@ class PCICap(object):
                    MSICap.cap_id: MSICap,
                    SubIDCap.cap_id: SubIDCap,
                    MSIXCap.cap_id: MSIXCap,
+                   EnhancedAllocCap.cap_id: EnhancedAllocCap,
+                   FPBCap.cap_id: FPBCap,
+                   VenorSpecCap.cap_id: VenorSpecCap,
+                   NullCap.cap_id: NullCap,
+                   VPDCap.cap_id: VPDCap,
                    }
     locate_offset = 64
     def __init__(self, raw_data, pci_config_header: PCIConfigHeader):
@@ -692,6 +885,30 @@ class PCIeExtendCapID(CapDataBase):
     length = 4
     def __init__(self, raw_data, offset):
         super(PCIeExtendCapID, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class NullExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              }
+    length = 4
+    name = 'Null Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_Null.value
+    def __init__(self, raw_data, offset):
+        super(NullExtendCap, self).__init__(raw_data, offset=offset)
 
     @property
     def CapabilityID(self):
@@ -833,7 +1050,7 @@ class AERCap(CapDataBase):
     }
     length = 72
     name = 'AER Capability'
-    cap_id = 0x01
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_ERR.value
     def __init__(self, raw_data, offset):
         super(AERCap, self).__init__(raw_data, offset=offset)
 
@@ -892,7 +1109,7 @@ class SRIOVCap(CapDataBase):
               }
     length = 64
     name = 'SR-IOV Extended Capability'
-    cap_id = 0x10
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_SRIOV.value
     def __init__(self, raw_data, offset):
         super(SRIOVCap, self).__init__(raw_data, offset=offset)
 
@@ -950,7 +1167,7 @@ class NPEMCap(CapDataBase):
               }
     length = 16
     name = 'NPEM Extended Capability'
-    cap_id = 0x29
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_NPEM.value
     def __init__(self, raw_data, offset):
         super(NPEMCap, self).__init__(raw_data, offset=offset)
 
@@ -979,41 +1196,9 @@ class SecondaryPCIeCap(CapDataBase):
               }
     length = 76
     name = 'Secondary PCI Express'
-    cap_id = 0x19
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_SECPCI.value
     def __init__(self, raw_data, offset):
         super(SecondaryPCIeCap, self).__init__(raw_data, offset=offset)
-
-    @property
-    def CapabilityID(self):
-        return self.decode_data.get("CapabilityID")
-
-    @property
-    def CapVer(self):
-        return self.decode_data.get("CapVer")
-
-    @property
-    def NextCapabilityPointer(self):
-        return self.decode_data.get("NextCapabilityPointer")
-
-
-class DataLinkFeatureExtendCap(CapDataBase):
-    BitMap = {"CapabilityID": [0xFFFF, 0],
-              "CapVer": [0x0F, 2],
-              "NextCapabilityPointer": [0xFFF0, 2],
-              "DLCap": {
-                  "LocScaledFlCtlSup": [0x01, 4],
-                  "DLExchEn": [0x80, 7],
-              },
-              "DLSta": {
-                  "RmtDLSup": [0x01, 8],
-                  "RmtDLSUpValid": [0x80, 11],
-              },
-    }
-    length = 12
-    name = 'Data Link Feature Extended Capability'
-    cap_id = 0x25
-    def __init__(self, raw_data, offset):
-        super(DataLinkFeatureExtendCap, self).__init__(raw_data, offset=offset)
 
     @property
     def CapabilityID(self):
@@ -1074,7 +1259,7 @@ class PLGen4ExtendCap(CapDataBase):
     }
     length = 64
     name = 'Physical Layer 16.0 GT/s Extended Capability'
-    cap_id = 0x26
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_PL_16GT.value
     def __init__(self, raw_data, offset):
         super(PLGen4ExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1138,7 +1323,7 @@ class PLGen5ExtendCap(CapDataBase):
     }
     length = 64
     name = 'Physical Layer 32.0 GT/s Extended Capability'
-    cap_id = 0x2A
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_PL_32GT.value
     def __init__(self, raw_data, offset):
         super(PLGen5ExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1153,6 +1338,51 @@ class PLGen5ExtendCap(CapDataBase):
     @property
     def NextCapabilityPointer(self):
         return self.decode_data.get("NextCapabilityPointer")
+
+
+class PLGen6ExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Ctl": [0xFFFFFFFF, 8],
+              "Sta": [0xFFFFFFFF, 12],
+              "EqCtl": {"L0": [0xFF, 16],
+                        "L1": [0xFF, 17],
+                        "L2": [0xFF, 18],
+                        "L3": [0xFF, 19],
+                        "L4": [0xFF, 20],
+                        "L5": [0xFF, 21],
+                        "L6": [0xFF, 22],
+                        "L7": [0xFF, 23],
+                        "L8": [0xFF, 24],
+                        "L9": [0xFF, 25],
+                        "L10": [0xFF, 26],
+                        "L11": [0xFF, 27],
+                        "L12": [0xFF, 28],
+                        "L13": [0xFF, 29],
+                        "L14": [0xFF, 30],
+                        "L15": [0xFF, 31],
+              },
+    }
+    length = 32
+    name = 'Physical Layer 64.0 GT/s Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_PL_64GT.value
+    def __init__(self, raw_data, offset):
+        super(PLGen6ExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
 
 
 class LaneMargineRxExtendCap(CapDataBase):
@@ -1258,7 +1488,7 @@ class LTRExtendCap(CapDataBase):
     }
     length = 8
     name = 'Latency Tolerance Reporting (LTR) Extended Capability'
-    cap_id = 0x18
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_LTR.value
     def __init__(self, raw_data, offset):
         super(LTRExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1307,7 +1537,7 @@ class L1PMSubstatesExtendCap(CapDataBase):
     }
     length = 20
     name = 'L1 PM Substates Extended Capability'
-    cap_id = 0x1E
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_L1SS.value
     def __init__(self, raw_data, offset):
         super(L1PMSubstatesExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1339,7 +1569,7 @@ class ARIExtendCap(CapDataBase):
     }
     length = 8
     name = 'ARI Extended Capability'
-    cap_id = 0x0E
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_ARI.value
     def __init__(self, raw_data, offset):
         super(ARIExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1365,7 +1595,7 @@ class DevSNExtendCap(CapDataBase):
     }
     length = 12
     name = 'Device Serial Number Extended Capability'
-    cap_id = 0x03
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_DSN.value
     def __init__(self, raw_data, offset):
         super(DevSNExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1393,7 +1623,7 @@ class VenorSpecExtendCap(CapDataBase):
     }
     length = 20
     name = 'Vendor-Specific Extended Capability'
-    cap_id = 0x0B
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_VNDR.value
     def __init__(self, raw_data, offset):
         super(VenorSpecExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1427,7 +1657,7 @@ class PowerBudgetingExtendCap(CapDataBase):
     }
     length = 16
     name = 'Power Budgeting Extended Capability'
-    cap_id = 0x04
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_PWR.value
     def __init__(self, raw_data, offset):
         super(PowerBudgetingExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1471,7 +1701,7 @@ class DOEExtendCap(CapDataBase):
     }
     length = 24
     name = 'Data Object Exchange Extended Capability'
-    cap_id = 0x2E
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_DOE.value
     def __init__(self, raw_data, offset):
         super(DOEExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1506,7 +1736,7 @@ class TPHReqExtendCap(CapDataBase):
     }
     length = 12
     name = 'TPH Requester Extended Capability'
-    cap_id = 0x17
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_TPH.value
     def __init__(self, raw_data, offset):
         super(TPHReqExtendCap, self).__init__(raw_data, offset=offset)
 
@@ -1523,12 +1753,1052 @@ class TPHReqExtendCap(CapDataBase):
         return self.decode_data.get("NextCapabilityPointer")
 
 
+class SecondaryPCIeExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "LnkCtl3":{"PerfEq": [0x01, 4],
+                        "LnkEqReqInt": [0x02, 4],
+                        "EnLowerSKPOSGenVec": [0xFE, 5],
+                        },
+              "LaneErrSta":[0xFFFFFFFF, 8],
+              "LaneEqCtl": {"Lane0": [0xFFFF, 12],
+                            "Lane1": [0xFFFF, 14],
+                            "Lane2": [0xFFFF, 16],
+                            "Lane3": [0xFFFF, 18],
+                            "Lane4": [0xFFFF, 20],
+                            "Lane5": [0xFFFF, 22],
+                            "Lane6": [0xFFFF, 24],
+                            "Lane7": [0xFFFF, 26],
+                            "Lane8": [0xFFFF, 28],
+                            "Lane9": [0xFFFF, 30],
+                            "Lane10": [0xFFFF, 32],
+                            "Lane11": [0xFFFF, 34],
+                            "Lane12": [0xFFFF, 36],
+                            "Lane13": [0xFFFF, 38],
+                            "Lane14": [0xFFFF, 40],
+                            "Lane15": [0xFFFF, 42],
+                            "Lane16": [0xFFFF, 44],
+                            "Lane17": [0xFFFF, 46],
+                            "Lane18": [0xFFFF, 48],
+                            "Lane19": [0xFFFF, 50],
+                            "Lane20": [0xFFFF, 52],
+                            "Lane21": [0xFFFF, 54],
+                            "Lane22": [0xFFFF, 56],
+                            "Lane23": [0xFFFF, 58],
+                            "Lane24": [0xFFFF, 60],
+                            "Lane25": [0xFFFF, 62],
+                            "Lane26": [0xFFFF, 64],
+                            "Lane27": [0xFFFF, 66],
+                            "Lane28": [0xFFFF, 68],
+                            "Lane29": [0xFFFF, 70],
+                            "Lane30": [0xFFFF, 72],
+                            "Lane31": [0xFFFF, 74],
+                            },
+    }
+    length = 76
+    name = 'Secondary PCI Express Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_SECPCI.value
+    def __init__(self, raw_data, offset):
+        super(SecondaryPCIeExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class DataLinkFeatureExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap":{"LocScaleFCSup": [0x01, 4],
+                     "LocImmeReadiness": [0x02, 4],
+                     "LocExtVCCnt": [0x1C, 4],
+                     "LocL0pExitLat": [0xE0, 4],
+                     "ExchangeEn": [0x80, 7],
+                     },
+              "Sta":{"RmtScaleFCSup": [0x01, 8],
+                     "RmtImmeReadiness": [0x02, 8],
+                     "RmtExtVCCnt": [0x1C, 8],
+                     "RmtL0pExitLat": [0xE0, 8],
+                     "RmtSupValid": [0x80, 11],
+                     },
+    }
+    length = 12
+    name = 'Data Link Feature Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_DLF.value
+    def __init__(self, raw_data, offset):
+        super(DataLinkFeatureExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class FlitLoggingExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Log1": [0xFFFFFFFF, 4],
+              "Log2": [0xFFFFFFFF, 8],
+              "CntCtl": [0xFFFF, 12],
+              "CntSta": [0xFFFF, 14],
+              "FBERMesCtl": [0xFFFFFFFF, 16],
+              "FBERMesSta": {"1_reg": [0xFFFFFFFF, 20],
+                             "2_reg": [0xFFFFFFFF, 24],
+                             "3_reg": [0xFFFFFFFF, 28],
+                             "4_reg": [0xFFFFFFFF, 32],
+                             "5_reg": [0xFFFFFFFF, 36],
+                             "6_reg": [0xFFFFFFFF, 40],
+                             "7_reg": [0xFFFFFFFF, 44],
+                             "8_reg": [0xFFFFFFFF, 48],
+                             "9_reg": [0xFFFFFFFF, 52],
+                             "10_reg": [0xFFFFFFFF, 56],
+                             },
+    }
+    length = 60
+    name = 'Flit Logging Extended Capability'
+    cap_id = 0x32
+    def __init__(self, raw_data, offset):
+        super(FlitLoggingExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class Dev3ExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap3": [0xFFFFFFFF, 4],
+              "Ctl3": [0xFFFFFFFF, 8],
+              "Sta3": [0xFFFFFFFF, 12],
+    }
+    length = 16
+    name = 'Device 3 Extended Capability'
+    cap_id = 0x2F
+    def __init__(self, raw_data, offset):
+        super(Dev3ExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class ACSExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFF, 4],
+              "Ctl": [0xFFFF, 6],
+              "EgressCtlVec": [0xFFFFFFFF, 8],
+              "AddEgressCtlVec": [0xFFFFFFFF, 12],
+    }
+    length = 16
+    name = 'ACS Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_ACS.value
+    def __init__(self, raw_data, offset):
+        super(ACSExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class ResizableBARExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "BAR_0": {"Cap": [0xFFFFFFFF, 4],
+                        "Ctl": [0xFFFFFFFF, 8],
+                         },
+              "BAR_1": {"Cap": [0xFFFFFFFF, 12],
+                        "Ctl": [0xFFFFFFFF, 16],
+                         },
+              "BAR_2": {"Cap": [0xFFFFFFFF, 20],
+                        "Ctl": [0xFFFFFFFF, 24],
+                         },
+              "BAR_3": {"Cap": [0xFFFFFFFF, 28],
+                        "Ctl": [0xFFFFFFFF, 32],
+                         },
+              "BAR_4": {"Cap": [0xFFFFFFFF, 36],
+                        "Ctl": [0xFFFFFFFF, 40],
+                         },
+              "BAR_5": {"Cap": [0xFFFFFFFF, 44],
+                        "Ctl": [0xFFFFFFFF, 48],
+                         },
+    }
+    length = 52
+    name = 'Resizable BAR Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_REBAR.value
+    def __init__(self, raw_data, offset):
+        super(ResizableBARExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class VFResizableBARExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "BAR_0": {"Cap": [0xFFFFFFFF, 4],
+                        "Ctl": [0xFFFFFFFF, 8],
+                         },
+              "BAR_1": {"Cap": [0xFFFFFFFF, 12],
+                        "Ctl": [0xFFFFFFFF, 16],
+                         },
+              "BAR_2": {"Cap": [0xFFFFFFFF, 20],
+                        "Ctl": [0xFFFFFFFF, 24],
+                         },
+              "BAR_3": {"Cap": [0xFFFFFFFF, 28],
+                        "Ctl": [0xFFFFFFFF, 32],
+                         },
+              "BAR_4": {"Cap": [0xFFFFFFFF, 36],
+                        "Ctl": [0xFFFFFFFF, 40],
+                         },
+              "BAR_5": {"Cap": [0xFFFFFFFF, 44],
+                        "Ctl": [0xFFFFFFFF, 48],
+                         },
+    }
+    length = 52
+    name = 'VF Resizable BAR Extended Capability'
+    cap_id = 0x24
+    def __init__(self, raw_data, offset):
+        super(VFResizableBARExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class PASIDExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFF, 4],
+              "Ctl": [0xFFFF, 6],
+    }
+    length = 8
+    name = 'PASID Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_PASID.value
+    def __init__(self, raw_data, offset):
+        super(PASIDExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class FRSQueExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Sta": [0xFFFF, 8],
+              "Ctl": [0xFFFF, 10],
+              "MsgQueue": [0xFFFFFFFF, 12],
+    }
+    length = 16
+    name = 'FRS Queueing Extended Capability'
+    cap_id = 0x21
+    def __init__(self, raw_data, offset):
+        super(FRSQueExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class FlitPerfMesExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Ctl": [0xFFFFFFFF, 8],
+              "Sta": [0xFFFFFFFF, 12],
+              "LTSSMSta": {"1_reg": [0xFFFFFFFF, 16],
+                           "2_reg": [0xFFFFFFFF, 20],
+                           "3_reg": [0xFFFFFFFF, 24],
+                           "4_reg": [0xFFFFFFFF, 28],
+                           "5_reg": [0xFFFFFFFF, 32],
+                           },
+    }
+    length = 36
+    name = 'Flit Performance Measurement Extended Capability'
+    cap_id = 0x33
+    def __init__(self, raw_data, offset):
+        super(FlitPerfMesExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class FlitErrInjExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Ctl1": [0xFFFFFFFF, 8],
+              "Ctl2": [0xFFFFFFFF, 12],
+              "Sta": [0xFFFFFFFF, 16],
+              "OrdInjCtl1": [0xFFFFFFFF, 20],
+              "OrdInjCtl2": [0xFFFFFFFF, 24],
+              "OrdTxInjSta": [0xFFFFFFFF, 28],
+              "OrdRxInjSta": [0xFFFFFFFF, 32],
+    }
+    length = 36
+    name = 'Flit Error Injection Extended Capability'
+    cap_id = 0x34
+    def __init__(self, raw_data, offset):
+        super(FlitErrInjExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class NOPFlitExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Ctl1": [0xFFFFFFFF, 8],
+              "Ctl2": [0xFFFFFFFF, 12],
+              "Sta": [0xFFFFFFFF, 16],
+    }
+    length = 20
+    name = 'NOP Flit Extended Capability'
+    cap_id = 0x37
+    def __init__(self, raw_data, offset):
+        super(NOPFlitExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class VCExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "PortCap1": [0xFFFFFFFF, 4],
+              "PortCap2": [0xFFFFFFFF, 8],
+              "PortCtl": [0xFFFF, 12],
+              "PortSta": [0xFFFF, 14],
+              "VCRes_0": {"Cap": [0xFFFFFFFF, 16],
+                          "Ctl": [0xFFFFFFFF, 20],
+                          "Sta": [0xFFFFFFFF, 24],},
+    }
+    length = 28
+    name = 'Virtual Channel Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_VC.value
+    def __init__(self, raw_data, offset):
+        super(VCExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+class VC9ExtendCap(VCExtendCap):
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_VC9.value
+
+
+class MFVCExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "PortVCCap1": [0xFFFFFFFF, 4],
+              "PortVCCap2": [0xFFFFFFFF, 8],
+              "PortVCCtl": [0xFFFF, 12],
+              "PortVCSta": [0xFFFF, 14],
+              "VCRes_0": {"Cap": [0xFFFFFFFF, 16],
+                          "Ctl": [0xFFFFFFFF, 20],
+                          "Sta": [0xFFFFFFFF, 24],},
+    }
+    length = 28
+    name = 'Multi-Function Virtual Channel Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_MFVC.value
+    def __init__(self, raw_data, offset):
+        super(MFVCExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class DesVenorSpecExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Header1": {"ID": [0xFFFF, 4],
+                          "Rev": [0x0F, 6],
+                          "Len": [0xFFF0, 6],
+              },
+              "Header2": [0xFFFF, 8],
+              "VSReg": ('b', 10, 10),
+    }
+    length = 20
+    name = 'Designated Vendor-Specific Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_DVSEC.value
+    def __init__(self, raw_data, offset):
+        super(DesVenorSpecExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class RCRBExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "VID": [0xFFFF, 4],
+              "DID": [0xFFFF, 6],
+              "Cap": [0xFFFFFFFF, 8],
+              "Ctl": [0xFFFFFFFF, 12],
+    }
+    length = 20
+    name = 'RCRB Header Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_RCRB.value
+    def __init__(self, raw_data, offset):
+        super(RCRBExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class RCLnkDecExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "ElSelfDes": [0xFFFFFFFF, 4],
+              "LnkEntry_1": ('b', 12, 16),
+    }
+    length = 28
+    name = 'Root Complex Link Declaration Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_RCLD.value
+    def __init__(self, raw_data, offset):
+        super(RCLnkDecExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class RCIntlLnkCtlExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Ctl": [0xFFFF, 8],
+              "Sta": [0xFFFF, 10],
+    }
+    length = 12
+    name = 'Root Complex Internal Link Control Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_RCILC.value
+    def __init__(self, raw_data, offset):
+        super(RCIntlLnkCtlExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class RCECEAExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "BitMap": [0xFFFFFFFF, 4],
+              "BusNum": [0xFFFFFFFF, 8],
+    }
+    length = 12
+    name = 'Root Complex Event Collector Endpoint Association Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_RCEC.value
+    def __init__(self, raw_data, offset):
+        super(RCECEAExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class MulticastExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFF, 4],
+              "Ctl": [0xFFFF, 6],
+              "Base_Addr": ('b', 8, 8),
+              "Receive": ('b', 16, 8),
+              "Block_All": ('b', 24, 8),
+              "Block_Unt": ('b', 32, 8),
+              "Overlay_BAR": ('b', 40, 8),
+    }
+    length = 48
+    name = 'Multicast Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_MCAST.value
+    def __init__(self, raw_data, offset):
+        super(MulticastExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class DPAExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "LatInd": [0xFFFFFFFF, 8],
+              "Sta": [0xFFFF, 12],
+              "Ctl": [0xFFFF, 14],
+              "PwrAllocArray": ('b', 16, 32),
+    }
+    length = 48
+    name = 'Dynamic Power Allocation Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_DPA.value
+    def __init__(self, raw_data, offset):
+        super(DPAExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+## 
+# skip DPC, spec 6.3 page 1361
+##
+class PTMExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Ctl": [0xFFFFFFFF, 8],
+    }
+    length = 12
+    name = 'Precision Time Measurement Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_PTM.value
+    def __init__(self, raw_data, offset):
+        super(PTMExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class RTRExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Reg_1": [0xFFFFFFFF, 4],
+              "Reg_2": [0xFFFFFFFF, 8],
+    }
+    length = 12
+    name = 'Readiness Time Reporting Extended Capability'
+    cap_id = 0x22
+    def __init__(self, raw_data, offset):
+        super(RTRExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class HierarchyIDExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Sta": [0xFFFFFFFF, 4],
+              "Data": [0xFFFFFFFF, 8],
+              "GUID":{"Reg_1": [0xFFFFFFFF, 12],
+                      "Reg_2": [0xFFFFFFFF, 16],
+                      "Reg_3": [0xFFFFFFFF, 20],
+                      "Reg_4": [0xFFFFFFFF, 24],
+                      "Reg_5": [0xFFFFFFFF, 28],
+              },
+    }
+    length = 32
+    name = 'Hierarchy ID Extended Capability'
+    cap_id = 0x28
+    def __init__(self, raw_data, offset):
+        super(HierarchyIDExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class AltProtExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Ctl": [0xFFFFFFFF, 8],
+              "Data_1": [0xFFFFFFFF, 12],
+              "Data_2": [0xFFFFFFFF, 16],
+              },
+    length = 20
+    name = 'Alternate Protocol Extended Capability'
+    cap_id = 0x2B
+    def __init__(self, raw_data, offset):
+        super(AltProtExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class SFIExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFF, 4],
+              "Ctl": [0xFFFF, 6],
+              "Sta": [0xFFFF, 8],
+              "CAM_Addr": [0xFFFFFFFF, 12],
+              "CAM_Data": [0xFFFFFFFF, 16],
+              },
+    length = 20
+    name = 'SFI Extended Capability'
+    cap_id = 0x2C
+    def __init__(self, raw_data, offset):
+        super(SFIExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+class ShadowFunctionsExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFFFFFF, 4],
+              "Ctl": [0xFFFFFFFF, 8],
+              "Instance": {"Reg_0": [0xFFFFFFFF, 12],
+                           "Reg_1": [0xFFFFFFFF, 16],
+                           "Reg_2": [0xFFFFFFFF, 20],
+                           "Reg_3": [0xFFFFFFFF, 24],
+                           },
+              },
+    length = 28
+    name = 'Shadow Functions Extended Capability'
+    cap_id = 0x2D
+    def __init__(self, raw_data, offset):
+        super(ShadowFunctionsExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class SVCExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "PortCap_1": {"VC_count": [0x07, 4],},
+              "PortCap_2": [0xFFFFFFFF, 8],
+              "PortCtl": [0xFFFFFFFF, 12],
+              "PortSta": [0xFFFFFFFF, 16],
+              "Resource_0": {"Cap": [0xFFFFFFFF, 20],
+                             "Ctl": [0xFFFFFFFF, 24],
+                             "Sta": [0xFFFFFFFF, 28],
+                             },
+              "Resource_1": {"Cap": [0xFFFFFFFF, 32],
+                             "Ctl": [0xFFFFFFFF, 36],
+                             "Sta": [0xFFFFFFFF, 40],
+                             },
+              "Resource_2": {"Cap": [0xFFFFFFFF, 44],
+                             "Ctl": [0xFFFFFFFF, 48],
+                             "Sta": [0xFFFFFFFF, 52],
+                             },
+              "Resource_3": {"Cap": [0xFFFFFFFF, 56],
+                             "Ctl": [0xFFFFFFFF, 60],
+                             "Sta": [0xFFFFFFFF, 64],
+                             },
+              "Resource_4": {"Cap": [0xFFFFFFFF, 68],
+                             "Ctl": [0xFFFFFFFF, 72],
+                             "Sta": [0xFFFFFFFF, 76],
+                             },
+              "Resource_5": {"Cap": [0xFFFFFFFF, 80],
+                             "Ctl": [0xFFFFFFFF, 84],
+                             "Sta": [0xFFFFFFFF, 88],
+                             },
+              "Resource_6": {"Cap": [0xFFFFFFFF, 92],
+                             "Ctl": [0xFFFFFFFF, 96],
+                             "Sta": [0xFFFFFFFF, 100],
+                             },
+              "Resource_7": {"Cap": [0xFFFFFFFF, 104],
+                             "Ctl": [0xFFFFFFFF, 108],
+                             "Sta": [0xFFFFFFFF, 112],
+                             },
+              },
+    length = 116  # default max value
+    name = 'Streamlined Virtual Channel Extended Capability'
+    cap_id = 0x35
+    def __init__(self, raw_data, offset):
+        super(SVCExtendCap, self).__init__(raw_data, offset=offset)
+        self.raw_data = self.raw_data[0:(self.decode_data["PortCap_1"]["VC_count"] * 12 + 32)]
+        self.BitMap = SVCExtendCap.BitMap.copy()
+        for i in range(self.decode_data["PortCap_1"]["VC_count"]+1, 8):
+            self.BitMap.pop("Resource_%d" % i)
+        self.decode_data.clear()
+        decode_bits_iterative(self.raw_data, self.BitMap, self.decode_data, byteorder='little')
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class MRBLExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": {"length": [0xFFF, 4],},
+              },
+    length = 8
+    name = 'MMIO Register Block Locator Extended Capability'
+    cap_id = 0x36
+    def __init__(self, raw_data, offset):
+        super(MRBLExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class ATSExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": [0xFFFF, 4],
+              "Ctl": [0xFFFF, 6],
+              },
+    length = 8
+    name = 'ATS Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_ATS.value
+    def __init__(self, raw_data, offset):
+        super(ATSExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class PageReqExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Ctl": [0xFFFF, 4],
+              "Sta": [0xFFFF, 6],
+              "Outstd_Cap": [0xFFFFFFFF, 8],
+              "Outstd_Alloc": [0xFFFFFFFF, 12],
+              },
+    length = 16
+    name = 'Page Request Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_PRI.value
+    def __init__(self, raw_data, offset):
+        super(PageReqExtendCap, self).__init__(raw_data, offset=offset)
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+class PMUXExtendCap(CapDataBase):
+    BitMap = {"CapabilityID": [0xFFFF, 0],
+              "CapVer": [0x0F, 2],
+              "NextCapabilityPointer": [0xFFF0, 2],
+              "Cap": {"ArraySzie": [0x3F, 4],
+                      "LnkSpeed": [0xFF, 5],
+                      },
+              "Ctl": [0xFFFFFFFF, 8],
+              "Sta": [0xFFFFFFFF, 12],
+              "Prot_Array": {"Prot_Array": {"A_%d" % i : [0xFFFFFFFF, 16+i*4] for i in range(1, 64)}},
+              },
+    length = 268  # default max value
+    name = 'PMUX Extended Capability'
+    cap_id = PCI_EXT_CAP_ID.PCI_EXT_CAP_ID_PMUX.value
+    def __init__(self, raw_data, offset):
+        super(PMUXExtendCap, self).__init__(raw_data, offset=offset)
+        self.raw_data = self.raw_data[0:(self.decode_data["Cap"]["ArraySzie"] * 4 + 16)]
+        self.BitMap = PMUXExtendCap.BitMap.copy()
+        for i in range(self.decode_data["Cap"]["ArraySzie"]+1, 64):
+            self.BitMap["Prot_Array"].pop("A_%d" % i)
+        self.decode_data.clear()
+        decode_bits_iterative(self.raw_data, self.BitMap, self.decode_data, byteorder='little')
+
+    @property
+    def CapabilityID(self):
+        return self.decode_data.get("CapabilityID")
+
+    @property
+    def CapVer(self):
+        return self.decode_data.get("CapVer")
+
+    @property
+    def NextCapabilityPointer(self):
+        return self.decode_data.get("NextCapabilityPointer")
+
+
+
 class PCIeExtendCap(object): # PCIe Extended Capabilities
     PCIeExtendCapTable = {SRIOVCap.cap_id: SRIOVCap,
                           AERCap.cap_id: AERCap,
                           NPEMCap.cap_id: NPEMCap,
                           SecondaryPCIeCap.cap_id: SecondaryPCIeCap,
-                          DataLinkFeatureExtendCap.cap_id: DataLinkFeatureExtendCap,
                           PLGen4ExtendCap.cap_id: PLGen4ExtendCap,
                           PLGen5ExtendCap.cap_id: PLGen5ExtendCap,
                           LaneMargineRxExtendCap.cap_id: LaneMargineRxExtendCap,
@@ -1540,6 +2810,41 @@ class PCIeExtendCap(object): # PCIe Extended Capabilities
                           PowerBudgetingExtendCap.cap_id: PowerBudgetingExtendCap,
                           DOEExtendCap.cap_id: DOEExtendCap,
                           TPHReqExtendCap.cap_id: TPHReqExtendCap,
+                          SecondaryPCIeExtendCap.cap_id: SecondaryPCIeExtendCap,
+                          DataLinkFeatureExtendCap.cap_id: DataLinkFeatureExtendCap,
+                          PLGen6ExtendCap.cap_id: PLGen6ExtendCap,
+                          FlitLoggingExtendCap.cap_id: FlitLoggingExtendCap,
+                          Dev3ExtendCap.cap_id: Dev3ExtendCap,
+                          ACSExtendCap.cap_id: ACSExtendCap,
+                          ResizableBARExtendCap.cap_id: ResizableBARExtendCap,
+                          FRSQueExtendCap.cap_id: FRSQueExtendCap,
+                          FlitPerfMesExtendCap.cap_id: FlitPerfMesExtendCap,
+                          FlitErrInjExtendCap.cap_id: FlitErrInjExtendCap,
+                          NOPFlitExtendCap.cap_id: NOPFlitExtendCap,
+                          VCExtendCap.cap_id: VCExtendCap,
+                          VC9ExtendCap.cap_id: VC9ExtendCap,
+                          MFVCExtendCap.cap_id: MFVCExtendCap,
+                          VFResizableBARExtendCap.cap_id: VFResizableBARExtendCap,
+                          PASIDExtendCap.cap_id: PASIDExtendCap,
+                          DesVenorSpecExtendCap.cap_id: DesVenorSpecExtendCap,
+                          RCRBExtendCap.cap_id: RCRBExtendCap,
+                          RCLnkDecExtendCap.cap_id: RCLnkDecExtendCap,
+                          RCIntlLnkCtlExtendCap.cap_id: RCIntlLnkCtlExtendCap,
+                          RCECEAExtendCap.cap_id: RCECEAExtendCap,
+                          MulticastExtendCap.cap_id: MulticastExtendCap,
+                          DPAExtendCap.cap_id: DPAExtendCap,
+                          PTMExtendCap.cap_id: PTMExtendCap,
+                          RTRExtendCap.cap_id: RTRExtendCap,
+                          NullExtendCap.cap_id: NullExtendCap,
+                          HierarchyIDExtendCap.cap_id: HierarchyIDExtendCap,
+                          AltProtExtendCap.cap_id: AltProtExtendCap,
+                          SFIExtendCap.cap_id: SFIExtendCap,
+                          ShadowFunctionsExtendCap.cap_id: ShadowFunctionsExtendCap,
+                          SVCExtendCap.cap_id: SVCExtendCap,
+                          MRBLExtendCap.cap_id: MRBLExtendCap,
+                          ATSExtendCap.cap_id: ATSExtendCap,
+                          PageReqExtendCap.cap_id: PageReqExtendCap,
+                          PMUXExtendCap.cap_id: PMUXExtendCap,
                           }
     locate_offset = 256
     def __init__(self, raw_data):
@@ -1573,7 +2878,6 @@ class PCIeExtendCap(object): # PCIe Extended Capabilities
                     func = PCIeExtendCap.PCIeExtendCapTable.get(pci_extend_cap_id.CapabilityID)
                     data_len = min(func.length, pci_extend_cap_id.NextCapabilityPointer-offset) if (pci_extend_cap_id.NextCapabilityPointer-offset) > 0 else func.length
                     self.__pcie_extend_cap_decode[pci_extend_cap_id.CapabilityID] = func(self.__raw_data[_self_locate:_self_locate+data_len], offset)
-                    self.__pcie_extend_cap_decode[pci_extend_cap_id.CapabilityID].length = data_len
                 else:
                     self.__pcie_extend_cap_decode[pci_extend_cap_id.CapabilityID] = pci_extend_cap_id # Unknown Capability
                 ## no other items
@@ -1585,6 +2889,10 @@ class PCIeExtendCap(object): # PCIe Extended Capabilities
                 raise ValueError("Incorrect PCIe Extended Capabilities Data offset(%#x)." % offset)
         else:
             raise ValueError("Incorrect PCIe Extended Capabilities Data.")
+
+## 
+# line to spec 6.3 page 1382
+##
 ################ PCIe Extend Capabilities End #########################
 
 class PCIConfigSpace(object):
