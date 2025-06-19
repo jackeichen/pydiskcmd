@@ -16,6 +16,7 @@ Version 0.3.5 (Not Released)
   * add new plugin pci, to replace pynvme pcie command
   * refactored code to pypci.pci_decode
   * introduce deepwiki in README
+  * Begin to support RST SATA in pydiskcmdlib and pydiskcmdcli
 
 Version 0.3.4
   * add windows VROC(RSTe) support

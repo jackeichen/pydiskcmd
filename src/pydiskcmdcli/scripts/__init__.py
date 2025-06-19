@@ -62,7 +62,7 @@ def script_check(options, danger_check=False, admin_check=False, delay_act=False
                 else:
                     print ("Wrong input")
                     print ("")
-    if debug_check and options.debug:
+    if debug_check and hasattr(options, 'debug') and options.debug:
         set_debug_mode(lib_log)
         set_debug_mode(cli_log)
     return 0
@@ -74,7 +74,3 @@ def func_debug_info(func):
         cli_log.debug("Function %s used %s seconds" % (func.__qualname__, (time.time() - start_t)))
         return ret
     return decorator
-
-
-
-

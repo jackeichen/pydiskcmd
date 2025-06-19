@@ -5,6 +5,7 @@ from .cdb_csmi_sas_get_driver_info import CSMI_SAS_GET_DRIVER_INFO
 from .cdb_csmi_sas_get_raid_info import CSMI_SAS_GET_RAID_INFO
 from .cdb_csmi_sas_get_raid_config import CSMI_SAS_GET_RAID_CONFIG
 from .cdb_csmi_sas_get_phy_info import CSMI_SAS_GET_PHY_INFO
+from .cdb_csmi_sas_get_cntlr_status import CSMI_SAS_GET_CNTLR_STATUS
 
 class CSMIController(object):
     def __init__(self, dev):
@@ -62,3 +63,6 @@ class CSMIController(object):
         cmd = CSMI_SAS_GET_PHY_INFO()
         return self.execute(cmd)
 
+    def get_cntlr_status(self):
+        cmd = CSMI_SAS_GET_CNTLR_STATUS()
+        return self.execute(cmd)

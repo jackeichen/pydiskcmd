@@ -31,6 +31,8 @@ def _win_csmi_print_help():
         print ("The following are all implemented sub-commands:")
         print ("")
         print ("  list-ctrls                    List all CSMI Controllers")
+        print ("  get-cntrl-status              Get CSMI Controller Status")
+        print ("  get-driver-info               Get CSMI Controller Driver Info")
         print ("  get-raid-info                 Get CSMI Controller Raid Info")
         print ("  get-phy-info                  Get CSMI Controller Phy Info")
         print ("  version                       Shows Windows CSMI plugin version")
@@ -51,11 +53,14 @@ def _win_csmi_list_ctrls():
     ##
     script_check(options, admin_check=True)
     ##
-    print_format = "%-20s %-12s %-20s %-40s %-40s"
-    print (print_format % ("Node", "CSMIRev", "DriverRev", "Name", "Description"))
-    print (print_format % ("-"*20, "-"*12, "-"*20, "-"*40, "-"*40))
+    print_format = "%-15s %-10s %-8s %-10s %-20s %-40s"
+    print (print_format % ("Node", "Status", "CSMIRev", "DriverRev", "Name", "Description"))
+    print (print_format % ("-"*15, "-"*10, "-"*8, "-"*10, "-"*20, "-"*40))
     ## cmd.Information.usMajorRevision
     for csmi_ctrl in scan_csmi_controller():
+        cmd = csmi_ctrl.get_cntlr_status()
+        status = cmd.get_status_desp()
+        #
         cmd = csmi_ctrl.get_driver_info()
         cmd.check_return_status(raise_if_fail=True)
         driver_rev = "%d.%d" % (cmd.cdb.Information.usMajorRevision,
@@ -68,11 +73,66 @@ def _win_csmi_list_ctrls():
         des = string_strip(decode_bytes(bytes(cmd.cdb.Information.szDescription)), b'\x00'.decode(), ' ')
         if options.output_format == "normal":
             print (print_format % (csmi_ctrl.device._file_name, 
+                                   status,
                                    csmi_rev,
                                    driver_rev,
                                    name,
                                    des,
                                    ))
+
+def _win_csmi_get_driver_info():
+    usage="usage: %prog csmi get-driver-info"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal"])
+
+    (options, args) = parser.parse_args()
+    if len(sys.argv) > 2:
+        #
+        dev = sys.argv[3].strip()
+        ##
+        script_check(options, admin_check=True)
+        ##
+        with CSMIController(init_device(dev, open_t='csmi')) as d:
+            cmd = d.get_driver_info()
+            cmd.check_return_status(raise_if_fail=True)
+
+        if options.output_format == "normal":
+            print ("CSMI Get %s Driver Info:" % dev)
+            print ("")
+            print ("  Name:     %s" % string_strip(decode_bytes(bytes(cmd.cdb.Information.szName)), b'\x00'.decode(), ' '))
+            print ("  Description: %s" % string_strip(decode_bytes(bytes(cmd.cdb.Information.szDescription)), b'\x00'.decode(), ' '))
+            print ("  MajorRevision: %d" % cmd.cdb.Information.usMajorRevision)
+            print ("  MinorRevision: %d" % cmd.cdb.Information.usMinorRevision)
+            print ("  BuildRevsion: %d" % cmd.cdb.Information.usBuildRevision)
+            print ("  ReleaseRevision: %d" % cmd.cdb.Information.usReleaseRevision)
+            print ("  CSMIMajorRevision: %d" % cmd.cdb.Information.usCSMIMajorRevision)
+            print ("  CSMIMinorRevision: %d" % cmd.cdb.Information.usCSMIMinorRevision)
+    else:
+        parser.print_help()
+
+def _win_csmi_get_cntrl_status():
+    usage="usage: %prog csmi get-cntrl-status"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal"])
+
+    (options, args) = parser.parse_args()
+    if len(sys.argv) > 2:
+        #
+        dev = sys.argv[3].strip()
+        ##
+        script_check(options, admin_check=True)
+        ##
+        with CSMIController(init_device(dev, open_t='csmi')) as d:
+            cmd = d.get_cntlr_status()
+            cmd.check_return_status(raise_if_fail=True)
+
+        if options.output_format == "normal":
+            print ("CSMI Get %s CNTLR Status:" % dev)
+            print ("")
+            print ("  Current Status: %d" % cmd.cdb.Status.uStatus)
+            print ("  Offline Reason: %d" % cmd.cdb.Status.uOfflineReason)
+    else:
+        parser.print_help()
 
 def _win_csmi_get_raid_info():
     usage="usage: %prog csmi get-raid-info"
@@ -144,6 +204,8 @@ def _win_csmi_get_phy_info():
 
 
 plugin_win_nvme_vroc_commands_dict = {"list-ctrls": _win_csmi_list_ctrls,
+                                      "get-cntrl-status": _win_csmi_get_cntrl_status,
+                                      "get-driver-info": _win_csmi_get_driver_info,
                                       "get-raid-info": _win_csmi_get_raid_info,
                                       "get-phy-info": _win_csmi_get_phy_info,
                                       "version": _win_csmi_print_ver,

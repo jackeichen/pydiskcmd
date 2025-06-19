@@ -68,6 +68,8 @@ class RSTNVMePass(RSTCommand):
                  ):
         if data is not None:
             data_buffer_len = min(len(data), data_buffer_len)
+        if metadata_buffer_len or metadata:
+            raise BuildSCSICommandError("NVMe Pass Through command metadata is not supported now")
         ##
         RSTCommand.__init__(self, Get_NVME_IOCTL_PASS_THROUGH_ALIGNED_WITH_BUFFER(data_buffer_len))
         self.build_command(HeaderLength=SRB_IO_CONTROL_LEN,

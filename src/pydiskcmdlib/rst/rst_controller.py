@@ -20,6 +20,12 @@ from .cdb_rst_nvme_identify import (
     IDNS,
     Identify,
 )
+from .cdb_rst_ata_smart import (
+    SmartReadData,
+    SmartReadThresh,
+)
+from .cdb_rst_ata_identify import Identify16
+
 from pydiskcmdlib.exceptions import *
 
 class RSTNVMe(object):
@@ -45,6 +51,10 @@ class RSTNVMe(object):
                  exc_val,
                  exc_tb):
         self.device.close()
+
+    @property
+    def dev_node(self):
+        return self._path_id
 
     def ctrl_identify_info(self):
         return self.__ctrl_identify_info
@@ -72,6 +82,58 @@ class RSTNVMe(object):
     def get_smart_log(self):
         cmd = SmartLog(self._path_id)
         return self.execute(cmd)
+
+
+class RSTATA(object):
+    def __init__(self, dev, phy_id, port_id, sas_addr):
+        self.device = dev
+        self._phy_id = phy_id
+        self._port_id = port_id
+        self._sas_addr = sas_addr
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self,
+                 exc_type,
+                 exc_val,
+                 exc_tb):
+        self.device.close()
+
+    def execute(self, cmd, check_return_status=False):
+        """
+        wrapper method to call the NVMeDevice.execute method
+
+        :param cmd: a nvme CmdStructure object
+        :return: CommandDecoder type
+        """
+        try:
+            self.device.execute(cmd)
+            if check_return_status:
+                cmd.check_return_status(raise_if_fail=True)
+        except Exception as e:
+            raise e
+        return cmd 
+
+    @property
+    def dev_node(self):
+        return self._phy_id
+
+    def smart_read_data(self, smart_key=None):
+        cmd = SmartReadData(self._phy_id, self._port_id, self._sas_addr, smart_key)
+        self.execute(cmd)
+        cmd.unmarshall()
+        return cmd
+
+    def smart_read_thresh(self):
+        cmd = SmartReadThresh(self._phy_id, self._port_id, self._sas_addr)
+        self.execute(cmd)
+        return cmd
+
+    def identify(self):
+        cmd = Identify16(self._phy_id, self._port_id, self._sas_addr)
+        self.execute(cmd)
+        return cmd
 
 
 class RSTController(CSMIController):
@@ -112,4 +174,28 @@ class RSTController(CSMIController):
             NVMe device RSTNVMe object
         """
         # TODO
-        pass
+        raise NotImplementedError("Get nvme disks is not implemented yet.")
+
+    def get_sata_disks(self):
+        """
+        Retrieves a list of SATA devices.
+
+        This function scans the system for available SATA devices and returns a list of their identifiers.
+
+        yield:
+            NVMe device RSTATA object
+        """
+        # TODO
+        try:
+            cmd = self.get_phy_info()
+            cmd.check_return_status(raise_if_fail=True)
+            for i in range(cmd.cdb.Information.bNumberOfPhys):
+                temp = cmd.cdb.Information.Phy[i]
+                if temp.Attached.bDeviceType == 0x10:
+                    # print ("Phy: %d, Port: %d, SASAddress: %s" % (i,
+                    #                                               temp.bPortIdentifier,
+                    #                                               ' '.join([("%X" % i).rjust(2, '0') for i in bytes(temp.Attached.bSASAddress)]),
+                    #                                               ))
+                    yield RSTATA(self.device, i, temp.bPortIdentifier, bytes(temp.Attached.bSASAddress))
+        except:
+            pass

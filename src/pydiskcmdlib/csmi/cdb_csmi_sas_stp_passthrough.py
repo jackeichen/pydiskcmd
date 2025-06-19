@@ -12,13 +12,9 @@ from .win_ioctl_utils import (
     CSMI_TIMEOUT,
 )
 
-class CSMI_SAS_SSP_PASSTHRU(CSMICommand):
+class CSMI_SAS_STP_PASSTHRU(CSMICommand):
     def __init__(self, phy_id, port_id, connection_rate, sas_addr, 
-                 command_FIS, flags, data=None, timeout=CSMI_TIMEOUT.CSMI_SAS_TIMEOUT.value,):
-        if data is None:
-            data_len = 0
-        else:
-            data_len = len(data)
+                 command_FIS, flags, data_len, data=None, timeout=CSMI_TIMEOUT.CSMI_SAS_TIMEOUT.value,):
         CSMICommand.__init__(self, GET_CSMI_SAS_STP_PASSTHRU_BUFFER(data_len))
         self.build_command(HeaderLength=SRB_IO_CONTROL_LEN,
                            Signature=CSMISignature.CSMI_SAS_SIGNATURE.value,
@@ -32,5 +28,6 @@ class CSMI_SAS_SSP_PASSTHRU(CSMICommand):
                            bDestinationSASAddress=sas_addr,
                            bCommandFIS=command_FIS,
                            uFlags=flags,
+                           uDataLength=data_len,
                            bDataBuffer=data,
                            )

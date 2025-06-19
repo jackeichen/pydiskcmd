@@ -48,6 +48,7 @@ def _ocp_print_help():
         print ("  ocp-check                     OCP support and version check")
         print ("  smart-add-log                 Retrieve extended SMART Information")
         print ("  error-recovery-log            Retrieve error recovery Information")
+        print ("  latency-monitor               Retrieve latency monitor log page")
         print ("  cloud-SSD-plugin-version      Shows cloud SSD plugin version")
         print ("  Help                          Display this help")
         print ("")
@@ -119,11 +120,33 @@ def _ocp_error_recovery_log():
     else:
         parser.print_help()
 
+def _ocp_latency_monitor():
+    usage="usage: %prog ocp latency-monitor <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal", "hex", "raw", "json"])
+
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ## check device
+        dev = sys.argv[3]
+        ##
+        script_check(options, admin_check=True)
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = ocp_plugin["LatencyMonitor"]()
+            d.execute(cmd)
+        ##
+        nvme_format_print.format_print_ocp_latency_monitor_log(cmd, options.output_format)
+    else:
+        parser.print_help()
+
 plugin_ocp_commands_dict = {"ocp-check": _ocp_info_check,
                             "smart-add-log": _ocp_smart_extended_log,
                             "error-recovery-log": _ocp_error_recovery_log,
+                            "latency-monitor": _ocp_latency_monitor,
                             "cloud-SSD-plugin-version": _ocp_print_ver,
                             "Help": _ocp_print_help,}
+
 
 def ocp():
     if len(sys.argv) > 2:

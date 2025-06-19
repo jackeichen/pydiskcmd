@@ -44,3 +44,20 @@ class Flush(NVMeCommand):
                                timeout_ms=timeout)
         elif os_type == "Windows":
             self.build_command()
+
+
+from pydiskcmdlib.pyscsi.scsi_cdb_synchronizecache import SynchronizeCache16
+from pyscsi.pyscsi.scsi_enum_command import sbc
+#####
+SCSICmdOPCode = sbc.SYNCHRONIZE_CACHE_16
+#####
+class SCSI2NVMeFlush(SynchronizeCache16):
+    def __init__(self,
+                 nsid,   # ignored by command
+                 timeout=CommandTimeout.nvm.value, # ignored by command
+                 ):
+        SynchronizeCache16.__init__(self,
+                                    SCSICmdOPCode,
+                                    0,   # start fronm lba 0
+                                    0,   # all lbas that start form lba 0
+                                    )

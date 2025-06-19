@@ -77,7 +77,8 @@ def print_help():
         print ("  help                        Display this help")
         print ("")
         print ("The following are all installed plugin extensions:")
-        print ("  megaraid                    MegaRAID extensions")
+        print ("  megaraid                    MegaRAID Linux extensions")
+        print ("  rst                         Intel RAID RST Windows extensions")
         print ("")
         print ("The following are pysata cli management interface:")
         print ("  cli-info                    Shows pysata information")
@@ -170,23 +171,22 @@ def check_power_mode():
             count = sector_count&0xFF
             print ("Device is in the:")
             if count == 0xFF:
-                print ("PM0:Active state or PM1:Idle state.")
+                print ("  PM0:Active state or PM1:Idle state.")
             elif count == 0x00:
-                print ("PM2:Standby state (see 4.15.4) and the EPC feature set (see 4.9) is not enabled;")
-                print ("or")
-                print ("PM2:Standby state, the EPC feature set is enabled, and the device is in the Standby_z power condition.")
+                print ("  PM2:Standby state (see 4.15.4) and the EPC feature set (see 4.9) is not enabled; or")
+                print ("  PM2:Standby state, the EPC feature set is enabled, and the device is in the Standby_z power condition.")
             elif count == 0x01:
-                print ("PM2:Standby state, the EPC feature set is enabled, and the device is in the Standby_y power condition.")
+                print ("  PM2:Standby state, the EPC feature set is enabled, and the device is in the Standby_y power condition.")
             elif count == 0x80:
-                print ("PM1:Idle state (see 4.15.4) and EPC feature set is not supported.")
+                print ("  PM1:Idle state (see 4.15.4) and EPC feature set is not supported.")
             elif count == 0x81:
-                print ("PM1:Idle state, the EPC feature set is enable, and the device is in the Idle_a power condition.")
+                print ("  PM1:Idle state, the EPC feature set is enable, and the device is in the Idle_a power condition.")
             elif count == 0x82:
-                print ("PM1:Idle state, the EPC feature set is enabled, and the device is in the Idle_b power condition.")
+                print ("  PM1:Idle state, the EPC feature set is enabled, and the device is in the Idle_b power condition.")
             elif count == 0x83:
-                print ("PM1:Idle state, the EPC feature set is enabled, and the device is in the Idle_c power condition.")
+                print ("  PM1:Idle state, the EPC feature set is enabled, and the device is in the Idle_c power condition.")
             else:
-                print ("Other power state: state Reserved or Obsoleted.")
+                print ("  Other power state: state Reserved or Obsoleted.")
     else:
         parser.print_help()
 

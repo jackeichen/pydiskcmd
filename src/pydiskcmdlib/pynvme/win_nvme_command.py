@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from ctypes import (Structure,
+                    Union,
                     c_uint8,
                     c_uint16,
                     c_uint32,

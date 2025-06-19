@@ -67,7 +67,6 @@ def print_help():
         print ("")
         print ("The following are all installed plugin extensions:")
         print ("  parse-cmd                   Parse the CDB and sense code")
-        print ("  lenovo                      Lenovo disk plugin")
         print ("  csmi                        Common Storage Management Interface (CSMI) plugin")
         print ("  megaraid                    MegaRAID extensions")
         print ("")

@@ -45,7 +45,7 @@ def _win_nvme_vroc_print_help():
         print ("  version                       Shows Windows NVMe VROC plugin version")
         print ("  help                          Display this help")
         print ("")
-        print ("See 'pynvme ocp help <command>' for more information on a specific command")
+        print ("See 'pynvme vroc help <command>' for more information on a specific command")
 
 def _win_nvme_vroc_print_ver():
     print ("Windows NVMe VROC Plugin Version: %s" % "1.0")

@@ -154,7 +154,7 @@ Feature support
 | Feature            | OS under test       | NVMe Supported | ATA Supported |
 |--------------------|---------------------|----------------|---------------|
 | [Intel VROC]       | Windows Server 2019 | T              | N             |
-| [Intel RST]        | Windows 10          | N              | N             |
+| [Intel RST]        | Windows 10          | D              | T             |
 
 Y: support, N: Non-support, D: Developing, T: Under Testing
 

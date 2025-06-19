@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pydiskcmdlib import os_type
-from pydiskcmdlib.pynvme.nvme_command import NVMeCommand,AdminCommandOpcode,CommandTimeout
+from pydiskcmdlib.pynvme.nvme_command import NVMeCommand,AdminCommandOpcode,CommandTimeout,build_int_by_bitmap
 from pydiskcmdlib.pynvme import linux_nvme_command,win_nvme_command
 #####
 CmdOPCode = AdminCommandOpcode.Sanitize.value
@@ -24,8 +24,8 @@ class Sanitize(NVMeCommand):
                      "sanact":[0x07, 40],
                      "ause":[0x08, 40],
                      "owpass":[0xF0, 40],
-                     "oipbp":[0x07, 40],
-                     "no_deallocate":[0x07, 40],
+                     "oipbp":[0x01, 41],
+                     "no_deallocate":[0x02, 41],
                      "ovrpat":[0xFFFFFFFF, 44],
                      "cdw12":[0xFFFFFFFF, 48],
                      "cdw13":[0xFFFFFFFF, 52],
@@ -35,8 +35,10 @@ class Sanitize(NVMeCommand):
                      "result":[0xFFFFFFFF, 68],
                      }
     elif os_type == "Windows":
-        _req_id = win_nvme_command.IOCTLRequest.RESERVED_REQUEST_ID.value
-        _cdb_bits = {}
+        _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_PROTOCOL_COMMAND.value
+        # use default _cdb_bits
+        # From Windows 10, Version 2004 / May 2020 Update, Windows Server Version 2004 (Server Core). 
+        # WinPE only prior to Windows 11, Windows Server 2022 and only if the user uses
 
     def __init__(self,
                  sanact,
@@ -48,9 +50,9 @@ class Sanitize(NVMeCommand):
                  timeout=CommandTimeout.admin.value,
                  ):
         super(Sanitize, self).__init__()
+        if sanact != 3:
+            ovrpat = 0
         if os_type == "Linux":
-            if sanact != 3:
-                ovrpat = 0
             self.build_command(opcode=CmdOPCode,
                                sanact=sanact,
                                ause=ause,
@@ -60,4 +62,15 @@ class Sanitize(NVMeCommand):
                                ovrpat=ovrpat,
                                timeout_ms=timeout)
         elif os_type == "Windows":
-            self.build_command()
+            cdw10 = build_int_by_bitmap({"sanact": (0x07, 0, sanact), 
+                                         "ause": (0x08, 0 ,ause), 
+                                         "owpass": (0xF0, 0, owpass),     
+                                         "oipbp": (0x01, 1, oipbp), 
+                                         "no_deallocate": (0x02, 1, no_deallocate)})  
+            self.build_command(Flags=win_nvme_command.STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST,
+                               TimeOutValue=10,
+                               CommandSpecific=win_nvme_command.STORAGE_PROTOCOL_SPECIFIC_NVME_ADMIN_COMMAND,
+                               OPC=CmdOPCode,
+                               CDW10=cdw10,
+                               CDW11=ovrpat,
+                               )

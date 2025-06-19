@@ -7,11 +7,13 @@ from abc import ABCMeta, abstractmethod
 from pydiskcmdlib import os_type
 from pydiskcmdlib.data_buffer import DataBuffer
 from pydiskcmdlib.utils.converter import encode_dict,decode_bits,CheckDict
+from pydiskcmdlib.device.win_device import BytesReturnedStruc
 from pydiskcmdlib.exceptions import *
 from pydiskcmdlib.os.win_ioctl_structures import (
     Structure,
     sizeof,
 )
+
 
 class BitStrucInfo():
     def __init__(self):
@@ -131,18 +133,67 @@ class CommandWrapper(object):
         ## some variables used by OS
         self._ioctl_result = None
         # Linux
-        # Windows
-        self._bytes_returned = None
+        # Windows IOCTL parameters
+        self._bytes_returned = BytesReturnedStruc(0) if os_type == "Windows" else None
+        self._over_lapped = None  # Not used now
 
     @property
     def ioctl_result(self):
+        """
+        Get the result of the IOCTL operation.
+
+        This method returns the value of the `_ioctl_result` attribute, which represents the result of the IOCTL operation.
+
+        :return: The result of the IOCTL operation.
+        """
         return self._ioctl_result
+
+    @ioctl_result.setter
+    def ioctl_result(self, value: int):
+        """
+        Set the result of the IOCTL operation.
+
+        This method sets the value of the `_ioctl_result` attribute, which represents the result of the IOCTL operation.
+
+        :param value: The value to be set as the result of the IOCTL operation.
+        """
+        self._ioctl_result = value
 
     @property
     def bytes_returned(self):
+        """
+        Return the IOCTL bytes returned.
+
+        This method returns the value of the `_bytes_returned` attribute, which represents IOCTL bytes returned
+
+        :return: IOCTL bytes returned.
+        """
         return self._bytes_returned
 
+    @property
+    def over_lapped(self):
+        """
+        Return the IOCTL over lapped.
+
+        This method returns the value of the `_over_lapped` attribute, which represents IOCTL over lapped.
+
+        :return: IOCTL over lapped.
+        """
+        return self._over_lapped
+
     def init_cdb_bitmap(self):
+        """
+        Initialize the CDB (Command Descriptor Block) bitmap.
+
+        This method initializes the CDB bitmap, which is a dictionary used to store the
+        bit positions and their corresponding values in the CDB. The method first checks
+        if the `_cdb_bits` attribute is present, and if so, it assigns it to the `_cdb_bitmap`.
+        If `_cdb_bits` is not present, it checks if the `_cdb_raw_struc` attribute is present,
+        and if so, it generates the CDB bitmap using the `generate_cdb_bits_by_structure`
+        function. If neither `_cdb_bits` nor `_cdb_raw_struc` is present, it checks if the
+        `_cdb_bitmap_pool` attribute is present, and if so, it retrieves the CDB bitmap
+        from the pool using the `req_id` as the key.
+        """
         self._cdb_bitmap = {}
         if self._cdb_bits:
             self._cdb_bitmap = self._cdb_bits
@@ -178,11 +229,11 @@ class CommandWrapper(object):
         return self._cdb_raw_struc
 
     @property
-    def cdb_raw_struc_len(self):
+    def cdb_raw_struc_len(self) -> int:
         return sizeof(self.cdb_raw_struc)
 
     @property
-    def req_id(self):
+    def req_id(self) -> int:
         """
         getter method of the req_id property
 
@@ -190,7 +241,7 @@ class CommandWrapper(object):
         """
         return self._req_id
 
-    def marshall_cdb(self, cdb, cdb_len: int):
+    def marshall_cdb(self, cdb, cdb_len: int) -> bytearray:
         """
         Marshall a Command cdb
 
@@ -223,6 +274,17 @@ class CommandWrapper(object):
 
     @staticmethod
     def _init_data_buffer(data_length=0, data_out=None):
+        """
+        Initialize a data buffer with the specified length and optional data.
+
+        This method creates a new `DataBuffer` object with the given `data_length`. If `data_out` is provided,
+        it will be copied into the data buffer. If `data_length` is not specified or is 0, the length of `data_out`
+        will be used.
+
+        :param data_length: The length of the data buffer to be initialized. If not provided, defaults to 0.
+        :param data_out: Optional data to be pre-populated into the data buffer. If not provided, defaults to None.
+        :return: The initialized data buffer or None.
+        """
         data_buffer = None
         if data_out:
             _data_len = data_length if data_length > 0 else len(data_out)
@@ -233,6 +295,18 @@ class CommandWrapper(object):
         return data_buffer
 
     def init_data_buffer(self, data_length=0, data_out=None, data_buffer=None):
+        """
+        Initialize or assign a data buffer.
+
+        This method can be used to initialize a data buffer with a specified length and optional data output,
+        or it can be used to assign an existing data buffer to the current object.
+
+        :param data_length: The length of the data buffer to be initialized. If not provided, defaults to 0.
+        :param data_out: Optional data to be pre-populated into the data buffer. If not provided, defaults to None.
+        :param data_buffer: An existing data buffer to be assigned to the current object. If provided, it will
+                            override the `data_length` and `data_out` parameters.
+        :return: The initialized or assigned data buffer.
+        """
         if isinstance(data_buffer, DataBuffer):
             self._data_buffer = data_buffer
         else:
@@ -240,6 +314,11 @@ class CommandWrapper(object):
         return self._data_buffer
 
     def init_metadata_buffer(self, data_length=0, data_out=None, data_buffer=None):
+        """
+        Initialize or assign a metadata buffer.
+
+        Same as init_data_buffer, but for metadata buffer.
+        """
         if isinstance(data_buffer, DataBuffer):
             self._metadata_buffer = data_buffer
         else:
@@ -248,15 +327,15 @@ class CommandWrapper(object):
 
     def build_command(self, **kwargs):
         """
-        Build the command in different OS:
-          1. The Linux define a fixed-length ctypes.structure;
-          2. The Windows define a bariable-length ctypes.structure.
-            * Windows init the cdb bufffer with StorageQueryWithoutBuffer
-            * Windows cannot set a data buffer in building
+        Build a command based on the provided keyword arguments and the raw command structure.
 
-        :param kwargs: the parameters to build command
+        This method takes keyword arguments, marshals them into a byte array based on the raw command structure,
+        and then creates a command object from this byte array. The built command is returned.
 
-        :return: the built command
+        :param kwargs: Keyword arguments containing the values to be included in the command.
+        :return: The built command as a byte array.
+        :raises CommandDataStrucError: If the raw command structure is not initialized or if the length of the command structure
+                                       is not a multiple of the specified byte alignment.
         """
         if not self._cdb_raw_struc:
             raise CommandDataStrucError("Need init cdb_raw_struc")

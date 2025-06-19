@@ -227,7 +227,10 @@ class CSMI_SAS_FIRMWARE_DOWNLOAD_BUFFER(Structure):
     _pack_ = 1
 
 def GET_CSMI_SAS_FIRMWARE_DOWNLOAD_BUFFER(data_len):
-    padding_num = BytesAligned - ((SRB_IO_CONTROL_LEN + sizeof(CSMI_SAS_FIRMWARE_DOWNLOAD) + data_len) % BytesAligned)
+    padding_num = 0
+    temp = (SRB_IO_CONTROL_LEN + sizeof(CSMI_SAS_FIRMWARE_DOWNLOAD) + data_len) % BytesAligned
+    if temp:
+        padding_num = BytesAligned - temp
     class CSMI_SAS_FIRMWARE_DOWNLOAD_BUFFER(Structure):
         _fields_ = [
             ('IoctlHeader', SRB_IO_CONTROL),
@@ -347,7 +350,10 @@ class CSMI_SAS_RAID_CONFIG_BUFFER(Structure):
     _pack_ = 1
 
 def GET_CSMI_SAS_RAID_CONFIG_BUFFER(drives_number):
-    padding_num = BytesAligned - ((SRB_IO_CONTROL_LEN + sizeof(GET_CSMI_SAS_RAID_CONFIG(drives_number))) % BytesAligned)
+    padding_num = 0
+    temp = (SRB_IO_CONTROL_LEN + sizeof(GET_CSMI_SAS_RAID_CONFIG(drives_number))) % BytesAligned
+    if temp:
+        padding_num = BytesAligned - temp
     class CSMI_SAS_RAID_CONFIG_BUFFER(Structure):
         _fields_ = [
             ('IoctlHeader', SRB_IO_CONTROL),
@@ -652,7 +658,10 @@ class CSMI_SAS_SSP_PASSTHRU_BUFFER(Structure):
     _pack_ = 1
 
 def GET_CSMI_SAS_SSP_PASSTHRU_BUFFER(data_len):
-    padding_num = BytesAligned - ((SRB_IO_CONTROL_LEN + sizeof(CSMI_SAS_SSP_PASSTHRU) + sizeof(CSMI_SAS_SSP_PASSTHRU_STATUS) + data_len) % BytesAligned)
+    padding_num = 0
+    temp = (SRB_IO_CONTROL_LEN + sizeof(CSMI_SAS_SSP_PASSTHRU) + sizeof(CSMI_SAS_SSP_PASSTHRU_STATUS) + data_len) % BytesAligned
+    if temp:
+        padding_num = BytesAligned - temp
     class CSMI_SAS_SSP_PASSTHRU_BUFFER(Structure):
         _fields_ = [
             ('IoctlHeader', SRB_IO_CONTROL),
@@ -726,7 +735,10 @@ class CSMI_SAS_STP_PASSTHRU_BUFFER(Structure):
     _pack_ = 1
 
 def GET_CSMI_SAS_STP_PASSTHRU_BUFFER(data_len):
-    padding_num = BytesAligned - ((SRB_IO_CONTROL_LEN + sizeof(CSMI_SAS_STP_PASSTHRU) + sizeof(CSMI_SAS_STP_PASSTHRU_STATUS) + data_len) % BytesAligned)
+    padding_num = 0
+    temp = (SRB_IO_CONTROL_LEN + sizeof(CSMI_SAS_STP_PASSTHRU) + sizeof(CSMI_SAS_STP_PASSTHRU_STATUS) + data_len) % BytesAligned
+    if temp:
+        padding_num = BytesAligned - temp
     class CSMI_SAS_STP_PASSTHRU_BUFFER(Structure):
         _fields_ = [
             ('IoctlHeader', SRB_IO_CONTROL),
@@ -932,7 +944,10 @@ class CSMI_SAS_PHY_CONTROL_BUFFER(Structure):
     _pack_ = 1
 
 def GET_CSMI_SAS_PHY_CONTROL_BUFFER(phy_control_number):
-    padding_num = BytesAligned - ((SRB_IO_CONTROL_LEN + 56 + sizeof(CSMI_SAS_PHY_CONTROL) * phy_control_number) % BytesAligned)
+    padding_num = 0
+    temp = (SRB_IO_CONTROL_LEN + 56 + sizeof(CSMI_SAS_PHY_CONTROL) * phy_control_number) % BytesAligned
+    if temp:
+        padding_num = BytesAligned - temp
     class CSMI_SAS_PHY_CONTROL_BUFFER(Structure):
         _fields_ = [
             ('IoctlHeader', SRB_IO_CONTROL),

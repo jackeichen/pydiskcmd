@@ -538,14 +538,16 @@ def format_print_ocp_latency_monitor_log(cmd, print_type='normal'):
         for k in list(decoded_data.keys()):
             decoded_data[k] = scsi_ba_to_int(decoded_data[k], 'little')
         if print_type == 'normal':
-            print ("OCP Error Recovery -")
+            print ("OCP Latency Monitor -")
             for k,v in decoded_data.items():
                 if k in ("Panic Reset Action", "Device Recovery Action_1", "Device Recovery Action_2",):
                     print ("  %-40s: %sb" % (k, bin(v).replace("0b", "").rjust(8, "0")))
                 elif k in ("Panic ID", "Device Capabilities", "VS Command CDW12", "VS Command CDW13", "Log Page Version", "Log Page GUID",):
                     print ("  %-40s: %#x" % (k, v))
+                elif "Bucket Counter" in k or " Latency Stamp" in k:
+                    print ("  %-40s: %#x" % (k, v))
                 else:
-                    print ("  %-40s: %s" % (k, v))
+                    print ("  %-40s: %#s" % (k, v))
         else:
             json_print(decoded_data)
     elif print_type == 'hex':
@@ -554,8 +556,6 @@ def format_print_ocp_latency_monitor_log(cmd, print_type='normal'):
         print (raw_data)
     else:
         raise NotImplementedError("Not Support type: %s" % print_type) 
-
-
 
 def format_print_id_uuid(cmd, print_type='normal'):
     raw_data = cmd.data

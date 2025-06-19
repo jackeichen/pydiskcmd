@@ -8,12 +8,14 @@ from .csmi import win_csmi
 from .broadcom import meraraid_sata
 from .broadcom import meraraid_scsi
 from .pcie import pci
+from .rst import win_sata_rst
 
 nvme_plugins = { "ocp": ocp,
                  "vroc": win_nvme_vroc,
                  "pci":pci,}
 
-ata_plugins = {"megaraid": meraraid_sata}
+ata_plugins = {"megaraid": meraraid_sata,
+               "rst": win_sata_rst,}
 
 scsi_plugins = {"parse-cmd": parse_cmd,
                 "csmi": win_csmi,

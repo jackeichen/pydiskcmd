@@ -28,6 +28,7 @@ class OCPLogIdentifier(Enum):
 ##### For windows vendor spec log page
 
 class SmartExtendedLog(NVMeCommand):
+    _support_ocp_ver = ("2.0", "2.5")
     if os_type == "Linux":
         _req_id = linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value
     elif os_type == "Windows":
@@ -63,6 +64,7 @@ class SmartExtendedLog(NVMeCommand):
 
 
 class ErrorRecoveryLog(NVMeCommand):
+    _support_ocp_ver = ("2.0", "2.5")
     if os_type == "Linux":
         _req_id = linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value
     elif os_type == "Windows":
@@ -98,6 +100,7 @@ class ErrorRecoveryLog(NVMeCommand):
 
 
 class LatencyMonitor(NVMeCommand):
+    _support_ocp_ver = ("2.0", "2.5")
     if os_type == "Linux":
         _req_id = linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value
     elif os_type == "Windows":
@@ -134,6 +137,7 @@ class LatencyMonitor(NVMeCommand):
 
 
 class DeviceCapabilities(NVMeCommand):
+    _support_ocp_ver = ("2.0", "2.5")
     if os_type == "Linux":
         _req_id = linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value
     elif os_type == "Windows":
@@ -170,6 +174,7 @@ class DeviceCapabilities(NVMeCommand):
 
 
 class UnsupportedRequirements(NVMeCommand):
+    _support_ocp_ver = ("2.0", "2.5")
     if os_type == "Linux":
         _req_id = linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value
     elif os_type == "Windows":
@@ -206,6 +211,7 @@ class UnsupportedRequirements(NVMeCommand):
 
 
 class HardwareComponent(NVMeCommand):
+    _support_ocp_ver = ("2.0", "2.5")
     if os_type == "Linux":
         _req_id = linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value
     elif os_type == "Windows":
@@ -241,6 +247,7 @@ class HardwareComponent(NVMeCommand):
 
 
 class TCGConfiguration(NVMeCommand):
+    _support_ocp_ver = ("2.0", "2.5")
     if os_type == "Linux":
         _req_id = linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value
     elif os_type == "Windows":
@@ -277,6 +284,7 @@ class TCGConfiguration(NVMeCommand):
 
 
 class TelemetryStringLog(NVMeCommand):
+    _support_ocp_ver = ("2.0", "2.5")
     if os_type == "Linux":
         _req_id = linux_nvme_command.IOCTLRequest.NVME_IOCTL_ADMIN_CMD.value
     elif os_type == "Windows":

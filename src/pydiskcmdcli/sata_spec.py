@@ -242,7 +242,10 @@ SelftestExecutionStatusDescription = {0: "Completed without error",
                                       8: "May handling damage",
                                       15: "In progress",
                                      }
-
+#####
+VS_FARM_page_0 = {'GeneralConfiguration': ['b', 0, 2],
+                  }
+#####
 
 class SmartAttr(object):
     def __init__(self, raw_data):

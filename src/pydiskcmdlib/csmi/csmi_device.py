@@ -24,11 +24,10 @@ if os_type == "Windows":
             if not cmd.cdb:
                 raise CommandDataStrucError("Invalid Command Data Structure %s" % cmd.cdb)
             ## execute
-            cmd._bytes_returned = BytesReturnedStruc(0)
-            result = WinIOCTLDevice.execute(self, 
-                                            cmd.req_id,   #
-                                            cmd.cdb,
-                                            cmd.cdb,
-                                            BytesReturned=BytesReturnedStruc(0))
-            cmd._ioctl_result = result
+            cmd._ioctl_result = WinIOCTLDevice.execute(self, 
+                                                       cmd.req_id,   #
+                                                       cmd.cdb,
+                                                       cmd.cdb,
+                                                       BytesReturned=cmd.bytes_returned,
+                                                       Overlapped=cmd.over_lapped)
             return cmd
