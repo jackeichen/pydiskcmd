@@ -17,6 +17,7 @@ Version 0.3.5 (Not Released)
   * refactored code to pypci.pci_decode
   * introduce deepwiki in README
   * Begin to support RST SATA in pydiskcmdlib and pydiskcmdcli
+  * winodws device could set not to raise when retuen code is 0
 
 Version 0.3.4
   * add windows VROC(RSTe) support

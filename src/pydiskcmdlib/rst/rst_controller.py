@@ -20,11 +20,21 @@ from .cdb_rst_nvme_identify import (
     IDNS,
     Identify,
 )
+from .cdb_rst_nvme_aer import RegisterAER
 from .cdb_rst_ata_smart import (
-    SmartReadData,
-    SmartReadThresh,
+    SmartReadData16,
+    SmartReadThresh16,
+    SmartReadLog16,
+    SmartReturnStatus,
 )
+from .cdb_rst_ata_cdb_readlog import ReadLogExt
 from .cdb_rst_ata_identify import Identify16
+from .cdb_rst_firmware import DeviceGetFirmwareInfo
+from .win_ioctl_utils import (
+    getUniqueName,
+    CreateEventForAER,
+    AER_COMPLETION_EVENT_TYPES,
+)
 
 from pydiskcmdlib.exceptions import *
 
@@ -82,6 +92,37 @@ class RSTNVMe(object):
     def get_smart_log(self):
         cmd = SmartLog(self._path_id)
         return self.execute(cmd)
+    
+    def register_aer(self,
+                     error_status=True,
+                     smart_health_status=True,
+                     notice=False,
+                     ):
+        '''
+        Register for Asynchronous Event Reporting (AER).
+
+        Steps to register AER:
+        1. Choose a unique name for the event. It's recommended to obtain it from a Windows-generated GUID 
+           to ensure uniqueness and avoid errors when creating an event with a name already in use.
+        2. Create an Event Object using the WINAPI CreateEvent function. Prefix the event name with "Global\\" 
+           to make the Event Object accessible to the driver. Keep the returned event handle.
+        3. Use the IOCTL_NVME_REGISTER_AER command to pass the name of the created event (without the "Global\\" prefix).
+
+        Returns:
+            int: Handle to the created event object.
+        '''
+        eventName = getUniqueName()
+        eventHandle = CreateEventForAER(eventName)
+        event_mask = 0
+        if error_status:
+            event_mask |= (1 << AER_COMPLETION_EVENT_TYPES.AE_TYPE_ERROR_STATUS.value)
+        if smart_health_status:
+            event_mask |= (1 << AER_COMPLETION_EVENT_TYPES.AE_TYPE_SMART_HEALTH_STATUS.value)
+        if notice:
+            event_mask |= (1 << AER_COMPLETION_EVENT_TYPES.AE_TYPE_NOTICE.value)
+        cmd = RegisterAER(self._path_id, 0, 0, eventName, event_mask)
+        self.execute(cmd, check_return_status=True)
+        return eventHandle
 
 
 class RSTATA(object):
@@ -119,19 +160,42 @@ class RSTATA(object):
     def dev_node(self):
         return self._phy_id
 
+    def _get_PTL_by_sasaddress(self):
+        return self._sas_addr[0],self._sas_addr[1],self._sas_addr[2]
+
     def smart_read_data(self, smart_key=None):
-        cmd = SmartReadData(self._phy_id, self._port_id, self._sas_addr, smart_key)
+        cmd = SmartReadData16(self._phy_id, self._port_id, self._sas_addr, smart_key)
         self.execute(cmd)
-        cmd.unmarshall()
         return cmd
 
     def smart_read_thresh(self):
-        cmd = SmartReadThresh(self._phy_id, self._port_id, self._sas_addr)
+        cmd = SmartReadThresh16(self._phy_id, self._port_id, self._sas_addr)
         self.execute(cmd)
         return cmd
 
     def identify(self):
         cmd = Identify16(self._phy_id, self._port_id, self._sas_addr)
+        self.execute(cmd)
+        return cmd
+
+    def smart_return_status(self):
+        cmd = SmartReturnStatus(self._phy_id, self._port_id, self._sas_addr)
+        self.execute(cmd)
+        return cmd
+    
+    def smart_read_log(self, log_address, count):
+        cmd = SmartReadLog16(self._phy_id, self._port_id, self._sas_addr, count, log_address)
+        self.execute(cmd)
+        return cmd
+
+    def read_log(self, log_address, count, page_number=0, feature=0):
+        cmd = ReadLogExt(self._phy_id, self._port_id, self._sas_addr, count, log_address, page_number, feature=feature)
+        self.execute(cmd)
+        return cmd
+
+    def get_firmware_info(self):
+        path_id,target_id,lun = self._get_PTL_by_sasaddress()
+        cmd = DeviceGetFirmwareInfo(path_id,target_id,lun)
         self.execute(cmd)
         return cmd
 
@@ -142,6 +206,7 @@ class RSTController(CSMIController):
         ## first try a get_driver_info command
         #  to check if RST controller
         cmd = self.get_driver_info()
+        cmd.check_return_status(fail_hint=False, raise_if_fail=True)
         if not (bytes(cmd.cdb.Information.szName).startswith(b'iaStor') and 
                 bytes(cmd.cdb.Information.szDescription).startswith(b'Intel(R) Rapid Storage Technology')):
             raise DeviceTypeError("Not a RST Controller.")

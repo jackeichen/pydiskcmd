@@ -47,19 +47,17 @@ class SmartReadData(RSTATAPass12):
         if smart_key:
             SmartReadData._standard_bits.update(smart_key)
 
-    @classmethod
-    def unmarshall_datain(cls, data):
+    def unmarshall_datain(self):
         """
         Unmarshall the Identify datain buffer
 
         :param data: a byte array with inquiry data
         :return result: a dict
         """
-        result = {}
-        convert.decode_bits(data,
-                            cls._standard_bits,
-                            result)
-        return result
+        convert.decode_bits(bytearray(self.cdb.bDataBuffer),
+                            self._standard_bits,
+                            self._result)
+        return self._result
 
 
 class SmartReadData16(RSTATAPass16):
@@ -90,19 +88,17 @@ class SmartReadData16(RSTATAPass16):
         if smart_key:
             SmartReadData._standard_bits.update(smart_key)
 
-    @classmethod
-    def unmarshall_datain(cls, data):
+    def unmarshall_datain(self):
         """
         Unmarshall the Identify datain buffer
 
         :param data: a byte array with inquiry data
         :return result: a dict
         """
-        result = {}
-        convert.decode_bits(data,
-                            cls._standard_bits,
-                            result)
-        return result
+        convert.decode_bits(bytearray(self.cdb.bDataBuffer),
+                            self._standard_bits,
+                            self._result)
+        return self._result
 
 
 class SmartReadThresh(RSTATAPass12):
@@ -147,4 +143,58 @@ class SmartReadThresh16(RSTATAPass16):
                               0,           # count
                               ATA_DATA_TRANSFER_DIRECTION.DATA_IN.value, # 0 for NO_DATA, 1 for DATA_IN, 2 for DATA_OUT
                               data_len=512, # data_len
+                              )
+
+
+class SmartReadLog16(RSTATAPass16):
+    """
+    A class to send smart command to a ATA device
+    """
+    def __init__(self,
+                 phy_id,
+                 port_id,
+                 sas_addr,
+                 count,
+                 log_address,
+                 ):
+        #      
+        lba_filed = log_address + (0xC24F << 8)
+        ##
+        RSTATAPass16.__init__(self,
+                              phy_id,
+                              port_id,
+                              sas_addr,
+                              0xB0,        # command
+                              0xD5,        # fetures
+                              lba_filed,   # lba
+                              0,           # device
+                              count,       # count
+                              ATA_DATA_TRANSFER_DIRECTION.DATA_IN.value, # 0 for NO_DATA, 1 for DATA_IN, 2 for DATA_OUT
+                              data_len=512*count, # data_len
+                              )
+
+
+class SmartReturnStatus(RSTATAPass16):
+    """
+    A class to send smart command to a ATA device
+    """
+    def __init__(self,
+                 phy_id,
+                 port_id,
+                 sas_addr,
+                 ):
+        #      
+        lba_filed = (0xC24F << 8)
+        ##
+        RSTATAPass16.__init__(self,
+                              phy_id,
+                              port_id,
+                              sas_addr,
+                              0xB0,        # command
+                              0xDA,        # fetures
+                              lba_filed,   # lba
+                              0,           # device
+                              0,           # count
+                              ATA_DATA_TRANSFER_DIRECTION.NO_DATA.value, # 0 for NO_DATA, 1 for DATA_IN, 2 for DATA_OUT
+                              data_len=0, # data_len
                               )

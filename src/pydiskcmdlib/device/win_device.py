@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import ctypes
 from pydiskcmdlib.device.device import DeviceBase
+from pydiskcmdlib import log
 
 class BytesReturnedStruc(ctypes.Structure):
     _fields_ = [("return_bytes", ctypes.c_uint32),]
@@ -15,11 +16,25 @@ class BytesReturnedStruc(ctypes.Structure):
 class WinIOCTLDevice(DeviceBase):
     """
     The IOCTL device class for Windows.
+    
+    Initialize a new instance of a WinIOCTLDevice.
+
+    :param device: The file descriptor representing the device.
+    :param readwrite: Boolean indicating the access type. True for read-write, False for read-only.
+    :param detect_replugged: Boolean to enable detection of device unplugged and plugged events.
+                             If True, ensures that executions will not fail silently due to replugged events.
+    :param share_mode: The file sharing mode, default is FILE_SHARE_READ (0x00000001).
+    :param flags_and_attributes: The file attributes, default is FILE_ATTRIBUTE_NORMAL (0x00000080).
+    See https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea for details.
     """
+    DevIDCount = 0
     def __init__(self, 
                  device,
                  readwrite=True,
-                 detect_replugged=True):
+                 detect_replugged=True,
+                 share_mode=0x00000001, # FILE_SHARE_READ
+                 flags_and_attributes=0x00000080, # FILE_ATTRIBUTE_NORMAL
+                 ):
         """
         initialize a new instance of a WinIOCTLDevice
         :param device: the file descriptor
@@ -28,6 +43,8 @@ class WinIOCTLDevice(DeviceBase):
         silently due to replugged events
         """
         super(WinIOCTLDevice, self).__init__(device, readwrite, detect_replugged)
+        self._share_mode = share_mode
+        self._flags_and_attributes = flags_and_attributes
         ##
         self.__kernel32 = None
         self._file = None
@@ -41,7 +58,7 @@ class WinIOCTLDevice(DeviceBase):
         :return: always true for now
         """
         # TODO
-        return True
+        return False
 
     @property
     def device_name(self):
@@ -74,16 +91,24 @@ class WinIOCTLDevice(DeviceBase):
         """
         if self._file:
             self.close()
+        log.debug("Opening Windows device[%s], readwrite=%s, detect_replugged=%s, share_mode=%#x, flags_and_attributes=%#x" % (self._file_name,
+                                                                                                                               self._read_write,
+                                                                                                                               self._detect_replugged,
+                                                                                                                               self._share_mode,
+                                                                                                                               self._flags_and_attributes,
+                                                                                                                               ))
         self._file = self._kernel32().CreateFileW(self._file_name,
                                                   (0x80000000 | 0x40000000) if self._read_write else 0x80000000,  # GENERIC_READ | GENERIC_WRITE
-                                                  0x00000001,  # FILE_SHARE_READ
+                                                  self._share_mode,  # FILE_SHARE_Mode
                                                   None,
                                                   0x00000003,  # OPEN_EXISTING
-                                                  0x00000080,  # FILE_ATTRIBUTE_NORMAL,
+                                                  self._flags_and_attributes,  # FILE_ATTRIBUTE,
                                                   None
                                                  )
+        log.debug("CreateFileW return %s" % self._file)
         if self._file == -1:
             raise ctypes.WinError(ctypes.get_last_error())
+        WinIOCTLDevice.DevIDCount += 1
 
     def close(self):
         """
@@ -92,10 +117,12 @@ class WinIOCTLDevice(DeviceBase):
         :return: None
         """
         if self._file:
+            log.debug("Closing Windows device[%s], file=%s" % (self._file_name, self._file))
             self._kernel32().CloseHandle(self._file)
             self._file = None
+            WinIOCTLDevice.DevIDCount -= 1
 
-    def execute(self, IoControlCode, InBuffer, OutBuffer, BytesReturned=None, Overlapped=None):
+    def execute(self, IoControlCode, InBuffer, OutBuffer, BytesReturned=None, Overlapped=None, raise_if_fail=True):
         """
         execute a IOCTL command
 
@@ -122,8 +149,10 @@ class WinIOCTLDevice(DeviceBase):
                                                       ctypes.sizeof(OutBuffer) if OutBuffer else 0,
                                                       ctypes.pointer(BytesReturned) if BytesReturned else None,
                                                       Overlapped)
-            if result == 0:
+            if result == 0 and raise_if_fail:
+                log.debug("Execute Command failed: %s" % ctypes.get_last_error())
                 raise ctypes.WinError(ctypes.get_last_error())
         else:
+            log.debug("Open device first!")
             raise RuntimeError("Open device first!")
         return result

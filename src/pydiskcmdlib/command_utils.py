@@ -6,7 +6,7 @@ from typing import Optional
 from abc import ABCMeta, abstractmethod
 from pydiskcmdlib import os_type
 from pydiskcmdlib.data_buffer import DataBuffer
-from pydiskcmdlib.utils.converter import encode_dict,decode_bits,CheckDict
+from pydiskcmdlib.utils.converter import encode_dict,decode_bits,CheckDict,scsi_int_to_ba,scsi_ba_to_int,ba_to_ascii_string
 from pydiskcmdlib.device.win_device import BytesReturnedStruc
 from pydiskcmdlib.exceptions import *
 from pydiskcmdlib.os.win_ioctl_structures import (
@@ -351,3 +351,198 @@ class CommandWrapper(object):
         '''
         Check the return status of command
         '''
+
+def generate_cdb_bits_by_structure_pro(structure: Structure, context=None):
+    if context is None:
+        context=StructureContext()
+    cdb_bits = {}
+    for i in structure._fields_:
+        field_name = i[0]
+        filed_type = i[1]
+        if hasattr(filed_type, '_fields_'):
+            cdb_bits[field_name] = generate_cdb_bits_by_structure_pro(filed_type, context=context)
+        else:
+            field_name,result = context.get_bit_map(i)
+            cdb_bits[field_name] = result
+    return cdb_bits
+
+
+def encode_dict_pro(data_dict,
+                    check_dict,
+                    result,
+                    byteorder='big'):
+    """
+    helper method to perform some simple bit operations
+
+    the list in the value of each key:value pair contains 2 values
+    - the bit mask
+    - the offset byte in the datain byte array
+
+    for now we assume he have to right shift only
+
+    :param data_dict:  a dict mapping field-names to notation tuples.
+    :param check_dict: a dict mapping field-names to notation tuples.
+    :param result: a buffer containing the bits encoded
+    """
+    for key in data_dict.keys():
+        if key not in check_dict:
+            continue
+        value = data_dict[key]
+        if value is None:
+            continue
+
+        val = check_dict[key]
+        if isinstance(value, dict) and isinstance(val, dict):
+            encode_dict_pro(value, val, result, byteorder=byteorder)
+        elif isinstance(value, dict) or isinstance(val, dict):
+            raise CommandDataStrucError("The data_dict of %s is dict, but the check_dict is not dict" % key)
+        else:
+            if len(val) == 2:
+                bitmask, bytepos = val
+
+                _num = 1
+                _bm = bitmask
+                while _bm > 0xff:
+                    _bm >>= 8
+                    _num += 1
+
+                _bm = bitmask
+                while not _bm & 0x01:
+                    _bm >>= 1
+                    value <<= 1
+
+                v = scsi_int_to_ba(value, _num, byteorder=byteorder)
+                for i in range(len(v)):
+                    result[bytepos + i] ^= v[i]
+            elif val[0] == 'b' and val[2] > 0:
+                offset, length = val[1:]
+                fixed_length = min(length, len(value))
+                if isinstance(value, str):
+                    value = value.encode()
+                result[offset:offset + fixed_length] = value[0:fixed_length]
+            elif val[0] == 'w' and val[2] > 0:
+                offset, length = val[1:]
+                result[offset:offset + length * 2] = value
+            elif val[0] == 'dw' and val[2] > 0:
+                offset, length = val[1:]
+                result[offset:offset + length * 4] = value
+
+def decode_bits_pro(data,
+                    check_dict,
+                    result_dict,
+                    byteorder='big'):
+    """
+    helper method to perform some simple bit operations
+
+    the list in the value of each key:value pair contains 2 values
+    - the bit mask
+    - the offset byte in the datain byte array
+
+    for now we assume he have to right shift only
+
+    :param data: a buffer containing the bits to decode
+    :param check_dict: a dict mapping field-names to notation tuples.
+    :param result_dict: a dict mapping field-names to notation tuples.
+    """
+    for key in check_dict.keys():
+        # Notation format:
+        #
+        # If the length is 2 we have the legacy notation [bitmask, offset]
+        # Example: 'sync': [0x10, 7],
+        #
+        # >2-tuples is the new style of notation.
+        # These tuples always consist of at least three elements, where the
+        # first element is a string that describes the type of value.
+        #
+        # 'b': Byte array blobs
+        # ----------------
+        # ('b', offset, length)
+        # Example: 't10_vendor_identification': ('b', 8, 8),
+        #
+
+        val = check_dict[key]
+        if isinstance(val, dict):
+            result_dict[key] = {}
+            decode_bits_pro(data, val, result_dict[key], byteorder=byteorder)
+        else:
+            if len(val) == 2:
+                bitmask, byte_pos = val
+                _num = 1
+                _bm = bitmask
+                while _bm > 0xff:
+                    _bm >>= 8
+                    _num += 1
+                value = scsi_ba_to_int(data[byte_pos:byte_pos + _num],byteorder=byteorder)
+                while not bitmask & 0x01:
+                    bitmask >>= 1
+                    value >>= 1
+                value &= bitmask
+            elif val[0] == 'b':
+                offset, length = val[1:3]
+                value = data[offset:offset + length]
+            elif val[0] == 'bb':
+                bit_offset, bit_length = val[1:3]
+                if isinstance(data, bytes):
+                    _tmp = scsi_ba_to_int(data, 'little')
+                value = (_tmp >> bit_offset) & (2**bit_length-1)
+            elif val[0] == 'w':
+                offset, length = val[1:3]
+                value = data[offset:offset + length * 2]
+            elif val[0] == 'dw':
+                offset, length = val[1:3]
+                value = data[offset:offset + length * 4]
+            ##
+            if len(val) > 3:
+                if val[3] == 'int_l':
+                    value = scsi_ba_to_int(value, 'little')
+                elif val[3] == 'int_b':
+                    value = scsi_ba_to_int(value, 'big')
+                elif val[3] == 'str_ascii':
+                    value = ba_to_ascii_string(value)
+            result_dict.update({key: value})
+
+
+class CommandWrapperPro(CommandWrapper):
+    def init_cdb_bitmap(self):
+        """
+        Initialize the CDB (Command Descriptor Block) bitmap.
+
+        This method initializes the CDB bitmap, which is a dictionary used to store the
+        bit positions and their corresponding values in the CDB. The method first checks
+        if the `_cdb_bits` attribute is present, and if so, it assigns it to the `_cdb_bitmap`.
+        If `_cdb_bits` is not present, it checks if the `_cdb_raw_struc` attribute is present,
+        and if so, it generates the CDB bitmap using the `generate_cdb_bits_by_structure`
+        function. If neither `_cdb_bits` nor `_cdb_raw_struc` is present, it checks if the
+        `_cdb_bitmap_pool` attribute is present, and if so, it retrieves the CDB bitmap
+        from the pool using the `req_id` as the key.
+        """
+        self._cdb_bitmap = {}
+        if self._cdb_bits:
+            self._cdb_bitmap = self._cdb_bits
+        elif self._cdb_raw_struc:
+            self._cdb_bitmap = generate_cdb_bits_by_structure_pro(self._cdb_raw_struc)
+        elif self._cdb_bitmap_pool:
+            self._cdb_bitmap = self._cdb_bitmap_pool.get(self.req_id)
+
+    def marshall_cdb(self, cdb, cdb_len: int) -> bytearray:
+        """
+        Marshall a Command cdb
+
+        :param cdb: a dict with key:value pairs representing a code descriptor block
+        :param cdb_len: the total length of build command
+        :return result: a byte array representing a code descriptor block
+        """
+        result = bytearray(cdb_len) # The command initial value is all 0
+        encode_dict_pro(cdb, self._cdb_bitmap, result, byteorder=self._byteorder)
+        return result
+
+    def unmarshall_cdb(self):
+        """
+        Unmarshall an SCSICommand cdb
+
+        :param cdb: a byte array representing a code descriptor block
+        :return result: a dict
+        """
+        result = {}
+        decode_bits_pro(self.cdb_struc, self._cdb_bitmap, result, byteorder=self._byteorder)
+        return result

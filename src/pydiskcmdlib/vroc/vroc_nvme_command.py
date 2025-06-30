@@ -2,11 +2,35 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import sys
+from enum import Enum
 from pydiskcmdlib import os_type
+from pydiskcmdlib.pynvme.nvme_status_code import StatusCodeDescription
 from pydiskcmdlib.utils.converter import encode_dict,decode_bits,CheckDict
 from pydiskcmdlib.os import win_ioctl_request
 from pydiskcmdlib.exceptions import *
 from pydiskcmdlib.vroc import win_ioctl
+
+
+class IOCTL_STATUS(Enum):
+    NVME_IOCTL_SUCCESS = 0
+    NVME_IOCTL_INVALID_IOCTL_CODE = 1
+    NVME_IOCTL_INVALID_SIGNATURE = 2
+    NVME_IOCTL_INSUFFICIENT_IN_BUFFER = 3
+    NVME_IOCTL_INSUFFICIENT_OUT_BUFFER = 4
+    NVME_IOCTL_UNSUPPORTED_ADMIN_CMD = 5
+    NVME_IOCTL_UNSUPPORTED_NVM_CMD = 6
+    NVME_IOCTL_INVALID_ADMIN_VENDOR_SPECIFIC_OPCODE = 7
+    NVME_IOCTL_INVALID_NVM_VENDOR_SPECIFIC_OPCODE = 8
+    NVME_IOCTL_ADMIN_VENDOR_SPECIFIC_NOT_SUPPORTED = 9  # AVSCC=0
+    NVME_IOCTL_NVM_VENDOR_SPECIFIC_NOT_SUPPORTED = 10   # NVSCC=0
+    NVME_IOCTL_INVALID_DIRECTION_SPECIFIED = 11         # when Direction is greater 
+    NVME_IOCTL_INVALID_META_BUFFER_LENGTH = 12
+    NVME_IOCTL_PRP_TRANSLATION_ERROR = 13
+    NVME_IOCTL_INVALID_PATH_TARGET_ID = 14
+    NVME_IOCTL_FORMAT_NVM_PENDING = 15                  # Only one Format NVM at a time
+    NVME_IOCTL_FORMAT_NVM_FAILED = 16
+    NVME_IOCTL_INVALID_NAMESPACE_ID = 17
+
 
 class VROCNVMeCommand(object):
     '''
@@ -184,9 +208,46 @@ class VROCNVMeCommand(object):
         ## Level 1: Returned status of DeviceIoControl API
         #  This can be checked in pydiskcmdlib.device.win_device.WinIOCTLDevice.execute()
         ## Level 2: ReturnCode of SRB_IO_CONTROL structure
+        ## Level 3: Status Field of Completion Entry if NVME_PASS_THROUGH_SRB_IO_CODE command
+        # Level 2 check
+        status_code = 0
         if self.cdb.SrbIoCtrl.ReturnCode != 0:
+            rc = self.cdb.SrbIoCtrl.ReturnCode
+            desp = IOCTL_STATUS(rc).name if rc in IOCTL_STATUS else "Unkown Error"
             if fail_hint:
-                print ("SrbIoCtrl->ReturnCode is %d" % self.cdb.SrbIoCtrl.ReturnCode)
+                print ("SrbIoCtrl->ReturnCode is %#x(%s)" % (rc, desp))
             if raise_if_fail:
-                raise CommandReturnStatusError('Command Check Error')
-        return self.cdb.SrbIoCtrl.ReturnCode
+                raise CommandReturnStatusError('Command Check Error: %#x(%s)' % (rc, desp))
+            status_code = 2
+        # Level 3 Check 
+        if self._cdb.SrbIoCtrl.ControlCode == win_ioctl.NVME_PASS_THROUGH_SRB_IO_CODE:
+            command_spec = self._cdb.CplEntry[0]
+            status_field = self._cdb.CplEntry[3] >> 16
+            ##
+            SC = (status_field & 0xFF)
+            SCT = ((status_field >> 8) & 0x07)
+            if SCT != 0 or SC != 0:
+                CRD = ((self.cq_status >> 11) & 0x03)
+                More = (self.cq_status >> 13 & 0x01)
+                DNR = (self.cq_status >> 14 & 0x01)
+                _hint = "NVMe Return Status Check Error: Status Code Type(%#x), Status Code(%#x)" % (SCT, SC)
+                if fail_hint:
+                    print ("Command failed, and details bellow.")
+                    format_string = "%-15s%-20s%-8s%s"
+                    print (format_string % ("Status Code", "Status Code Type", "More", "Do Not Retry"))
+                    print (format_string % (SC, SCT, More, DNR))
+                    print ('')
+                    print (StatusCodeDescription.get((SCT,SC)))
+                    print ('')
+                    # Step 1.2 check Command Specific Status Value. It may not work,
+                    # just an ideas
+                    if os_type == 'Linux':
+                        if fail_hint and self.cq_cmd_spec in self._cmd_spec_fail:
+                            print (self._cmd_spec_fail.get(self.cq_cmd_spec))
+                            print ('')
+                            _hint = "%s, Command Specific Status Value: %#x" % (_hint, self.cq_cmd_spec)
+                if raise_if_fail:
+                    raise CommandReturnStatusError(_hint)
+                status_code = 3
+            ##
+        return status_code

@@ -10,8 +10,18 @@ from ctypes import (Structure,
                     c_ubyte,
                     sizeof,
                     c_ulonglong,
+                    Union,
                     )
-from pydiskcmdlib.os.win_ioctl_structures import SRB_IO_CONTROL,roundupdw,GENERIC_COMMAND,SRB_IO_CONTROL_LEN
+from pydiskcmdlib.os.win_ioctl_structures import (SRB_IO_CONTROL,
+                                                  roundupdw,
+                                                  GENERIC_COMMAND,
+                                                  SRB_IO_CONTROL_LEN,
+                                                  FIRMWARE_REQUEST_BLOCK,
+                                                  STORAGE_FIRMWARE_INFO_V2,
+                                                  Get_STORAGE_FIRMWARE_INFO_V2,
+                                                  Get_STORAGE_FIRMWARE_INFO,
+)
+from .win_ioctl_utils import AEN_MAX_EVENT_NAME_LENGTH,NVME_GET_AER_DATA_MAX_COMPLETIONS
 
 ##
 class COMPLETION_QUEUE_ENTRY(Structure):
@@ -83,14 +93,15 @@ class NVME_IOCTL_PASS_THROUGH(Structure):
         return
 
 NVME_IOCTL_PASS_THROUGH_LEN = sizeof(NVME_IOCTL_PASS_THROUGH)
-# NVME_IOCTL_PASS_THROUGH_LEN_ALIGNED = roundupdw(NVME_IOCTL_PASS_THROUGH_LEN)
+NVME_IOCTL_PASS_THROUGH_LEN_DW_ALIGNED = roundupdw(NVME_IOCTL_PASS_THROUGH_LEN)
 
 def Get_NVME_IOCTL_PASS_THROUGH_ALIGNED_WITH_BUFFER(buffer_length):
     class NVME_IOCTL_PASS_THROUGH_WITH_BUFFER(Structure):
         _fields_ = [
             ('NVME_IOCTL_PASS_THROUGH', NVME_IOCTL_PASS_THROUGH),
-            ("Padding", c_uint8 * (roundupdw(buffer_length) - buffer_length)),  # keep DW aligned
+            ("Padding", c_uint8 * (NVME_IOCTL_PASS_THROUGH_LEN_DW_ALIGNED - NVME_IOCTL_PASS_THROUGH_LEN)),  # keep DW aligned of NVME_IOCTL_PASS_THROUGH
             ('DataBuffer', c_ubyte* buffer_length),  # DW
+            ('PaddingDataBuffer', c_uint8 * (roundupdw(buffer_length) - buffer_length)),  # keep DW aligned of DataBuffer
         ]
         _pack_ = 1
 
@@ -127,3 +138,140 @@ def Get_NVME_IOCTL_PASS_THROUGH_ALIGNED_WITH_BUFFER(buffer_length):
             return self.DataBuffer
 
     return NVME_IOCTL_PASS_THROUGH_WITH_BUFFER
+
+# struct RAID_FIRMWARE_REQUEST_BLOCK {
+#  UCHAR Version;
+#  UCHAR PathID;
+#  UCHAR TargetID;
+#  UCHAR Lun;
+#  FIRMWARE_REQUEST_BLOCK FwRequestBlock; // from ntddscsi.h
+# };
+class RAID_FIRMWARE_REQUEST_BLOCK(Structure):
+    _fields_ = [
+        ('Version', c_uint8),
+        ('PathID', c_uint8),
+        ('TargetID', c_uint8),
+        ('Lun', c_uint8),
+        ('FwRequestBlock', FIRMWARE_REQUEST_BLOCK),
+    ]
+    _pack_ = 1
+
+# struct IOCTL_RAID_FIRMWARE_BUFFER {
+#  SRB_IO_CONTROL Header; // from ntddscsi.h
+#  RAID_FIRMWARE_REQUEST_BLOCK Request;
+# };
+class IOCTL_RAID_FIRMWARE_BUFFER(Structure):
+    _fields_ = [
+        ('Header', SRB_IO_CONTROL),
+        ('Request', RAID_FIRMWARE_REQUEST_BLOCK),
+    ]
+    _pack_ = 1
+
+
+class DEV_FIRMWARE_INFO_M1(Structure):
+    from pydiskcmdlib.os.win_ioctl_structures import PVOID
+    temp = (SRB_IO_CONTROL_LEN+sizeof(RAID_FIRMWARE_REQUEST_BLOCK)) % sizeof(PVOID)
+    padding = 0 if temp == 0 else (sizeof(PVOID) - temp)
+    # Set max 7 firmware info here
+    _fields_ = [
+        ('Header', SRB_IO_CONTROL),
+        ('Request', RAID_FIRMWARE_REQUEST_BLOCK),
+        ('Padding', c_uint8 * padding),
+        ('FirmwareInfo', Get_STORAGE_FIRMWARE_INFO(1)),
+    ]
+    _pack_ = 1
+
+
+class DEV_FIRMWARE_INFO_V2_M7(Structure):
+    from pydiskcmdlib.os.win_ioctl_structures import PVOID
+    temp = (SRB_IO_CONTROL_LEN+sizeof(RAID_FIRMWARE_REQUEST_BLOCK)) % sizeof(PVOID)
+    padding = 0 if temp == 0 else (sizeof(PVOID) - temp)
+    # Set max 7 firmware info here
+    _fields_ = [
+        ('Header', SRB_IO_CONTROL),
+        ('Request', RAID_FIRMWARE_REQUEST_BLOCK),
+        ('Padding', c_uint8 * padding),
+        ('FirmwareInfo', Get_STORAGE_FIRMWARE_INFO_V2(7)),
+    ]
+    _pack_ = 1
+
+# typedef struct _RAIDPORT_REGISTER_SHARED_EVENT {
+#  U8 eventName[AEN_MAX_EVENT_NAME_LENGTH];
+#  U8 reserved;
+#  U64 eventMask;
+# } RAIDPORT_REGISTER_SHARED_EVENT;
+class RAIDPORT_REGISTER_SHARED_EVENT(Structure):
+    _fields_ = [
+        ('eventName', c_uint8 * AEN_MAX_EVENT_NAME_LENGTH),
+        ('reserved', c_uint8),
+        ('eventMask', c_uint64),
+    ]
+    _pack_ = 1
+
+# struct NVME_IOCTL_REGISTER_AER {
+#  SRB_IO_CONTROL Header;
+#  RAIDPORT_REGISTER_SHARED_EVENT EventData;
+# };
+# Main Structures
+class NVME_IOCTL_REGISTER_AER(Structure):
+    _fields_ = [
+        ('Header', SRB_IO_CONTROL),
+        ('EventData', RAIDPORT_REGISTER_SHARED_EVENT),
+    ]
+    _pack_ = 1
+
+# struct ADMIN_ASYNCHRONOUS_EVENT_REQUEST_COMPLETION_DW0 {
+#  union {
+#  struct {
+#  U32 AsynchronousEventType : 3;
+#  U32 Reserved1 : 5;
+#  U32 AsynchronousEventInformation : 8;
+#  U32 AssociatedLogPage : 8;
+#  U32 Reserved2 : 8;
+#  };
+#  U32 Raw;
+#  };
+# };
+class ADMIN_ASYNCHRONOUS_EVENT_REQUEST_COMPLETION_DW0_INFO(Structure):
+    _fields_ = [
+        ('AsynchronousEventType', c_uint32, 3),
+        ('Reserved1', c_uint32, 5),
+        ('AsynchronousEventInformation', c_uint32, 8),
+        ('AssociatedLogPage', c_uint32, 8),
+        ('Reserved2', c_uint32, 8),
+    ]
+
+class ADMIN_ASYNCHRONOUS_EVENT_REQUEST_COMPLETION_DW0(Union):
+    _fields_ = [
+        ('Info', ADMIN_ASYNCHRONOUS_EVENT_REQUEST_COMPLETION_DW0_INFO),
+        ('Raw', c_uint32),
+    ]
+    _pack_ = 1
+
+# struct NVME_AER_DATA {
+#  U8 eventName[AEN_MAX_EVENT_NAME_LENGTH];
+#  U8 reserved;
+#  ADMIN_ASYNCHRONOUS_EVENT_REQUEST_COMPLETION_DW0
+# Completions[NVME_GET_AER_DATA_MAX_COMPLETIONS];
+#  UINT32 CompletionsCount;
+# };
+class NVME_AER_DATA(Structure):
+    _fields_ = [
+        ('eventName', c_uint8 * AEN_MAX_EVENT_NAME_LENGTH),
+        ('reserved', c_uint8),
+        ('Completions', ADMIN_ASYNCHRONOUS_EVENT_REQUEST_COMPLETION_DW0 * NVME_GET_AER_DATA_MAX_COMPLETIONS),
+        ('CompletionsCount', c_uint32),
+    ]
+    _pack_ = 1
+
+# struct NVME_IOCTL_GET_AER_DATA {
+#  SRB_IO_CONTROL Header;
+#  NVME_AER_DATA Data;
+# };
+# Main Structures
+class NVME_IOCTL_GET_AER_DATA(Structure):
+    _fields_ = [
+        ('Header', SRB_IO_CONTROL),
+        ('Data', NVME_AER_DATA),
+    ]
+    _pack_ = 1

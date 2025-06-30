@@ -172,11 +172,11 @@ def format_print_smart(cmd_read_data, cmd_thread, print_type='normal', show_stat
             ID = data[i]
             if ID:
                 target["content"]["vendor_spec"][ID] = {"AttrName": SMART_ATTR[ID] if ID in SMART_ATTR else 'Unknown_Attribute',
-                                             "Flag": scsi_ba_to_int(data[i+1:i+3], 'little'),
-                                             "Value": data[i+3],
-                                             "Worst": data[i+4],
-                                             "Thresh": smart_thread[ID],
-                                             "RawValue": scsi_ba_to_int(data[i+5:i+11], 'little')}
+                                                        "Flag": scsi_ba_to_int(data[i+1:i+3], 'little'),
+                                                        "Value": data[i+3],
+                                                        "Worst": data[i+4],
+                                                        "Thresh": smart_thread[ID],
+                                                        "RawValue": scsi_ba_to_int(data[i+5:i+11], 'little')}
         if print_type == 'normal':
             print ('General SMART Values:')
             print ('=' * 100)

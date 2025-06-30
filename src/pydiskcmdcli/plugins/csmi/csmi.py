@@ -34,6 +34,7 @@ def _win_csmi_print_help():
         print ("  get-cntrl-status              Get CSMI Controller Status")
         print ("  get-driver-info               Get CSMI Controller Driver Info")
         print ("  get-raid-info                 Get CSMI Controller Raid Info")
+        print ("  get-raid-config               Get CSMI Controller Raid Config")
         print ("  get-phy-info                  Get CSMI Controller Phy Info")
         print ("  version                       Shows Windows CSMI plugin version")
         print ("  help                          Display this help")
@@ -86,7 +87,7 @@ def _win_csmi_get_driver_info():
     parser_update(parser, add_output=["normal"])
 
     (options, args) = parser.parse_args()
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
         #
         dev = sys.argv[3].strip()
         ##
@@ -116,7 +117,7 @@ def _win_csmi_get_cntrl_status():
     parser_update(parser, add_output=["normal"])
 
     (options, args) = parser.parse_args()
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
         #
         dev = sys.argv[3].strip()
         ##
@@ -140,7 +141,7 @@ def _win_csmi_get_raid_info():
     parser_update(parser, add_output=["normal"])
 
     (options, args) = parser.parse_args()
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
         #
         dev = sys.argv[3].strip()
         ##
@@ -158,13 +159,83 @@ def _win_csmi_get_raid_info():
     else:
         parser.print_help()
 
+def _win_csmi_get_raid_config():
+    usage="usage: %prog csmi get-raid-config"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal"])
+
+    (options, args) = parser.parse_args()
+    if len(sys.argv) > 3:
+        #
+        dev = sys.argv[3].strip()
+        ##
+        script_check(options, admin_check=True)
+        ##
+        result = {}
+        with CSMIController(init_device(dev, open_t='csmi')) as d:
+            cmd = d.get_raid_info()
+            cmd.check_return_status(raise_if_fail=True)
+            num_raid_sets = cmd.cdb.Information.uNumRaidSets
+            max_drives_per_set = cmd.cdb.Information.uMaxDrivesPerSet
+            for raid_set_index in range(0, num_raid_sets):
+                cmd = d.get_raid_config(raid_set_index, max_drives_per_set)
+                cmd.check_return_status(raise_if_fail=True)
+                result[raid_set_index] = {"RaidSetIndex": cmd.cdb.Configuration.uRaidSetIndex,
+                                          "Capacity": cmd.cdb.Configuration.uCapacity,
+                                          "StripeSize": cmd.cdb.Configuration.uStripeSize,
+                                          "RaidType": cmd.cdb.Configuration.bRaidType,
+                                          "Status": cmd.cdb.Configuration.bStatus,
+                                          "Information": cmd.cdb.Configuration.bInformation,
+                                          "DriveCount": cmd.cdb.Configuration.bDriveCount,
+                                          "Drives": [],
+                                          }
+                for drive_index in range(result[raid_set_index]["DriveCount"]):
+                    drive_info = cmd.cdb.Configuration.Drives[drive_index]
+                    result[raid_set_index]["Drives"].append({"Model": bytes(drive_info.bModel),
+                                                             "Firmware": bytes(drive_info.bFirmware),
+                                                             "SerialNumber": bytes(drive_info.bSerialNumber),
+                                                             "SASAddress": bytes(drive_info.bSASAddress),
+                                                             "SASLun": bytes(drive_info.bSASLun),
+                                                             "DriveStatus": drive_info.bDriveStatus,
+                                                             "DriveUsage": drive_info.bDriveUsage,
+                                                           })
+
+        if options.output_format == "normal":
+            print ("CSMI Get %s RAID Config:" % dev)
+            print ("")
+            if result:
+                for raid_set_index,raid_info in result.items():
+                    print ("  %s" % ("="*20))
+                    print ("  RaidSetIndex: %d" % raid_info["RaidSetIndex"])
+                    print ("  Capacity: %d" % raid_info["Capacity"])
+                    print ("  StripeSize: %d" % raid_info["StripeSize"])
+                    print ("  RaidType: %d" % raid_info["RaidType"])
+                    print ("  Status: %d" % raid_info["Status"])
+                    print ("  Information: %d" % raid_info["Information"])
+                    print ("  DriveCount: %d" % raid_info["DriveCount"])
+                    for drive_index,drive_info in enumerate(raid_info["Drives"]):
+                        print ("    %s" % ("-"*18))
+                        print ("    Drive[%d]:" % drive_index)
+                        print ("      Model: %s" % drive_info["Model"])
+                        print ("      Firmware: %s" % drive_info["Firmware"])
+                        print ("      SerialNumber: %s" % drive_info["SerialNumber"])
+                        print ("      SASAddress: %s" % drive_info["SASAddress"])
+                        print ("      SASLun: %s" % drive_info["SASLun"])
+                        print ("      DriveStatus: %d" % drive_info["DriveStatus"])
+                        print ("      DriveUsage: %d" % drive_info["DriveUsage"])
+            else:
+                print ("No RAID Volume is configured.")
+    else:
+        parser.print_help()
+
+
 def _win_csmi_get_phy_info():
     usage="usage: %prog csmi get-phy-info"
     parser = optparse.OptionParser(usage)
     parser_update(parser, add_output=["normal"])
 
     (options, args) = parser.parse_args()
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
         #
         dev = sys.argv[3].strip()
         script_check(options, admin_check=True)
@@ -207,6 +278,7 @@ plugin_win_nvme_vroc_commands_dict = {"list-ctrls": _win_csmi_list_ctrls,
                                       "get-cntrl-status": _win_csmi_get_cntrl_status,
                                       "get-driver-info": _win_csmi_get_driver_info,
                                       "get-raid-info": _win_csmi_get_raid_info,
+                                      "get-raid-config": _win_csmi_get_raid_config,
                                       "get-phy-info": _win_csmi_get_phy_info,
                                       "version": _win_csmi_print_ver,
                                       "help": _win_csmi_print_help,}
@@ -217,6 +289,5 @@ def win_csmi():
     if len(sys.argv) > 2:
         plugin_command = sys.argv[2]
         if plugin_command in plugin_win_nvme_vroc_commands_dict:
-            plugin_win_nvme_vroc_commands_dict[plugin_command]()
-            return
+            return plugin_win_nvme_vroc_commands_dict[plugin_command]()
     _win_csmi_print_help()

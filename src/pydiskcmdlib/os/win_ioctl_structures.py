@@ -9,13 +9,38 @@ from ctypes import (Structure,
                     c_ubyte,
                     sizeof,
                     c_ulonglong,
+                    c_void_p,
+                    POINTER,
+                    c_ulong,
+                    Union,
                     )
+
+VOID = c_void_p
+PVOID = POINTER(VOID)
 
 def roundupdw(number: int) -> int:
     """
     Round up the number to the next multiple of 4.
     """
     return (number + 3) & ~3
+
+# typedef struct _SCSI_ADDRESS {
+#   ULONG Length;
+#   UCHAR PortNumber;
+#   UCHAR PathId;
+#   UCHAR TargetId;
+#   UCHAR Lun;
+# } SCSI_ADDRESS, *PSCSI_ADDRESS;
+class SCSI_ADDRESS(Structure):
+    _fields_ = [
+        ('Length', c_uint32),
+        ('PortNumber', c_uint8),
+        ('PathId', c_uint8),
+        ('TargetId', c_uint8),
+        ('Lun', c_uint8),
+    ]
+    _pack_ = 1
+
 
 class NVME_COMMAND_DWORD0(Structure):
     _fields_ = [
@@ -440,3 +465,145 @@ def Get_NVME_IOCTL_PASS_THROUGH_ALIGNED_WITH_BUFFER(buffer_length):
             else:
                 return bytes(self.DataBuffer)
     return NVME_IOCTL_PASS_THROUGH_WITH_BUFFER
+
+# typedef struct _STORAGE_FIRMWARE_SLOT_INFO {
+
+#     UCHAR   SlotNumber;
+#     BOOLEAN ReadOnly;
+#     UCHAR   Reserved[6];
+
+#     union {
+#         UCHAR     Info[8];
+#         ULONGLONG AsUlonglong;
+#     } Revision;
+
+# } STORAGE_FIRMWARE_SLOT_INFO, *PSTORAGE_FIRMWARE_SLOT_INFO;
+class STORAGE_FIRMWARE_SLOT_INFO_Revision(Union):
+    _fields_ = [
+        ('Info', c_uint8 * 8),
+        ('AsUlonglong', c_ulonglong),
+    ]
+
+class STORAGE_FIRMWARE_SLOT_INFO(Structure):
+    _fields_ = [
+        ('SlotNumber', c_uint8),
+        ('ReadOnly', c_uint8),
+        ('Reserved', c_uint8 * 6),
+        ('Revision', STORAGE_FIRMWARE_SLOT_INFO_Revision),
+    ]
+    _pack_ = 1
+
+# typedef struct _STORAGE_FIRMWARE_INFO {
+
+#     ULONG   Version;        // STORAGE_FIRMWARE_INFO_STRUCTURE_VERSION
+#     ULONG   Size;           // sizeof(STORAGE_FIRMWARE_INFO)
+
+#     BOOLEAN UpgradeSupport;
+#     UCHAR   SlotCount;
+#     UCHAR   ActiveSlot;
+#     UCHAR   PendingActivateSlot;
+
+#     ULONG   Reserved;
+
+#     STORAGE_FIRMWARE_SLOT_INFO Slot[0];
+
+# } STORAGE_FIRMWARE_INFO, *PSTORAGE_FIRMWARE_INFO;
+class STORAGE_FIRMWARE_INFO(Structure):
+    _fields_ = [
+        ('Version', c_ulong),
+        ('Size', c_ulong),
+        ('UpgradeSupport', c_uint8),
+        ('SlotCount', c_uint8),
+        ('ActiveSlot', c_uint8),
+        ('PendingActivateSlot', c_uint8),
+        ('Reserved', c_ulong),
+        ('Slot', STORAGE_FIRMWARE_SLOT_INFO * 1),
+    ]
+    _pack_ = 1
+
+def Get_STORAGE_FIRMWARE_INFO(max_slot):
+    class STORAGE_FIRMWARE_INFO(Structure):
+        _fields_ = [
+            ('Version', c_ulong),
+            ('Size', c_ulong),
+            ('UpgradeSupport', c_uint8),
+            ('SlotCount', c_uint8),
+            ('ActiveSlot', c_uint8),
+            ('PendingActivateSlot', c_uint8),
+            ('Reserved', c_ulong),
+            ('Slot', STORAGE_FIRMWARE_SLOT_INFO * max_slot),
+        ]
+        _pack_ = 1
+    return STORAGE_FIRMWARE_INFO
+
+# typedef struct _STORAGE_FIRMWARE_SLOT_INFO_V2 {
+
+#     UCHAR   SlotNumber;
+#     BOOLEAN ReadOnly;
+#     UCHAR   Reserved[6];
+
+#     UCHAR   Revision[STORAGE_FIRMWARE_SLOT_INFO_V2_REVISION_LENGTH];
+
+# } STORAGE_FIRMWARE_SLOT_INFO_V2, *PSTORAGE_FIRMWARE_SLOT_INFO_V2;
+STORAGE_FIRMWARE_SLOT_INFO_V2_REVISION_LENGTH = 16
+class STORAGE_FIRMWARE_SLOT_INFO_V2(Structure):
+    _fields_ = [
+        ('SlotNumber', c_uint8),
+        ('ReadOnly', c_uint8),
+        ('Reserved', c_uint8 * 6),
+        ('Revision', c_uint8 * STORAGE_FIRMWARE_SLOT_INFO_V2_REVISION_LENGTH),
+    ]
+    _pack_ = 1
+
+# typedef struct _STORAGE_FIRMWARE_INFO_V2 {
+
+#     ULONG   Version;        // STORAGE_FIRMWARE_INFO_STRUCTURE_VERSION_V2
+#     ULONG   Size;           // sizeof(STORAGE_FIRMWARE_INFO_V2)
+
+#     BOOLEAN UpgradeSupport;
+#     UCHAR   SlotCount;
+#     UCHAR   ActiveSlot;
+#     UCHAR   PendingActivateSlot;
+
+#     BOOLEAN FirmwareShared;         // The firmware applies to both device and adapter. For example: PCIe SSD.
+#     UCHAR   Reserved[3];
+
+#     ULONG   ImagePayloadAlignment;  // Number of bytes. Max: PAGE_SIZE. The transfer size should be multiple of this unit size. Some protocol requires at least sector size. 0 means the value is not valid.
+#     ULONG   ImagePayloadMaxSize;    // for a single command.
+
+#     STORAGE_FIRMWARE_SLOT_INFO_V2 Slot[0];
+
+# } STORAGE_FIRMWARE_INFO_V2, *PSTORAGE_FIRMWARE_INFO_V2;
+class STORAGE_FIRMWARE_INFO_V2(Structure):
+    _fields_ = [
+        ('Version', c_ulong),
+        ('Size', c_ulong),
+        ('UpgradeSupport', c_uint8),
+        ('SlotCount', c_uint8),
+        ('ActiveSlot', c_uint8),
+        ('PendingActivateSlot', c_uint8),
+        ('FirmwareShared', c_uint8),
+        ('Reserved', c_uint8 * 3),
+        ('ImagePayloadAlignment', c_ulong),
+        ('ImagePayloadMaxSize', c_ulong),
+        ('Slot', STORAGE_FIRMWARE_SLOT_INFO_V2 * 1),
+    ]
+    _pack_ = 1
+
+def Get_STORAGE_FIRMWARE_INFO_V2(max_slot):
+    class STORAGE_FIRMWARE_INFO_V2(Structure):
+        _fields_ = [
+            ('Version', c_ulong),
+            ('Size', c_ulong),
+            ('UpgradeSupport', c_uint8),
+            ('SlotCount', c_uint8),
+            ('ActiveSlot', c_uint8),
+            ('PendingActivateSlot', c_uint8),
+            ('FirmwareShared', c_uint8),
+            ('Reserved', c_uint8 * 3),
+            ('ImagePayloadAlignment', c_ulong),
+            ('ImagePayloadMaxSize', c_ulong),
+            ('Slot', STORAGE_FIRMWARE_SLOT_INFO_V2 * max_slot),
+        ]
+        _pack_ = 1
+    return STORAGE_FIRMWARE_INFO_V2

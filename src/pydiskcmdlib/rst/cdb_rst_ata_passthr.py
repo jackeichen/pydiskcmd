@@ -100,6 +100,8 @@ class RSTATAPass12(CSMI_SAS_STP_PASSTHRU):
         CSMI_SAS_STP_PASSTHRU.__init__(self, phy_id, port_id, connection_rate, 
                                        sas_addr, bytes(fis), flags, data_len, data=data,
                                        )
+        ##
+        self._result = {}
 
     def _encode_h2d_register(self, **kwargs):
         '''
@@ -119,6 +121,14 @@ class RSTATAPass12(CSMI_SAS_STP_PASSTHRU):
     @property
     def ata_status_return_descriptor(self):
         return self._decode_d2h_register()
+
+    @property
+    def datain(self):
+        return bytes(self.cdb.bDataBuffer)
+    
+    @property
+    def result(self):
+        return self._result
 
     def get_ata_status_return(self):
         return self.ata_status_return_descriptor
@@ -210,6 +220,8 @@ class RSTATAPass16(CSMI_SAS_STP_PASSTHRU):
         CSMI_SAS_STP_PASSTHRU.__init__(self, phy_id, port_id, connection_rate, 
                                        sas_addr, bytes(fis), flags, data_len, data=data,
                                        )
+        ##
+        self._result = {}
 
     def _encode_h2d_register(self, **kwargs):
         '''
@@ -221,16 +233,47 @@ class RSTATAPass16(CSMI_SAS_STP_PASSTHRU):
 
     def _decode_d2h_register(self):
         result = {}
-        decode_bits(bytes(self.cdb.Status.bStatusFIS), self._d2h_register_bitmap, result)
+        decode_bits(bytes(self.cdb.Status.bStatusFIS), self._d2h_register_bitmap, result, byteorder='little')
         return result
 
+    @property
+    def ata_status_return_descriptor(self):
+        return self._decode_d2h_register()
+
+    @property
+    def datain(self):
+        return bytes(self.cdb.bDataBuffer)
+    
+    @property
+    def result(self):
+        return self._result
+
+    def get_ata_status_return(self):
+        # TODO
+        return self._decode_d2h_register()
+
     def check_return_status(self, success_hint=False, fail_hint=True, raise_if_fail=True) -> int:
+        ret = 0
+        ## level 1. Check the IOCTL execute return code
+        if self.ioctl_result is not None and self.ioctl_result == 0:
+            ret = 1
+            import ctypes # noqa: F401
+            if fail_hint:
+                print (str(ctypes.WinError(ctypes.get_last_error())))
+            if raise_if_fail:
+                raise ctypes.WinError(ctypes.get_last_error())
+        ## Level 2. Check SRB_IO_CONTROL ReturnCode field
+        if self.cdb.IoctlHeader.ReturnCode != 0:
+            ret = 2
+            rc = self.cdb.IoctlHeader.ReturnCode
+            if fail_hint:
+                print ("IoctlHeader->ReturnCode is %#x" % rc)
+            if raise_if_fail:
+                raise CommandReturnStatusError('Command Check Error: %#x' % rc)
+        ## Level 3. Check ATA returncode: Status and Error field
         result = self._decode_d2h_register()
-        ret = (result.get("Status") &0x01) | result.get("Error")
-        if ret == 0 and success_hint:
-            print ("Command Success")
-            print ('')
-        if ret!= 0:
+        if ((result.get("Status") &0x01) | result.get("Error")) != 0:
+            ret = 3
             if fail_hint:
                 print ("Command failed, and details bellow.")
                 print ("- ATA Status:")
@@ -241,4 +284,8 @@ class RSTATAPass16(CSMI_SAS_STP_PASSTHRU):
                                         ))
             if raise_if_fail:
                 raise CommandReturnStatusError("Command failed, status: %#x, error: %#x" % (result.get("Status"), result.get("Error")))
+        ##
+        if ret == 0 and success_hint:
+            print ("Command Success")
+            print ('')
         return ret

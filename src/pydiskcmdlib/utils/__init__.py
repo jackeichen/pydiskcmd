@@ -48,6 +48,14 @@ def init_device(dev,
             device = CSMIDevice(dev, read_write)
         else:
             raise NotImplementedError('No backend implemented for %s' % dev)
+    elif open_t == 'rst':
+        if os_type == "Windows":
+            from pydiskcmdlib.rst.rst_device import RSTDevice
+            if dev.startswith("Scsi"):
+                dev = "\\\\.\\" + dev
+            device = RSTDevice(dev, read_write)
+        else:
+            raise NotImplementedError('No backend implemented for %s' % dev)
     elif open_t == None and os_type == "Linux":
         if dev[:5] == '/dev/' and "nvme" in dev[5:]:
             from pydiskcmdlib.pynvme.nvme_device import NVMeDevice
