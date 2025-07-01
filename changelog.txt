@@ -6,7 +6,7 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.3.5 (Not Released)
+Version 0.3.5 (20250701)
   * fix a bug that conflict argument in 'pynvme get-log'
   * add support MegaRAID(Broadcom RAID) for pydiskcmdlib
   * add plugin megaraid for pydiskcmdcli
