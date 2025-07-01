@@ -14,7 +14,7 @@ if os_type == "Windows":
                      device,
                      readwrite=True,
                      detect_replugged=True):
-            super(RSTDevice, self).__init__(device, readwrite, detect_replugged, share_mode=0, flags_and_attributes=0)
+            super(RSTDevice, self).__init__(device, readwrite, detect_replugged, share_mode=3, flags_and_attributes=0)
 
         def execute(self, cmd: CommandWrapper):
             """

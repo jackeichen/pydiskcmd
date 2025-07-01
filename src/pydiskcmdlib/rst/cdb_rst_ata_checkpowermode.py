@@ -14,17 +14,13 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
-from .cdb_rst_ata_passthr import RSTATAPass12, RSTATAPass16, ATA_DATA_TRANSFER_DIRECTION
-import pydiskcmdlib.utils.converter as convert
-from pydiskcmdlib.pysata.sata_spec import Identify_Info
+from .cdb_rst_ata_passthr import RSTATAPass16, ATA_DATA_TRANSFER_DIRECTION
 
 
-class Identify16(RSTATAPass16):
+class CheckPowerMode16(RSTATAPass16):
     """
-    A class to send identify command to a ATA device
+    A class to send CheckPowerMode command to a ATA device
     """
-    _standard_bits =  Identify_Info
-
     def __init__(self,
                  phy_id,
                  port_id,
@@ -34,23 +30,11 @@ class Identify16(RSTATAPass16):
                               phy_id,
                               port_id,
                               sas_addr,
-                              0xec,      # command
+                              0xe5,      # command
                               0,         # fetures
                               0,         # lba
                               0,         # device
                               0,         # count
-                              ATA_DATA_TRANSFER_DIRECTION.DATA_IN.value, # 0 for NO_DATA, 1 for DATA_IN, 2 for DATA_OUT
-                              data_len=512, # data_len
+                              ATA_DATA_TRANSFER_DIRECTION.NO_DATA.value, # 0 for NO_DATA, 1 for DATA_IN, 2 for DATA_OUT
+                              data_len=0, # data_len
                               )
-
-    def unmarshall_datain(self):
-        """
-        Unmarshall the Identify datain buffer
-
-        :param data: a byte array with inquiry data
-        :return result: a dict
-        """
-        convert.decode_bits(bytearray(self.cdb.bDataBuffer),
-                            self._standard_bits,
-                            self._result)
-        return self._result

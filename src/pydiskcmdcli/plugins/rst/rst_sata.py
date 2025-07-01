@@ -58,6 +58,7 @@ def _win_sata_rst_print_help():
         print ("The following are all implemented sub-commands:")
         print ("")
         print ("  list                          List All SATA RST disks")
+        print ("  check-PowerMode               Check device Power Mode")
         print ("  identify                      Send Identify command to SATA Disk under RST controller")
         print ("  smart                         Send SMART command to SATA Disk under RST controller")
         print ("  smart-return-status           Get SMART Return Status")
@@ -120,6 +121,55 @@ def _win_sata_rst_list():
             except:
                 log.debug("Skip Device[%s]: %s" % (node, traceback.format_exc()))
 
+def _win_sata_rst_check_PM():
+    usage="usage: %prog rst check-PowerMode <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_debug=True)
+
+    (options, args) = parser.parse_args()
+    if len(sys.argv) > 3:
+        script_check(options, admin_check=True)
+        ## device path
+        dev = sys.argv[3].strip().split('/')
+        ctrl_path,phy_id = dev
+        phy_id = int(phy_id)
+        # print (dev, ctrl_path,phy_id)
+        ## check out the target disk
+        with RSTController(init_device(ctrl_path, open_t='rst')) as ctrl:
+            for disk in ctrl.get_sata_disks():
+                if disk._phy_id == phy_id:
+                    break
+            else:
+                print ("Disk %s not found" % sys.argv[3])
+                return 1
+            ##
+            cmd = disk.check_power_mode()
+        cmd.check_return_status()
+        # print(cmd.ata_status_return_descriptor)
+        sector_count = cmd.ata_status_return_descriptor['Sector_Count']
+        ##
+        count = sector_count&0xFF
+        print ("Device is in the:")
+        if count == 0xFF:
+            print ("  PM0:Active state or PM1:Idle state.")
+        elif count == 0x00:
+            print ("  PM2:Standby state (see 4.15.4) and the EPC feature set (see 4.9) is not enabled; or")
+            print ("  PM2:Standby state, the EPC feature set is enabled, and the device is in the Standby_z power condition.")
+        elif count == 0x01:
+            print ("  PM2:Standby state, the EPC feature set is enabled, and the device is in the Standby_y power condition.")
+        elif count == 0x80:
+            print ("  PM1:Idle state (see 4.15.4) and EPC feature set is not supported.")
+        elif count == 0x81:
+            print ("  PM1:Idle state, the EPC feature set is enable, and the device is in the Idle_a power condition.")
+        elif count == 0x82:
+            print ("  PM1:Idle state, the EPC feature set is enabled, and the device is in the Idle_b power condition.")
+        elif count == 0x83:
+            print ("  PM1:Idle state, the EPC feature set is enabled, and the device is in the Idle_c power condition.")
+        else:
+            print ("  Other power state: state Reserved or Obsoleted.")
+    else:
+        parser.print_help()
+
 def _win_sata_rst_identify():
     usage="usage: %prog rst identify <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -143,6 +193,7 @@ def _win_sata_rst_identify():
                 return 1
             ##
             cmd = disk.identify()
+        cmd.check_return_status()
         cmd.unmarshall_datain()
         format_print_identify(cmd, print_type=options.output_format)
     else:
@@ -343,6 +394,7 @@ def _win_sata_rst_get_fw_info():
 
 
 plugin_win_sata_rst_commands_dict = {"list": _win_sata_rst_list,
+                                     "check-PowerMode": _win_sata_rst_check_PM,
                                      "identify": _win_sata_rst_identify,
                                      "smart": _win_sata_rst_smart,
                                      "smart-return-status": _win_sata_rst_smart_return_status,

@@ -275,7 +275,7 @@ commands inside. Use bellow command to get help:
     $ pysata help
 
 ```
-pysata-0.3.0
+pysata-0.3.6
 usage: pysata <command> [<device>] [<args>]
 
 The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
@@ -291,10 +291,15 @@ The following are all implemented sub-commands:
   smart                       Get smart information
   smart-return-status         Get the reliability status of the device
   read-log                    Get the GPL Log and show it
+  write-log                   Send write log command
   smart-read-log              Get the smart Log and show it
+  sanitize                    Send sanitize command
   standby                     Send standby command
   read                        Send a read command to disk
+  read-sectors                Send a read sector(s) command to disk
+  read-verify-sector          Send read verify sector(s) command
   write                       Send a write command to disk
+  write-uncorrectable         Send a write uncorrectable command to disk
   flush                       Send a flush command to disk
   trim                        Send a trim command to disk
   download-fw                 Download firmware to target disk
@@ -302,7 +307,8 @@ The following are all implemented sub-commands:
   help                        Display this help
 
 The following are all installed plugin extensions:
-  megaraid                    MegaRAID extensions
+  megaraid                    MegaRAID Linux extensions
+  rst                         Intel RAID RST Windows extensions
 
 The following are pysata cli management interface:
   cli-info                    Shows pysata information
@@ -319,7 +325,7 @@ commands inside. Use bellow command to get help:
     $ pyscsi help
 
 ```
-pyscsi 0.3.0
+pyscsi 0.3.6
 usage: pyscsi <sub-command> [<device>] [<args>]
 
 The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
@@ -343,6 +349,7 @@ The following are all implemented sub-commands:
 
 The following are all installed plugin extensions:
   parse-cmd                   Parse the CDB and sense code
+  lenovo                      Lenovo disk plugin(for Private Release)
   csmi                        Common Storage Management Interface (CSMI) plugin
   megaraid                    MegaRAID extensions
 

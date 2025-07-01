@@ -6,6 +6,7 @@ from pydiskcmdlib.os.win_ioctl_utils import ATA_DATA_TRANSFER_DIRECTION
 from pydiskcmdlib.csmi.win_ioctl_utils import CSMI_SAS_LINK_RATE,STP_Flags
 from pydiskcmdlib.csmi.cdb_csmi_sas_stp_passthrough import CSMI_SAS_STP_PASSTHRU
 from pydiskcmdlib.exceptions import *
+from pydiskcmdlib import log
 
 
 class RSTATAPass12(CSMI_SAS_STP_PASSTHRU):
@@ -272,6 +273,8 @@ class RSTATAPass16(CSMI_SAS_STP_PASSTHRU):
                 raise CommandReturnStatusError('Command Check Error: %#x' % rc)
         ## Level 3. Check ATA returncode: Status and Error field
         result = self._decode_d2h_register()
+        # format print StatusFIS
+        log.debug("StatusFIS: %s" % result)
         if ((result.get("Status") &0x01) | result.get("Error")) != 0:
             ret = 3
             if fail_hint:

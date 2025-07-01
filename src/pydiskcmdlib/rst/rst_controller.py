@@ -21,6 +21,7 @@ from .cdb_rst_nvme_identify import (
     Identify,
 )
 from .cdb_rst_nvme_aer import RegisterAER
+from .cdb_rst_ata_checkpowermode import CheckPowerMode16
 from .cdb_rst_ata_smart import (
     SmartReadData16,
     SmartReadThresh16,
@@ -37,6 +38,7 @@ from .win_ioctl_utils import (
 )
 
 from pydiskcmdlib.exceptions import *
+from pydiskcmdlib import log
 
 class RSTNVMe(object):
     def __init__(self, dev, path_id: int):
@@ -162,6 +164,11 @@ class RSTATA(object):
 
     def _get_PTL_by_sasaddress(self):
         return self._sas_addr[0],self._sas_addr[1],self._sas_addr[2]
+
+    def check_power_mode(self):
+        cmd = CheckPowerMode16(self._phy_id, self._port_id, self._sas_addr)
+        self.execute(cmd)
+        return cmd
 
     def smart_read_data(self, smart_key=None):
         cmd = SmartReadData16(self._phy_id, self._port_id, self._sas_addr, smart_key)
