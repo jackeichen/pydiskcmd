@@ -6,6 +6,8 @@ from .cdb_csmi_sas_get_raid_info import CSMI_SAS_GET_RAID_INFO
 from .cdb_csmi_sas_get_raid_config import CSMI_SAS_GET_RAID_CONFIG
 from .cdb_csmi_sas_get_phy_info import CSMI_SAS_GET_PHY_INFO
 from .cdb_csmi_sas_get_cntlr_status import CSMI_SAS_GET_CNTLR_STATUS
+from .cdb_csmi_sas_get_cntlr_config import CSMI_SAS_GET_CNTLR_CONFIG
+from .cdb_csmi_sas_get_sata_signature import CSMI_SAS_GET_SATA_SIGNATURE
 
 class CSMIController(object):
     def __init__(self, dev):
@@ -65,4 +67,12 @@ class CSMIController(object):
 
     def get_cntlr_status(self):
         cmd = CSMI_SAS_GET_CNTLR_STATUS()
+        return self.execute(cmd)
+
+    def get_cntlr_config(self):
+        cmd = CSMI_SAS_GET_CNTLR_CONFIG()
+        return self.execute(cmd)
+
+    def get_sata_signature(self, phy_id):
+        cmd = CSMI_SAS_GET_SATA_SIGNATURE(phy_id)
         return self.execute(cmd)

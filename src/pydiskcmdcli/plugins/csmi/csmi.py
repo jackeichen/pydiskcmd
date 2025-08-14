@@ -7,7 +7,7 @@ from pydiskcmdcli import os_type
 from pydiskcmdlib.utils import init_device
 from pydiskcmdcli.utils import nvme_format_print
 from pydiskcmdlib.utils.converter import scsi_ba_to_int
-from pydiskcmdcli.utils.format_print import format_dump_bytes,human_read_capacity
+from pydiskcmdcli.utils.format_print import format_dump_bytes,human_read_capacity,format_print_pyobj
 from pydiskcmdcli.scripts import parser_update,script_check
 from pydiskcmdcli.utils.string_utils import decode_bytes,string_strip
 from .scan_csmi_controller import (
@@ -32,10 +32,12 @@ def _win_csmi_print_help():
         print ("")
         print ("  list-ctrls                    List all CSMI Controllers")
         print ("  get-cntrl-status              Get CSMI Controller Status")
+        print ("  get-cntrl-config              Get CSMI Controller Config")
         print ("  get-driver-info               Get CSMI Controller Driver Info")
         print ("  get-raid-info                 Get CSMI Controller Raid Info")
         print ("  get-raid-config               Get CSMI Controller Raid Config")
         print ("  get-phy-info                  Get CSMI Controller Phy Info")
+        print ("  get-sata-sig                  Get SATA Signature for a specific phy id")
         print ("  version                       Shows Windows CSMI plugin version")
         print ("  help                          Display this help")
         print ("")
@@ -108,6 +110,36 @@ def _win_csmi_get_driver_info():
             print ("  ReleaseRevision: %d" % cmd.cdb.Information.usReleaseRevision)
             print ("  CSMIMajorRevision: %d" % cmd.cdb.Information.usCSMIMajorRevision)
             print ("  CSMIMinorRevision: %d" % cmd.cdb.Information.usCSMIMinorRevision)
+    else:
+        parser.print_help()
+
+def _win_csmi_get_cntrl_config():
+    usage="usage: %prog csmi get-cntrl-config"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal", "raw", "hex"])
+
+    (options, args) = parser.parse_args()
+    if len(sys.argv) > 3:
+        #
+        dev = sys.argv[3].strip()
+        ##
+        script_check(options, admin_check=True)
+        ##
+        with CSMIController(init_device(dev, open_t='csmi')) as d:
+            cmd = d.get_cntlr_config()
+        cmd.check_return_status(raise_if_fail=True)
+        if options.output_format == "normal":
+            print ("CSMI Get %s Cntrl Config:" % dev)
+            data = cmd.unmarshall_cdb()
+            if data:
+                format_print_pyobj(data['Configuration'])
+            else:
+                print ("Invalid Data")
+                return 1
+        elif options.output_format == "raw":
+            print (bytes(cmd.cdb.Configuration))
+        elif options.output_format == "hex":
+            format_dump_bytes(bytes(cmd.cdb.Configuration))
     else:
         parser.print_help()
 
@@ -273,13 +305,45 @@ def _win_csmi_get_phy_info():
                 print ("      SignalClass:           %#x" % temp.Attached.bSignalClass)
                 print ("  ----------------------------")
 
+def _win_csmi_get_sata_sig():
+    usage="usage: %prog csmi get-sata-sig"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-i", "--phy-id", type="int", dest="phy_id", action="store", default=-1,
+        help="The phy identifier of given device.")
+    parser_update(parser)
+
+    (options, args) = parser.parse_args()
+    if options.phy_id < 0:
+        parser.error("phy identifier is required.")
+        return 1
+    if len(sys.argv) > 3:
+        dev = sys.argv[3].strip()
+        ##
+        script_check(options, admin_check=True)
+        ##
+        with CSMIController(init_device(dev, open_t='csmi')) as d:
+            cmd = d.get_sata_signature(options.phy_id)
+        ##
+        cmd.check_return_status(raise_if_fail=True)
+        print ("CSMI Get %s Phy %d SATA Signature:" % (dev, options.phy_id))
+        print ("")
+        print ("  Device to Host FIS: %s" % ' '.join(['%#x' % i for i in cmd.cdb.Signature.bSignatureFIS]))
+        print ("  FIS Type: %#x(the entire FIS is assumed to be %s)" % (cmd.cdb.Signature.bSignatureFIS[0], 
+                                                                       "valid" if cmd.cdb.Signature.bSignatureFIS[0] == 0x34 else "invalid",
+                                                                       )
+               )
+    else:
+        parser.print_help()
+
 
 plugin_win_nvme_vroc_commands_dict = {"list-ctrls": _win_csmi_list_ctrls,
                                       "get-cntrl-status": _win_csmi_get_cntrl_status,
+                                      "get-cntrl-config": _win_csmi_get_cntrl_config,
                                       "get-driver-info": _win_csmi_get_driver_info,
                                       "get-raid-info": _win_csmi_get_raid_info,
                                       "get-raid-config": _win_csmi_get_raid_config,
                                       "get-phy-info": _win_csmi_get_phy_info,
+                                      "get-sata-sig": _win_csmi_get_sata_sig,
                                       "version": _win_csmi_print_ver,
                                       "help": _win_csmi_print_help,}
 

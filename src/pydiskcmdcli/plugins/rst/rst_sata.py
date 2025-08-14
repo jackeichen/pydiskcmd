@@ -406,7 +406,7 @@ plugin_win_sata_rst_commands_dict = {"list": _win_sata_rst_list,
 
 def win_sata_rst():
     if os_type != 'Windows':
-        raise NotImplementedError("Only Windows NVMe VROC support")
+        raise NotImplementedError("Only Windows Intel RST support")
     if len(sys.argv) > 2:
         plugin_command = sys.argv[2]
         if plugin_command in plugin_win_sata_rst_commands_dict:

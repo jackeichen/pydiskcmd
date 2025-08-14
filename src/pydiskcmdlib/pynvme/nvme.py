@@ -26,6 +26,7 @@ from pydiskcmdlib.pynvme.cdb_nvme_dataset_management import DatasetManagement
 from pydiskcmdlib.pynvme.cdb_nvme_get_lba_status import GetLBAStatus
 from pydiskcmdlib.pynvme.cdb_nvme_reset import Reset
 from pydiskcmdlib.pynvme.cdb_nvme_subsys_reset import SubsysReset
+from pydiskcmdlib.pynvme.cdb_nvme_mi import NVMeMISend, NVMeMIRecv
 from pydiskcmdlib.exceptions import *
 from pydiskcmdlib.pynvme.data_buffer import DataBuffer
 from pydiskcmdlib import log
@@ -276,6 +277,16 @@ class NVMe(object):
 
     def ns_attachment(self, ns_id, sel, ctrl_id_list):
         cmd = NSAttachment(ns_id, sel, ctrl_id_list)
+        self.execute(cmd)
+        return cmd
+
+    def nvme_mi_send(self, opcode, nmd0, nmd1, data=None):
+        cmd = NVMeMISend(opcode, nmd0, nmd1, data=data)
+        self.execute(cmd)
+        return cmd
+
+    def nvme_mi_recv(self, opcode, nmd0, nmd1, data_len=0):
+        cmd = NVMeMIRecv(opcode, nmd0, nmd1, data_len=data_len)
         self.execute(cmd)
         return cmd
 

@@ -101,3 +101,33 @@ def deocde_format_bits(data_dict, check_dict):
 
 def json_print(json_object):
     print (json.dumps(json_object, sort_keys=False, indent=2))
+
+def format_print_pyobj(data, prefix="  "):
+    if isinstance(data, dict):
+        for k,v in data.items():
+            if isinstance(v, (dict, list, tuple)):
+                print ("%s%s: " % (prefix, k))
+                format_print_pyobj(v, prefix*2)
+            else:
+                if isinstance(v, (int, float)):
+                    temp = "%#x" % v
+                elif isinstance(v, bytearray):
+                    temp = bytes(v)
+                else:
+                    temp = v
+                print ("%s%s: %s" % (prefix, k, temp))
+    elif isinstance(data, (list, tuple)):
+        for v in data:
+            if isinstance(v, (dict, list, tuple)):
+                print ("%s- " % prefix)
+                format_print_pyobj(v, prefix*2)
+            else:
+                if isinstance(v, (int, float)):
+                    temp = "%#x" % v
+                elif isinstance(v, bytearray):
+                    temp = bytes(v)
+                else:
+                    temp = v
+                print ("%s- %s" % (prefix, temp))
+    else:
+        print ("%s: %s" % (prefix, data))

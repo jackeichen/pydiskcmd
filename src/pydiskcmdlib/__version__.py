@@ -4,8 +4,11 @@
 
 major = 0
 minor = 3
-revision = 2
+revision = 3
 ## version format
 version_format = (major, minor, revision)
 ## version in string format
 version = '%s.%s.%s' % (major, minor, revision)
+
+# 0.3.2 -> 0.3.3
+# follow pynvme version changed

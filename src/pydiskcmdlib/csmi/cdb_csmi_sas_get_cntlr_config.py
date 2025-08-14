@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
-from .csmi_command import CSMICommand
+from .csmi_command import CSMICommandPro
 from .win_ioctl_structures import (
     SRB_IO_CONTROL_LEN,
     CSMI_SAS_CNTLR_CONFIG_BUFFER,
@@ -13,7 +13,7 @@ from .win_ioctl_utils import (
 )
 
 
-class CSMI_SAS_GET_CNTLR_CONFIG(CSMICommand):
+class CSMI_SAS_GET_CNTLR_CONFIG(CSMICommandPro):
     """
     Initialize the CSMICommand for retrieving the SAS controller configuration buffer.
 
@@ -43,11 +43,12 @@ class CSMI_SAS_GET_CNTLR_CONFIG(CSMICommand):
     #             }
 
     def __init__(self, timeout=CSMI_TIMEOUT.CSMI_ALL_TIMEOUT.value):
-        CSMICommand.__init__(self, CSMI_SAS_CNTLR_CONFIG_BUFFER)
-        self.build_command(HeaderLength=SRB_IO_CONTROL_LEN,
-                           Signature=CSMISignature.CSMI_ALL_SIGNATURE.value,
-                           Timeout=timeout,
-                           ControlCode=CSMI_Control_Code.CC_CSMI_SAS_GET_CNTLR_CONFIG.value,
-                           ReturnCode=0,
-                           Length=self.cdb_raw_struc_len-SRB_IO_CONTROL_LEN,
+        CSMICommandPro.__init__(self, CSMI_SAS_CNTLR_CONFIG_BUFFER)  # IoctlHeader, Configuration
+        self.build_command(IoctlHeader={"HeaderLength": SRB_IO_CONTROL_LEN,
+                                        "Signature":CSMISignature.CSMI_ALL_SIGNATURE.value,
+                                        "Timeout":timeout,
+                                        "ControlCode":CSMI_Control_Code.CC_CSMI_SAS_GET_CNTLR_CONFIG.value,
+                                        "ReturnCode":0,
+                                        "Length": self.cdb_raw_struc_len-SRB_IO_CONTROL_LEN,
+                                        },
                            )

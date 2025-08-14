@@ -9,6 +9,7 @@ from .broadcom import meraraid_sata
 from .broadcom import meraraid_scsi
 from .pcie import pci
 from .rst import win_sata_rst
+from .nvme_mi import nvme_mi
 try:
     from .lenovo import lenovo
 except:
@@ -17,10 +18,13 @@ except:
 
 nvme_plugins = { "ocp": ocp,
                  "vroc": win_nvme_vroc,
-                 "pci":pci,}
+                 "pci":pci,
+                 "mi": nvme_mi,
+                 }
 
 ata_plugins = {"megaraid": meraraid_sata,
-               "rst": win_sata_rst,}
+               "rst": win_sata_rst,
+               }
 
 scsi_plugins = {"parse-cmd": parse_cmd,
                 "lenovo": lenovo,

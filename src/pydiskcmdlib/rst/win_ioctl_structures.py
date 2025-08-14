@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from ctypes import (Structure,
+                    c_int,
                     c_uint8,
                     c_int8,
                     c_uint16,
@@ -275,3 +276,106 @@ class NVME_IOCTL_GET_AER_DATA(Structure):
         ('Data', NVME_AER_DATA),
     ]
     _pack_ = 1
+
+# struct REMAPPORT_LOCATION_PCI_BDF
+# {
+# UCHAR Bus;
+# UCHAR Device : 5;
+# UCHAR Function : 3;
+# } REMAPPORT_LOCATION_PCI_BDF;
+class REMAPPORT_LOCATION_PCI_BDF(Structure):
+    _fields_ = [
+        ('Bus', c_uint8),
+        ('Device', c_uint8, 5),
+        ('Function', c_uint8, 3),
+    ]
+    _pack_ = 1
+
+# struct REMAPPORT_LOCATION_SATA
+# {
+# UCHAR PortNumber;
+# };
+# struct REMAPPORT_LOCATION_CR
+# {
+# UCHAR CycleRouterNumber;
+# };
+# struct REMAPPORT_LOCATION_SW_REMAP
+# {
+# REMAPPORT_LOCATION_PCI_BDF PciAddress;
+# };
+class REMAPPORT_LOCATION_SATA(Structure):
+    _fields_ = [
+        ('PortNumber', c_uint8),
+    ]
+    _pack_ = 1
+
+class REMAPPORT_LOCATION_CR(Structure):
+    _fields_ = [
+        ('CycleRouterNumber', c_uint8),
+    ]
+    _pack_ = 1
+
+class REMAPPORT_LOCATION_SW_REMAP(Structure):
+    _fields_ = [
+        ('PciAddress', REMAPPORT_LOCATION_PCI_BDF),
+    ]
+    _pack_ = 1
+
+# struct REMAPPORT_LOCATION_VMD
+# {
+# USHORT SocketNumber;
+# USHORT ControllerNumber;
+# // Device's root port Bus/Device/Function
+# REMAPPORT_LOCATION_PCI_BDF RootPortAddress;
+# // Physical slot number from SLCAP.PSN field in
+# // devices root port's PCI Express Capability
+# USHORT PhysicalSlotNumber;
+# };
+class REMAPPORT_LOCATION_VMD(Structure):
+    _fields_ = [
+        ('SocketNumber', c_uint16),
+        ('ControllerNumber', c_uint16),
+        ('RootPortAddress', REMAPPORT_LOCATION_PCI_BDF),
+        ('PhysicalSlotNumber', c_uint16),
+    ]
+    _pack_ = 1
+
+# struct REMAPPORT_IOCTL_GET_DEVICE_LOCATION
+# {
+# SRB_IO_CONTROL srbIoControl;
+# UCHAR Version; // version 1
+# UCHAR Size; // sizeof this struct
+# UCHAR PathId;
+# UCHAR TargetId;
+# UCHAR Lun;
+# REMAPPORT_LOCATION_TYPE LocationType;
+# union {
+# REMAPPORT_LOCATION_SATA Sata;
+# REMAPPORT_LOCATION_CR CR;
+# REMAPPORT_LOCATION_SW_REMAP SwRemap;
+# REMAPPORT_LOCATION_VMD Vmd;
+# } Location;
+# };
+# #pragma pack(pop, remapport_ioctl)
+class Location_UNION(Union):
+    _fields_ = [
+        ('Sata', REMAPPORT_LOCATION_SATA),
+        ('CR', REMAPPORT_LOCATION_CR),
+        ('SwRemap', REMAPPORT_LOCATION_SW_REMAP),
+        ('Vmd', REMAPPORT_LOCATION_VMD),
+    ]
+    _pack_ = 1
+
+class REMAPPORT_IOCTL_GET_DEVICE_LOCATION(Structure):
+    _fields_ = [
+        ('srbIoControl', SRB_IO_CONTROL),
+        ('Version', c_uint8),
+        ('Size', c_uint8),
+        ('PathId', c_uint8),
+        ('TargetId', c_uint8),
+        ('Lun', c_uint8),
+        ('LocationType', c_int),
+        ('Location', Location_UNION),
+    ]
+    _pack_ = 1
+

@@ -92,6 +92,7 @@ def print_help():
         print ("  ocp                   OCP cloud SSD extensions")
         print ("  vroc                  Windows NVMe VROC support")
         print ("  pci                   Linux PCIe SSD extensions")
+        print ("  mi                    NVMe-MI extensions")
         print ("")
         print ("The following are pynvme cli management interface:")
         print ("  cli-info              Shows pynvme information")

@@ -259,6 +259,7 @@ The following are all installed plugin extensions:
   ocp                   OCP cloud SSD extensions
   vroc                  Windows NVMe VROC support
   pci                   Linux PCIe SSD extensions
+  mi                    NVMe-MI extensions
 
 The following are pynvme cli management interface:
   cli-info              Shows pynvme information

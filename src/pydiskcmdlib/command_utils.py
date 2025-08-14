@@ -132,7 +132,7 @@ class CommandWrapper(object):
         self._byteorder = sys.byteorder
         ## some variables used by OS
         self._ioctl_result = None
-        # Linux
+        # Linux IOCTL parameters
         # Windows IOCTL parameters
         self._bytes_returned = BytesReturnedStruc(0) if os_type == "Windows" else None
         self._over_lapped = None  # Not used now
