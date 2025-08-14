@@ -13,10 +13,10 @@ def decode_subsys_health_status(data):
               "Percentage Drive Life Used": None,
               "Composite Controller Status": None,
               }
-    result["NVM Subsystem Status"]["P1LA"] = data[0] & 0x04
-    result["NVM Subsystem Status"]["P0LA"] = data[0] & 0x08
-    result["NVM Subsystem Status"]["RNR"] = data[0] & 0x10
-    result["NVM Subsystem Status"]["DF"] = data[0] & 0x20
+    result["NVM Subsystem Status"]["P1LA"] = (data[0] >> 2) & 0x01
+    result["NVM Subsystem Status"]["P0LA"] = (data[0] >> 3) & 0x01
+    result["NVM Subsystem Status"]["RNR"] = (data[0] >> 4) & 0x01
+    result["NVM Subsystem Status"]["DF"] = (data[0] >> 5) & 0x01
     ##
     result["Smart Warnings"] = data[1]
     result["Composite Temperature"] = data[2]
