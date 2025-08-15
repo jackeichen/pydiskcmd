@@ -58,6 +58,7 @@ def print_help():
         print ("  smart-log             Retrieve SMART Log, show it")
         print ("  error-log             Retrieve Error Log, show it")
         print ("  commands-se-log       Retrieve Commands Supported and Effects Log, and show it")
+        print ("  mi-commands-se-log    Retrieve NVMe-MI Commands Supported and Effects Log, and show it")
         print ("  fw-log                Retrieve FW Log, show it")
         print ("  sanitize-log          Retrieve Sanitize Log, show it")
         print ("  self-test-log         Retrieve the SELF-TEST Log, show it")
@@ -793,6 +794,25 @@ def commands_supported_and_effects():
             cmd = d.commands_supported_and_effects_log()
         ##
         nvme_format_print.format_print_supported_and_effects(cmd.data, dev=d.device.device_name, print_type=options.output_format)
+    else:
+        parser.print_help()
+
+def mi_commands_supported_and_effects():
+    usage="usage: %prog mi-commands-se-log <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser, add_output=["normal", "hex", "raw", "json"])
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, admin_check=True)
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.mi_commands_supported_and_effects_log()
+        ##
+        cmd.check_return_status(raise_if_fail=True)
+        nvme_format_print.format_print_mi_commands_supported_and_effects(cmd, print_type=options.output_format)
     else:
         parser.print_help()
 
@@ -1759,6 +1779,7 @@ commands_dict = {"list": _list,
                  "device-self-test": device_self_test,
                  "self-test-log": self_test_log,
                  "commands-se-log": commands_supported_and_effects,
+                 "mi-commands-se-log": mi_commands_supported_and_effects,
                  "pcie": pcie,
                  "show-regs": show_regs,
                  "flush": flush,

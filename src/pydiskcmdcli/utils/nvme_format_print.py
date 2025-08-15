@@ -17,13 +17,14 @@ from pydiskcmdcli.nvme_spec import (
     nvme_power_management_cq_decode,
     decode_sanitize_log,
     decode_ctrl_register,
+    decode_mi_commands_supported_and_effects,
     )
 from pydiskcmdcli.plugins.ocp.DSSD_spec import (
     ocp_smart_extended_decode,
     ocp_error_recovery_decode,
     ocp_latency_monitor_decode,
     )
-from pydiskcmdcli.utils.format_print import format_dump_bytes,json_print
+from pydiskcmdcli.utils.format_print import format_dump_bytes,json_print,format_print_pyobj
 from pydiskcmdlib.utils.converter import scsi_ba_to_int,ba_to_ascii_string
 
 
@@ -563,6 +564,22 @@ def format_print_id_uuid(cmd, print_type='normal'):
         print ("Function TODO")
     elif print_type == 'hex':
         format_dump_bytes(raw_data, end=511)
+    elif print_type == 'raw':
+        print (raw_data)
+    else:
+        raise NotImplementedError("Not Support type: %s" % print_type)
+
+def format_print_mi_commands_supported_and_effects(cmd, print_type='normal'):
+    raw_data = cmd.data
+    if print_type == 'normal' or print_type == 'json':
+        decoded_data = decode_mi_commands_supported_and_effects(raw_data)
+        if print_type == 'normal':
+            print ("NVME-MI Commands Supported and Effects -")
+            format_print_pyobj(decoded_data)
+        else:
+            json_print(decoded_data)
+    elif print_type == 'hex':
+        format_dump_bytes(raw_data)
     elif print_type == 'raw':
         print (raw_data)
     else:

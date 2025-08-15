@@ -298,6 +298,41 @@ ctrl_register_bit_mask = {"cap": ('b', 0, 8),
                           "pmrmscu": ('b', 0xE18, 4),
                           }
 
+mi_commands_supported_and_effects_bit_mask = {"CSUPP": [0x01, 0],
+                                              "UDCC": [0x02, 0],
+                                              "NCC": [0x04, 0],
+                                              "NIC": [0x08, 0],
+                                              "CCC": [0x10, 0],
+                                              "CSP": [0xFFF0, 2],
+                                              }
+
+nvme_mi_command_names = {0x00: "Read NVMe-MI Data Structure",
+                         0x01: "NVM Subsystem Health Status Poll",
+                         0x02: "Controller Health Status Poll",
+                         0x03: "Configuration Set",
+                         0x04: "Configuration Get",
+                         0x05: "VPD Read",
+                         0x06: "VPD Write",
+                         0x07: "Reset",
+                         0x08: "SES Receive",
+                         0x09: "SES Send",
+                         0x0A: "Management Endpoint Buffer Read",
+                         0x0B: "Management Endpoint Buffer Write",
+                         0x0C: "Shutdown",
+                         tuple(range(0x0D, 0xC0)): "Reserved",
+                         tuple(range(0xC0, 0x100)): "Vendor specific",
+                         }
+
+def get_nvme_mi_command_name(opcode: int) -> str:
+    if opcode < 0x0D:
+        name = nvme_mi_command_names.get(opcode)
+    elif opcode < 0xC0:
+        name = "Reserved"
+    elif opcode < 0x100:
+        name = "Vendor specific"
+    else:
+        name = "Unknown"
+    return name
 
 class ErrorInfomationLogEntryUnit(object):
     def __init__(self, data):
@@ -510,4 +545,13 @@ def decode_ctrl_register(data):
     decode_bits(data, ctrl_register_bit_mask, result)
     for k,v in result.items():
         result[k] = scsi_ba_to_int(v, 'little')
+    return result
+
+def decode_mi_commands_supported_and_effects(data):
+    result = {}
+    for i in range(256):
+        temp = {}
+        decode_bits(data[i*4:(i+1)*4], mi_commands_supported_and_effects_bit_mask, temp)
+        if temp['CSUPP']:
+            result[i] = temp
     return result

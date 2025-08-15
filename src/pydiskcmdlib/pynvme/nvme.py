@@ -6,8 +6,19 @@ from pydiskcmdlib.pynvme.cdb_identify import IDCtrl,IDNS,IDActiveNS,IDAllocatedN
 from pydiskcmdlib.pynvme.cdb_set_feature import SetFeature
 from pydiskcmdlib.pynvme.cdb_get_feature import GetFeature
 from pydiskcmdlib.pynvme.cdb_get_feature import GetFeature
-from pydiskcmdlib.pynvme.cdb_get_log_page import GetLogPage,FWSlotInfo,ErrorLog,SmartLog,SelfTestLog,PersistentEventLog,TelemetryHostInitiatedLog,TelemetryControllerInitiatedLog,SanitizeStatus
-from pydiskcmdlib.pynvme.cdb_get_log_page import CommandsSupportedAndEffectsLog
+from pydiskcmdlib.pynvme.cdb_get_log_page import (
+    GetLogPage,
+    FWSlotInfo,
+    ErrorLog,
+    SmartLog,
+    SelfTestLog,
+    PersistentEventLog,
+    TelemetryHostInitiatedLog,
+    TelemetryControllerInitiatedLog,
+    SanitizeStatus,
+    CommandsSupportedAndEffectsLog,
+    MICommandsSupportedAndEffectsLog,
+    )
 from pydiskcmdlib.pynvme.cdb_fw_download import FWImageDownload
 from pydiskcmdlib.pynvme.cdb_fw_commit import FWCommit
 from pydiskcmdlib.pynvme.cdb_format import Format
@@ -221,6 +232,11 @@ class NVMe(object):
 
     def commands_supported_and_effects_log(self):
         cmd = CommandsSupportedAndEffectsLog()
+        self.execute(cmd)
+        return cmd
+
+    def mi_commands_supported_and_effects_log(self, numdl=1023, lpol=0):
+        cmd = MICommandsSupportedAndEffectsLog(numdl=numdl, lpol=lpol)
         self.execute(cmd)
         return cmd
 

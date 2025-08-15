@@ -25,6 +25,7 @@ class LogIdentifier(Enum):
     PersistentEventLog               = 0x0D
     LBAStatusInformation             = 0x0E
     EnduranceGroupEventAggregate     = 0x0F
+    MICommandsSupportedAndEffects    = 0x13
     Discovery                        = 0x70   # refer to the NVMe over Fabrics specification
     ReservationNotification          = 0x80
     SanitizeStatus                   = 0x81
@@ -376,6 +377,28 @@ class PersistentEventLog(GetLogPage):
                             0,       # CDW14: Offset Type
                             0,       # CDW14: Command Set Identifier 
                             data_buffer=data_buffer,
+                            )
+
+
+class MICommandsSupportedAndEffectsLog(GetLogPage):
+    def __init__(self,
+                 numdl=1023,  # CDW10: Number of Dwords Lower
+                 lpol=0,      # CDW12: Log Page Offset Lower
+                 ):
+        ## init command
+        GetLogPage.__init__(self,
+                            0,       # Namespace ID
+                            LogIdentifier.MICommandsSupportedAndEffects.value,    # CDW10: Log Page Identifier
+                            0,       # CDW10: Log Specific Parameter
+                            0,       # CDW10: Retain Asynchronous Event
+                            numdl,   # CDW10: Number of Dwords Lower
+                            0,       # CDW11: Number of Dwords
+                            0,       # CDW11: Log Specific Identifier
+                            lpol,    # CDW12: Log Page Offset Lower
+                            0,       # CDW13: Log Page Offset Upper
+                            0,       # CDW14: UUID Index
+                            0,       # CDW14: Offset Type
+                            0,       # CDW14: Command Set Identifier 
                             )
 
 

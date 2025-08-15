@@ -7,6 +7,7 @@ from pydiskcmdlib.utils import init_device
 from pydiskcmdlib.pynvme.nvme import NVMe
 from pydiskcmdcli.scripts import parser_update,script_check
 from pydiskcmdcli.utils.format_print import format_dump_bytes,json_print,format_print_pyobj
+from pydiskcmdcli.nvme_spec import decode_commands_supported_and_effects,decode_mi_commands_supported_and_effects,get_nvme_mi_command_name
 from .mi_decode import decode_subsys_health_status
 from pydiskcmdlib.exceptions import CommandReturnDataError,CommandReturnStatusError
 
@@ -24,6 +25,7 @@ def _nvme_mi_print_help():
         print ("")
         print ("The following are all implemented sub-commands:")
         print ("")
+        print ("  check-support                 Check device if support NVMe MI commands")
         print ("  mi-data                       Read NVMe-MI Data Structure")
         print ("  subsys-health                 Get Subsystem Health Status")
         print ("  vpd-read                      Read VPD page")
@@ -39,6 +41,52 @@ def _nvme_mi_print_ver():
     print ("NVMe-MI Plugin Version: %s" % "1.0")
     print ("")
     return 0
+
+def _check_support():
+    usage="usage: %prog mi check-support <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser_update(parser)
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ##
+        script_check(options, admin_check=True)
+        ## check device
+        from pydiskcmdlib.pynvme.nvme_command import AdminCommandOpcode
+        dev = sys.argv[3].strip()
+        mi_send_support = "Unkown"
+        mi_recv_support = "Unkown"
+        mi_cmds = []
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            # First check commands supported and effects log
+            cmd = d.commands_supported_and_effects_log()
+            SC,SCT = cmd.check_return_status(fail_hint=False)
+            if SC == 0 and SCT == 0:
+                admin_cmd,_ = decode_commands_supported_and_effects(cmd.data)
+                mi_send_support = "No"
+                mi_recv_support = "No"
+                for i in admin_cmd:
+                    if i["opcode"] == AdminCommandOpcode.NVMeMISend.value:
+                        mi_send_support = "Yes"
+                    if i["opcode"] == AdminCommandOpcode.NVMeMIReceive.value:
+                        mi_recv_support = "Yes"
+                ##
+                cmd = d.mi_commands_supported_and_effects_log()
+                SC,SCT = cmd.check_return_status(fail_hint=False)
+                if SC == 0 and SCT == 0:
+                    mi_cmd = decode_mi_commands_supported_and_effects(cmd.data)
+                    for opcode,_ in mi_cmd.items():
+                        mi_cmds.append((opcode, get_nvme_mi_command_name(opcode)))
+        print ("NVMe-Mi Send Command Support   : %s" % mi_send_support)
+        print ("NVMe-Mi Receive Command Support: %s" % mi_recv_support)
+        if mi_cmds:
+            print_format = "  %-10s %s"
+            print ('')
+            print ('NVMe-Mi Commands:')
+            print (print_format % ("Opcode", "Command Name"))
+            for i in mi_cmds:
+                print (print_format % i)
+    else:
+        parser.print_help()
 
 def _ib_send():
     usage="usage: %prog mi ib-send <device> [OPTIONS]"
@@ -67,7 +115,7 @@ def _ib_send():
             raise FileNotFoundError("input file not found: %s" % options.input_file)
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.nvme_mi_send(options.opcode, options.nmd0, options.nmd1, data=raw_data)
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         #
         print ("Tunneled Status: %#x" % (cmd.cq_cmd_spec & 0xFF))
         print ("Tunneled NVMe Management Response: %#x" % (cmd.cq_cmd_spec >> 8))
@@ -96,7 +144,7 @@ def _ib_recv():
         ##
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = d.nvme_mi_recv(options.opcode, options.nmd0, options.nmd1, data_len=options.data_len)
-        cmd.check_return_status()
+        cmd.check_return_status(raise_if_fail=True)
         #
         print ("Tunneled Status: %#x" % (cmd.cq_cmd_spec & 0xFF))
         print ("Tunneled NVMe Management Response: %#x" % (cmd.cq_cmd_spec >> 8))
@@ -123,8 +171,8 @@ def _read_nvme_mi_data():
         help="I/O Command Set Identifier. Default 0")
     parser.add_option("-l", "--data-len", type="int", dest="data_len", default=32,
         help="The length of Request Data field. Default 32")
-    parser.add_option("-m", "--servicing-mode", type="choice", dest="servicing_mode", action="store", choices=["ib", "pcie", "smbus", "i2c"], default="ib",
-        help="Message Servicing Mode, In-Band(ib) or Out-Of-Band(pcie/smbus/i2c). Default ib")
+    parser.add_option("-m", "--servicing-mode", type="choice", dest="servicing_mode", action="store", choices=["ib", "vdm", "smbus", "i2c"], default="ib",
+        help="Message Servicing Mode, In-Band(ib) or Out-Of-Band(vdm/smbus/i2c). Default ib")
     parser_update(parser, add_output=["hex", "raw"])
 
     if len(sys.argv) > 3:
@@ -139,7 +187,7 @@ def _read_nvme_mi_data():
         if options.servicing_mode == 'ib':
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.nvme_mi_recv(0x00, numd0, nmd1, data_len=options.data_len)
-            cmd.check_return_status()
+            cmd.check_return_status(raise_if_fail=True)
             # check the Tunneled Status
             if cmd.cq_cmd_spec & 0xFF:
                 raise CommandReturnStatusError("Tunneled Status code is %#x" % (cmd.cq_cmd_spec & 0xFF))
@@ -161,8 +209,8 @@ def _nvm_subsys_health_status():
     parser = optparse.OptionParser(usage)
     parser.add_option("-c", "--clear-status", dest="clear_status", action="store_true",default=False,
         help="Clear the state of reported Composite Controller Status. Default False")
-    parser.add_option("-m", "--servicing-mode", type="choice", dest="servicing_mode", action="store", choices=["ib", "pcie", "smbus", "i2c"], default="ib",
-        help="Message Servicing Mode, In-Band(ib) or Out-Of-Band(pcie/smbus/i2c). Default ib")
+    parser.add_option("-m", "--servicing-mode", type="choice", dest="servicing_mode", action="store", choices=["ib", "vdm", "smbus", "i2c"], default="ib",
+        help="Message Servicing Mode, In-Band(ib) or Out-Of-Band(vdm/smbus/i2c). Default ib")
     parser_update(parser, add_output=["normal", "hex", "raw", "json"])
 
     if len(sys.argv) > 3:
@@ -179,7 +227,7 @@ def _nvm_subsys_health_status():
         if options.servicing_mode == 'ib':
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.nvme_mi_recv(0x01, 0, nmd1, data_len=8)
-            cmd.check_return_status()
+            cmd.check_return_status(raise_if_fail=True)
         else:
             raise NotImplementedError("Out-Of-Band Message Servicing Mode(%s) is not implemented now" % options.servicing_mode)
         ##
@@ -203,8 +251,8 @@ def _vpd_read():
         help="Data length in bytes to read from the VPD page. Default 8")
     parser.add_option("-L", "--dofst", type="int", dest="data_offset", action="store",default=0,
         help="Starting offset in bytes to read the VPD data. Default 0")
-    parser.add_option("-m", "--servicing-mode", type="choice", dest="servicing_mode", action="store", choices=["ib", "pcie", "smbus", "i2c"], default="ib",
-        help="Message Servicing Mode, In-Band(ib) or Out-Of-Band(pcie/smbus/i2c). Default ib")
+    parser.add_option("-m", "--servicing-mode", type="choice", dest="servicing_mode", action="store", choices=["ib", "vdm", "smbus", "i2c"], default="ib",
+        help="Message Servicing Mode, In-Band(ib) or Out-Of-Band(vdm/smbus/i2c). Default ib")
     parser_update(parser, add_output=["hex", "raw"])
 
     if len(sys.argv) > 3:
@@ -219,7 +267,7 @@ def _vpd_read():
         if options.servicing_mode == 'ib':
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.nvme_mi_recv(0x05, nmd0, nmd1, data_len=options.data_len)
-            cmd.check_return_status()
+            cmd.check_return_status(raise_if_fail=True)
         else:
             raise NotImplementedError("Out-Of-Band Message Servicing Mode(%s) is not implemented now" % options.servicing_mode)
         ##
@@ -232,6 +280,7 @@ def _vpd_read():
 
 
 plugin_nvme_mi_commands_dict = {
+    "check-support": _check_support,
     "mi-data": _read_nvme_mi_data,
     "subsys-health": _nvm_subsys_health_status,
     "vpd-read": _vpd_read,
