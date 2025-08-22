@@ -342,8 +342,8 @@ class NVMe(object):
         self.execute(cmd)
         return cmd
 
-    def write(self, ns_id, slba, nlba, raw_data, raw_metadata):
-        cmd = Write(ns_id, slba, nlba, raw_data=raw_data, raw_metadata=raw_metadata)
+    def write(self, ns_id, slba, nlba, raw_data, raw_metadata, fua=0, prinfo=0):
+        cmd = Write(ns_id, slba, nlba, raw_data=raw_data, raw_metadata=raw_metadata, fua=fua, prinfo=prinfo)
         self.execute(cmd)
         return cmd
 
@@ -399,3 +399,83 @@ class NVMe(object):
         cmd = DatasetManagement(nsid, nr, idr, idw, ad, data)
         self.execute(cmd)
         return cmd
+
+
+from pydiskcmdlib.pyscsi.scsi import SCSI
+from pyscsi.pyscsi.scsi_command import SCSICommand
+from pydiskcmdlib import os_type
+
+class SCSI2NVMe(SCSI):
+    if os_type == "Windows":
+        # From StorNVMe SCSI Translation Support
+        support_commands = (
+            0x48,   # SANITIZE
+            0x12,   # Inquiry
+            0x4D,   # Log Sense
+            0x55,   # Mode Select 10
+            0x5A,   # Mode Sense 10
+            0x28,   # Read10
+            0x88,   # Read16
+            0x25,   # Read Capacity 10
+            0x10,   # Read Capacity 16
+            # Read Data Buffer 16
+            0xA0,   # Report Luns
+            0xA2,   # Security Protocal in
+            0xB5,   # Security Protocol out
+            0x1D,   # Send Diagnostic
+            0x1B,   # Start Stop Unit
+            0x35,   # SYNCHRONIZE_CACHE_10
+            0x00,   # Test Unit Ready
+            0x42,   # Unmap
+            0x2F,   # Verify10
+            0x8F,   # Verify16
+            0x2A,   # Write10
+            0x8A,   # Write16
+            0x3B,   # Write Buffer
+            0x9E,   # internal used by pyscsi, user should not use it
+        )
+    else:
+        # Support by 'NVM-Express-SCSI-Translation-Reference-1_1-Gold'
+        support_commands = (
+            0x12,   # Inquiry
+            0x4D,   # Log Sense
+            0x15,   # Mode Select 6
+            0x55,   # Mode Select 10
+            0x1A,   # Mode Sense 6
+            0x5A,   # Mode Sense 10
+            0xA0,   # Report Luns
+            0x03,   # Request Sense
+            0xA2,   # Security Protocal in
+            0xB5,   # Security Protocol out
+            0x1B,   # Start Stop Unit
+            0x00,   # Test Unit Ready
+            0x3B,   # Write Buffer
+            0x89,   # Compare And Write
+            0x04,   # Format Unit
+            0x08,   # Read6
+            0x28,   # Read10
+            0xA8,   # Read12
+            0x88,   # Read16
+            0x25,   # Read Capacity 10
+            0x10,   # Read Capacity 16
+            0x35,   # SYNCHRONIZE_CACHE_10
+            0x91,   # SYNCHRONIZE_CACHE_16
+            0x42,   # Unmap
+            0x0A,   # Write6
+            0x2A,   # Write10
+            0xAA,   # Write12
+            0x8A,   # Write16
+            0x3F,   # Write Long 10
+            0x9F,   # Write Long 16
+            0x9E,   # internal used by pyscsi, user should not use it
+        )
+    def __init__(self, 
+                 dev,
+                 blocksize=0):
+        super(SCSI2NVMe, self).__init__(dev, blocksize=blocksize)
+
+    def execute(self, cmd: SCSICommand, en_raw_sense=False):
+        if cmd.opcode.value in SCSI2NVMe.support_commands:
+            return SCSI.execute(self, cmd, en_raw_sense=en_raw_sense)
+        else:
+            raise CommandNotSupport("SCSI Translation to NVMe Do Not Support OPCode: 0x%x" % cmd.opcode.value)

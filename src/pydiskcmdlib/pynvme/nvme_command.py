@@ -104,7 +104,7 @@ class NVMeCommand(object):
     '''
     This Class define the function that must be implemented by CommandWapper function.
     '''
-    _cdb_bits: CheckDict = {}   # define your self command bitmap
+    _cdb_bits: CheckDict = {}   # user defined cdb bitmap
     _req_id: int = 0
     _cmd_spec_fail = {}
 
@@ -474,7 +474,15 @@ class NVMeCommand(object):
                     self._cdb.srbIoCtrl.HeaderLength = win_nvme_command.SRB_IO_CONTROL_LEN
                 if self._cdb.srbIoCtrl.Length == 0:
                     self._cdb.srbIoCtrl.Length = sizeof(self._cdb) - win_nvme_command.SRB_IO_CONTROL_LEN
-            
+            elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_FIRMWARE_ACTIVATE.value:
+                # TODO
+                raise BuildNVMeCommandError("Failed to build command, Do Not Support Request %#x" % self._req_id)
+            elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_FIRMWARE_DOWNLOAD.value:
+                # TODO
+                raise BuildNVMeCommandError("Failed to build command, Do Not Support Request %#x" % self._req_id)
+            elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_SCSI_PASS_THROUG.value:
+                # TODO
+                raise BuildNVMeCommandError("Failed to build command, Do Not Support Request %#x" % self._req_id)
             elif self._req_id in (win_nvme_command.IOCTLRequest.FSCTL_LOCK_VOLUME.value,
                                   win_nvme_command.IOCTLRequest.FSCTL_UNLOCK_VOLUME.value,
                                   win_nvme_command.IOCTLRequest.IOCTL_DISK_FLUSH_CACHE.value,

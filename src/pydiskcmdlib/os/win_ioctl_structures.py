@@ -1,22 +1,36 @@
 # SPDX-FileCopyrightText: 2022 The pydiskcmd Authors
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
+import platform
 from ctypes import (Structure,
                     c_uint8,
                     c_uint16,
                     c_uint32,
                     c_uint64,
                     c_ubyte,
+                    c_int,
+                    c_int64,
+                    c_ushort,
                     sizeof,
                     c_ulonglong,
                     c_void_p,
                     POINTER,
                     c_ulong,
                     Union,
+                    c_char,
                     )
 
 VOID = c_void_p
 PVOID = POINTER(VOID)
+
+BOOLEAN = c_uint8
+BOOL = c_int
+if platform.architecture()[0] == '64bit':
+    ULONG_PTR = c_int64
+else:
+    ULONG_PTR = c_ulong
+
+
 
 def roundupdw(number: int) -> int:
     """
@@ -607,3 +621,171 @@ def Get_STORAGE_FIRMWARE_INFO_V2(max_slot):
         ]
         _pack_ = 1
     return STORAGE_FIRMWARE_INFO_V2
+
+######## Input parameter for IOCTL_STORAGE_FIRMWARE_DOWNLOAD ########
+class STORAGE_HW_FIRMWARE_DOWNLOAD(Structure):
+    _fields_ = [
+        ('Version', c_ulong),        # sizeof(STORAGE_HW_FIRMWARE_DOWNLOAD)
+        ('Size', c_ulong),           # size of the whole buffer include "ImageBuffer"
+        ('Flags', c_ulong),
+        ('Slot', c_uint8),           # Slot number that firmware image will be downloaded into.
+        ('Reserved', c_uint8 * 3),
+        ('Offset', c_ulonglong),     # Image file offset, should be aligned to "ImagePayloadAlignment" value from STORAGE_FIRMWARE_INFO.
+        ('BufferSize', c_ulonglong), # should be multiple of "ImagePayloadAlignment" value from STORAGE_FIRMWARE_INFO.
+        ('ImageBuffer', c_uint8 * 1), # firmware image file.
+    ]
+    _pack_ = 1
+
+def STORAGE_HW_FIRMWARE_DOWNLOAD_WITH_BUFFER(max_size):
+    class STORAGE_HW_FIRMWARE_DOWNLOAD(Structure):
+        _fields_ = [
+            ('Version', c_ulong),        # sizeof(STORAGE_HW_FIRMWARE_DOWNLOAD)
+            ('Size', c_ulong),           # size of the whole buffer include "ImageBuffer"
+            ('Flags', c_ulong),
+            ('Slot', c_uint8),           # Slot number that firmware image will be downloaded into.
+            ('Reserved', c_uint8 * 3),
+            ('Offset', c_ulonglong),     # Image file offset, should be aligned to "ImagePayloadAlignment" value from STORAGE_FIRMWARE_INFO.
+            ('BufferSize', c_ulonglong), # should be multiple of "ImagePayloadAlignment" value from STORAGE_FIRMWARE_INFO.
+            ('ImageBuffer', c_uint8 * max_size), # firmware image file.
+        ]
+        _pack_ = 1
+    return STORAGE_HW_FIRMWARE_DOWNLOAD
+
+class STORAGE_HW_FIRMWARE_DOWNLOAD_V2(Structure):
+    _fields_ = [
+        ('Version', c_ulong),        # sizeof(STORAGE_HW_FIRMWARE_DOWNLOAD_V2)
+        ('Size', c_ulong),           # size of the whole buffer include "ImageBuffer"
+        ('Flags', c_ulong),
+        ('Slot', c_uint8),           # Slot number that firmware image will be downloaded into.
+        ('Reserved', c_uint8 * 3),
+        ('Offset', c_ulonglong),     # Image file offset, should be aligned to "ImagePayloadAlignment" value from STORAGE_FIRMWARE_INFO.
+        ('BufferSize', c_ulonglong), # should be multiple of "ImagePayloadAlignment" value from STORAGE_FIRMWARE_INFO.
+        ('ImageSize', c_ulong),      # Firmware Image size.
+        ('Reserved2', c_ulong),
+        ('ImageBuffer', c_uint8 * 1), # firmware image file.
+    ]
+    _pack_ = 1
+
+def STORAGE_HW_FIRMWARE_DOWNLOAD_V2_WITH_BUFFER(max_size):
+    class STORAGE_HW_FIRMWARE_DOWNLOAD_V2(Structure):
+        _fields_ = [
+            ('Version', c_ulong),        # sizeof(STORAGE_HW_FIRMWARE_DOWNLOAD_V2)
+            ('Size', c_ulong),           # size of the whole buffer include "ImageBuffer"
+            ('Flags', c_ulong),
+            ('Slot', c_uint8),           # Slot number that firmware image will be downloaded into.
+            ('Reserved', c_uint8 * 3),
+            ('Offset', c_ulonglong),     # Image file offset, should be aligned to "ImagePayloadAlignment" value from STORAGE_FIRMWARE_INFO.
+            ('BufferSize', c_ulonglong), # should be multiple of "ImagePayloadAlignment" value from STORAGE_FIRMWARE_INFO.
+            ('ImageSize', c_ulong),      # Firmware Image size.
+            ('Reserved2', c_ulong),
+            ('ImageBuffer', c_uint8 * max_size), # firmware image file.
+        ]
+        _pack_ = 1
+    return STORAGE_HW_FIRMWARE_DOWNLOAD_V2
+
+######## Input parameter for IOCTL_STORAGE_FIRMWARE_ACTIVATE ########
+class STORAGE_HW_FIRMWARE_ACTIVATE(Structure):
+    _fields_ = [
+        ('Version', c_ulong),
+        ('Size', c_ulong),
+        ('Flags', c_ulong),
+        ('Slot', c_uint8),       # Slot with firmware image to be activated.
+        ('Reserved0', c_uint8 * 3),
+    ]
+    _pack_ = 1
+
+######## Input parameter for IOCTL_STORAGE_FIRMWARE_GET_INFO ########
+class STORAGE_HW_FIRMWARE_INFO_QUERY(Structure):
+    _fields_ = [
+        ('Version', c_ulong),   # sizeof(STORAGE_FIRMWARE_INFO_QUERY)
+        ('Size', c_ulong),      # Whole size of the buffer (in case this data structure being extended to be variable length)
+        ('Flags', c_ulong),
+        ('Reserved', c_ulong),
+    ]
+    _pack_ = 1
+
+######## Output parameter for IOCTL_STORAGE_FIRMWARE_GET_INFO ########
+# The total size of returned data is for Firmware Info is:
+#  sizeof(STORAGE_HW_FIRMWARE_INFO) + sizeof(STORAGE_HW_FIRMWARE_SLOT_INFO) * (SlotCount - 1).
+# If the buffer is not big enough, callee should set the required length in "Size" field of STORAGE_HW_FIRMWARE_INFO,
+#
+# Following value maybe used in "PendingActiveSlot" field indicating there is no firmware pending to activate.
+
+STORAGE_HW_FIRMWARE_REVISION_LENGTH = 16
+class STORAGE_HW_FIRMWARE_SLOT_INFO(Structure):
+    _fields_ = [
+        ('Version', c_ulong),   # sizeof(STORAGE_HW_FIRMWARE_SLOT_INFO)
+        ('Size', c_ulong),      # size the data contained in STORAGE_HW_FIRMWARE_SLOT_INFO.
+        ('SlotNumber', c_uint8),
+        ('ReadOnly', c_uint8, 1),
+        ('Reserved0', c_uint8, 7),
+        ('Reserved1', c_uint8 * 6),
+        ('Revision', c_uint8 * STORAGE_HW_FIRMWARE_REVISION_LENGTH),
+    ]
+    _pack_ = 1
+
+class STORAGE_HW_FIRMWARE_INFO(Structure):
+    _fields_ = [
+        ('Version', c_ulong),                 # sizeof(STORAGE_HW_FIRMWARE_INFO)
+        ('Size', c_ulong),                    # size of the whole buffer including slot[]
+        ('SupportUpgrade', c_uint8, 1),
+        ('Reserved0', c_uint8, 7),
+        ('SlotCount', c_uint8),
+        ('ActiveSlot', c_uint8),
+        ('PendingActivateSlot', c_uint8),
+        ('FirmwareShared', BOOLEAN),          # The firmware applies to both device and adapter. For example: PCIe SSD.
+        ('Reserved', c_uint8 * 3),
+        ('ImagePayloadAlignment', c_ulong),   # Number of bytes. Max: PAGE_SIZE. The transfer size should be multiple of this unit size. Some protocol requires at least sector size. 0 means the value is not valid.
+        ('ImagePayloadMaxSize', c_ulong),     # for a single command.
+        ('Slot', STORAGE_HW_FIRMWARE_SLOT_INFO * 1),
+    ]
+    _pack_ = 1
+
+def STORAGE_HW_FIRMWARE_INFO_WITH_BUFFER(max_slot):
+    class STORAGE_HW_FIRMWARE_INFO(Structure):
+        _fields_ = [
+            ('Version', c_ulong),                 # sizeof(STORAGE_HW_FIRMWARE_INFO)
+            ('Size', c_ulong),                    # size of the whole buffer including slot[]
+            ('SupportUpgrade', c_uint8, 1),
+            ('Reserved0', c_uint8, 7),
+            ('SlotCount', c_uint8),
+            ('ActiveSlot', c_uint8),
+            ('PendingActivateSlot', c_uint8),
+            ('FirmwareShared', BOOLEAN),          # The firmware applies to both device and adapter. For example: PCIe SSD.
+            ('Reserved', c_uint8 * 3),
+            ('ImagePayloadAlignment', c_ulong),   # Number of bytes. Max: PAGE_SIZE. The transfer size should be multiple of this unit size. Some protocol requires at least sector size. 0 means the value is not valid.
+            ('ImagePayloadMaxSize', c_ulong),     # for a single command.
+            ('Slot', STORAGE_HW_FIRMWARE_SLOT_INFO * max_slot),
+        ]
+        _pack_ = 1
+    return STORAGE_HW_FIRMWARE_INFO
+
+######## Input parameter for IOCTL_SCSI_PASS_THROUGH ########
+class SCSI_PASS_THROUGH(Structure):
+    _fields_ = [
+        ('Length', c_ushort),                # sizeof(SCSI_PASS_THROUGH)
+        ('ScsiStatus', c_uint8),
+        ('PathId', c_uint8),
+        ('TargetId', c_uint8),
+        ('Lun', c_uint8),
+        ('CdbLength', c_uint8),              # Indicates the size in bytes of the SCSI command descriptor block.
+        ('SenseInfoLength', c_uint8),        # Indicates the size in bytes of the request-sense buffer.
+        ('DataIn', c_uint8),                 # SCSI_IOCTL_DATA_OUT | SCSI_IOCTL_DATA_IN | SCSI_IOCTL_DATA_UNSPECIFIED
+        ('DataTransferLength', c_ulong),     # Indicates the size in bytes of the data buffer.
+        ('TimeOutValue', c_ulong),           # Indicates the interval in seconds that the request can execute before the port driver considers it timed out.
+        ('DataBufferOffset', ULONG_PTR),     # Contains an offset from the beginning of this structure to the data buffer. 
+        ('SenseInfoOffset', c_ulong),        # Offset from the beginning of this structure to the request-sense buffer.
+        ('Cdb', c_uint8 * 16),               # Specifies the SCSI command descriptor block to be sent to the target device.
+    ]
+    _pack_ = 1
+
+SCSI_PASS_THROUGH_SIZE = sizeof(SCSI_PASS_THROUGH)
+
+def SCSI_PASS_THROUGH_WITH_DATA(data_len):
+    class _SCSI_PASS_THROUGH(Structure):
+        _fields_ = [
+            ('spt', SCSI_PASS_THROUGH),
+            ('data', c_ubyte * data_len),
+        ]
+        _pack_ = 1
+    return _SCSI_PASS_THROUGH

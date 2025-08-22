@@ -5,6 +5,7 @@ from enum import Enum
 
 class IOCTLRequest(Enum):
     RESERVED_REQUEST_ID                      = 0x00      # This is a reserved request ID for pydiskcmd.
+    IOCTL_SCSI_PASS_THROUG                   = 0x4D004
     IOCTL_SCSI_PASS_THROUGH_DIRECT           = 0x4D014
     IOCTL_SCSI_MINIPORT                      = 0x4D008
     IOCTL_SCSI_PASS_THROUGH_DIRECT_EX        = 0x4D048

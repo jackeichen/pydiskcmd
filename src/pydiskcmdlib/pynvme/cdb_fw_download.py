@@ -77,10 +77,3 @@ class FWImageDownload(NVMeCommand):
                                fdOffset=offset,
                                fdBufferSize=len(data),
                                )
-
-from .cdb_scsi2nvme_write_buffer import NVMeWriteBuffer
-class SCSI2NVMeFWImageDownload(NVMeWriteBuffer):
-    def __init__(self, 
-                 data, 
-                 offset):
-        NVMeWriteBuffer.__init__(self, 0x0E, 0, offset, int(len(data)/4), data=data)

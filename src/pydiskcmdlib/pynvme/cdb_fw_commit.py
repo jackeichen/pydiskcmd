@@ -93,12 +93,3 @@ controller for vendor specific reasons (e.g., controller does not support down r
                                Function=FWCommit.win_nvme_command.FIRMWARE_FUNCTION.ACTIVATE.value,
                                faSlotToActivate=fw_slot,
                                )
-
-
-from .cdb_scsi2nvme_write_buffer import NVMeWriteBuffer
-class SCSI2NVMeFWCommit(NVMeWriteBuffer):
-    def __init__(self, 
-                 fw_slot, 
-                 action,
-                 bpid=0):
-        NVMeWriteBuffer.__init__(self, 0x0F, fw_slot, 0, 0,)

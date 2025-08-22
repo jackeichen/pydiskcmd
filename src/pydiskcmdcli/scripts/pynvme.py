@@ -4,7 +4,7 @@
 import sys,os
 import optparse
 from pydiskcmdlib.utils import init_device
-from pydiskcmdlib.pynvme.nvme import NVMe
+from pydiskcmdlib.pynvme.nvme import NVMe,SCSI2NVMe
 from pydiskcmdcli.utils.format_print import format_dump_bytes,human_read_capacity
 from pydiskcmdlib.utils.converter import scsi_ba_to_int
 from pydiskcmdlib.pynvme.data_buffer import DataBuffer
@@ -1273,6 +1273,10 @@ def read():
         help="64-bit addr of first block to access")
     parser.add_option("-c", "--block-count", type="int", dest="block_count", action="store", default=0,
         help="number of blocks (zeroes based) on device to access")
+    parser.add_option("-u", "--fua", dest="fua", action="store_true", default=False,
+        help="Force device to commit data before command completes")
+    parser.add_option("-p", "--prinfo", type="int", dest="prinfo", action="store", default=0,
+        help="Protection Information(PI) and check field")
     parser_update(parser, add_output=["raw", "hex"])
 
     if len(sys.argv) > 2:
@@ -1282,11 +1286,37 @@ def read():
         ##
         script_check(options, admin_check=True)
         ##
-        with NVMe(init_device(dev, open_t='nvme')) as d:
-            cmd = d.read(options.namespace_id, options.start_block, options.block_count)
-        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
-        ##
-        nvme_format_print.format_print_read_data(cmd.metadata, cmd.data, dev=d.device.device_name, print_type=options.output_format)
+        if os_type == 'Windows':
+            with SCSI2NVMe(init_device(dev, open_t='scsi')) as d:
+                if options.prinfo == 0b1000:
+                    rdprotect = 0
+                elif options.prinfo == 0b0111:
+                    rdprotect = 1 # or 5
+                elif options.prinfo == 0b0011:
+                    rdprotect = 2
+                elif options.prinfo == 0b0000:
+                    rdprotect = 3
+                elif options.prinfo == 0b0100:
+                    rdprotect = 4
+                else:
+                    raise ValueError("Invalid prinfo value in windows")
+                cmd = d.read16(options.start_block, 
+                               options.block_count+1, 
+                               fua=1 if options.fua else 0, 
+                               rdprotect=rdprotect)
+            nvme_format_print.format_print_read_data(b'', cmd.datain, dev=d.device._file_name, print_type=options.output_format)
+        else:
+            with NVMe(init_device(dev, open_t='nvme')) as d:
+                cmd = d.read(options.namespace_id, 
+                             options.start_block, 
+                             options.block_count, 
+                             fua=1 if options.fua else 0,
+                             prinfo=options.prinfo,
+                             )
+
+            cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
+            ##
+            nvme_format_print.format_print_read_data(cmd.metadata, cmd.data, dev=d.device.device_name, print_type=options.output_format)
         ##
     else:
         parser.print_help()
@@ -1328,6 +1358,11 @@ def write():
         help="String containing the data to write")
     parser.add_option("-f", "--data-file", type="str", dest="dfile", action="store", default='',
         help="File(Read first) containing the data to write")
+    parser.add_option("-u", "--fua", dest="fua", action="store_true", default=False,
+        help="Force device to commit data before command completes")
+    parser.add_option("-p", "--prinfo", type="int", dest="prinfo", action="store", default=0,
+        help="Protection Information(PI) and check field")
+
     parser_update(parser, add_force=True)
 
     if len(sys.argv) > 2:
@@ -1347,24 +1382,60 @@ def write():
         if not temp_data:
             parser.error("Lack of input data")
         ##
-        with NVMe(init_device(dev, open_t='nvme')) as d:
-            cmd = d.id_ns(options.namespace_id)
-            result = nvme_format_print.nvme_id_ns_decode(cmd.data)
-            lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
-            lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
-            lba_size = 2 ** lba_data_size
-            ##
-            data_l = len(temp_data)
-            remainder = data_l % lba_size
-            if remainder:
-                data_l += (lba_size-remainder) 
-            temp_data = temp_data.ljust(data_l, b'\x00')
-            ##
-            print ('issuing write command')
-            print ("%s:" % d.device._file_name)
-            print ('')
-            cmd = d.write(options.namespace_id, options.start_block, options.block_count, temp_data, b'')
-        cmd.check_return_status(True, raise_if_fail=True)
+        if os_type == 'Windows':
+            temp_data = bytearray(temp_data)
+            with SCSI2NVMe(init_device(dev, open_t='scsi')) as d:
+                if temp_data:
+                    data_l = len(temp_data)
+                    data_size = (options.block_count+1) * d.blocksize
+                    if data_size < data_l:
+                        temp_data = temp_data[0:data_size]
+                    elif data_size > data_l:
+                        temp_data = temp_data + bytearray(data_size-data_l)
+                    else:
+                        pass
+                if options.prinfo == 0b1000:
+                    wrprotect = 0
+                elif options.prinfo == 0b0111:
+                    wrprotect = 1 # or 5
+                elif options.prinfo == 0b0011:
+                    wrprotect = 2
+                elif options.prinfo == 0b0000:
+                    wrprotect = 3
+                elif options.prinfo == 0b0100:
+                    wrprotect = 4
+                else:
+                    raise ValueError("Invalid prinfo value in windows")
+                cmd = d.write16(options.start_block, 
+                                options.block_count+1, 
+                                temp_data,
+                                fua=1 if options.fua else 0,
+                                wrprotect=wrprotect)
+        else:
+            with NVMe(init_device(dev, open_t='nvme')) as d:
+                cmd = d.id_ns(options.namespace_id)
+                result = nvme_format_print.nvme_id_ns_decode(cmd.data)
+                lbaf = result.get("LBAF").get(scsi_ba_to_int(result.get("FLBAS"), 'little') & 0x0F)
+                lba_data_size = scsi_ba_to_int(lbaf.get("LBADS"), 'little')
+                lba_size = 2 ** lba_data_size
+                ##
+                data_l = len(temp_data)
+                remainder = data_l % lba_size
+                if remainder:
+                    data_l += (lba_size-remainder) 
+                temp_data = temp_data.ljust(data_l, b'\x00')
+                ##
+                print ('issuing write command')
+                print ("%s:" % d.device._file_name)
+                print ('')
+                cmd = d.write(options.namespace_id, 
+                              options.start_block, 
+                              options.block_count, 
+                              temp_data, 
+                              b'', 
+                              fua=1 if options.fua else 0, 
+                              prinfo=options.prinfo)
+            cmd.check_return_status(True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1382,9 +1453,13 @@ def flush():
         ##
         script_check(options, admin_check=True)
         ##
-        with NVMe(init_device(dev, open_t='nvme')) as d:
-            cmd = d.flush(options.namespace_id)
-        cmd.check_return_status(True, raise_if_fail=True)
+        if os_type == 'Windows':
+            with SCSI2NVMe(init_device(dev, open_t='scsi')) as d:
+                cmd = d.synchronizecache10(0, 0)
+        else:
+            with NVMe(init_device(dev, open_t='nvme')) as d:
+                cmd = d.flush(options.namespace_id)
+            cmd.check_return_status(True, raise_if_fail=True)
     else:
         parser.print_help()
 

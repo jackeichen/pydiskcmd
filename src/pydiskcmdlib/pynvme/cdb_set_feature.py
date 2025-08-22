@@ -33,7 +33,7 @@ class SetFeature(NVMeCommand):
                      "result":[0xFFFFFFFF, 68],
                      }
     elif os_type == "Windows":
-        _req_id = win_nvme_command.IOCTLRequest.RESERVED_REQUEST_ID.value 
+        _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_SET_PROPERTY.value 
         # _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_SET_PROPERTY.value 
         _cdb_bits = {"PropertyId": [0xFFFFFFFF, 0],
                      "SetType": [0xFFFFFFFF, 4],
