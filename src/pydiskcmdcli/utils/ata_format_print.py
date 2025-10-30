@@ -137,7 +137,7 @@ def format_print_identify(cmd, dev='', print_type='normal', show_status=False):
     else:
         raise NotImplementedError("Not Support type: %s" % print_type)
 
-def format_print_smart(cmd_read_data, cmd_thread, print_type='normal', show_status=False) -> None:
+def format_print_smart(cmd_read_data, cmd_thread, print_type='normal', show_status=False, smart_attr=None) -> None:
     """
     This function is used to print format smart information.
 
@@ -159,6 +159,8 @@ def format_print_smart(cmd_read_data, cmd_thread, print_type='normal', show_stat
         _print_return_status(cmd_thread.ata_status_return_descriptor)
     print ('')
     if print_type == 'normal' or print_type == 'json':
+        if smart_attr:
+            SMART_ATTR = smart_attr
         target = {"return_status": {"smart_read_data": cmd_read_data.ata_status_return_descriptor, "smart_thread": cmd_thread.ata_status_return_descriptor}, 
                   "content": {"vendor_spec": {}, "general_info": {}},
                   }

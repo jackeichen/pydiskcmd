@@ -248,7 +248,9 @@ VS_FARM_page_0 = {'GeneralConfiguration': ['b', 0, 2],
 #####
 
 class SmartAttr(object):
-    def __init__(self, raw_data):
+    def __init__(self, raw_data, smart_attr=None):
+        if smart_attr:
+            SMART_ATTR = smart_attr
         self.id = raw_data[0]
         if self.id in SMART_ATTR:
             self.attr_name = SMART_ATTR[self.id]
@@ -278,11 +280,11 @@ class SmartThresh(object):
         self.thresh = raw_data[1]
 
 
-def decode_smart_info(smart_info_raw):
+def decode_smart_info(smart_info_raw, vs_smart=None):
     smart = {}
     ##
     for i in range(0, 359, 12):
-        smart_attr = SmartAttr(smart_info_raw[i:(i+12)])
+        smart_attr = SmartAttr(smart_info_raw[i:(i+12)], vs_smart)
         if smart_attr.id != 0:
             smart[smart_attr.id] = smart_attr
     return smart

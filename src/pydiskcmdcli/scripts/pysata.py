@@ -29,8 +29,9 @@ from pydiskcmdcli import os_type
 from pydiskcmdcli import version as Version
 from pydiskcmdcli.plugins import ata_plugins
 from . import parser_update,script_check,func_debug_info
+from pydiskcmdlib.utils.converter import bytearray2string,translocate_bytearray
 from pydiskcmdcli import log
-
+VS_SMART_DRIVEDB_PATH = "/etc/pydiskcmd/vs_smart_drivedb.json" if os_type == "Linux" else None
 
 def _sending_cmd_info(dev_path: str, cmd_name: str) -> None:
     print ('issuing %s command' % cmd_name)
@@ -99,7 +100,6 @@ def _list():
     print_format = "%-20s %-20s %-40s %-26s %-16s %-8s"
     print (print_format % ("Node", "SN", "Model", "Capacity", "Format(L/P)", "FW Rev"))
     print (print_format % ("-"*20, "-"*20, "-"*40, "-"*26, "-"*16, "-"*8))
-    from pydiskcmdlib.utils.converter import bytearray2string,translocate_bytearray
     dev_path_all = None
     if os_type == 'Linux':
         from pydiskcmdcli.system.lin_os_tool import get_block_devs
@@ -663,13 +663,20 @@ def smart():
         if options.output_format != 'json':
             _sending_cmd_info(dev, "smart")
         with SATA(init_device(dev, open_t='ata')) as d:
+            id_info = d.identify_raw
             cmd_read_data = d.smart_read_data(SMART_KEY)
             cmd_read_data.check_return_status()
             ##
             cmd_thread = d.smart_read_thresh()
             cmd_thread.check_return_status()
         ##
-        format_print_smart(cmd_read_data, cmd_thread, print_type=options.output_format, show_status=options.show_status)
+        invalid_symbol = b'\x00'.decode()
+        fw = bytearray2string(translocate_bytearray(id_info[46:54]))
+        mn = bytearray2string(translocate_bytearray(id_info[54:94])).strip().strip(invalid_symbol)
+        from pydiskcmdcli.drivedb import get_drivedb_entry_by_mn,DriveSmartEntryAttr
+        _drivedb_entry = get_drivedb_entry_by_mn(mn, vs_smart_drivedb_path=VS_SMART_DRIVEDB_PATH)
+        #
+        format_print_smart(cmd_read_data, cmd_thread, print_type=options.output_format, show_status=options.show_status, smart_attr={int(k):DriveSmartEntryAttr(v).attr_name for k,v in _drivedb_entry["presets"]["vs_attribute"].items()})
     else:
         parser.print_help()
 

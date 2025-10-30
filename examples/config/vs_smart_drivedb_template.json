@@ -1,0 +1,30 @@
+[
+    {
+        "modelfamily": "VS_VERSION: 0.1",
+        "modelregexp": "-",
+        "firmwareregexp": "-",
+        "warningmsg": "Vendor Specific Version information",
+        "presets": {
+            "device_type": "",
+            "fw_bug_fix": "",
+            "vs_attribute": {}
+        }
+    },
+    {
+        "modelfamily": "Family Name here",
+        "modelregexp": "Model regexp used by re.match",
+        "firmwareregexp": "firmware regexp used by re.match",
+        "warningmsg": "Warning message here",
+        "presets": {
+            "device_type": "device_type",
+            "fw_bug_fix": "fw_bug_fix",
+            "vs_attribute": {
+                "9": [
+                    "9",
+                    "raw48",
+                    "attribute_description"
+                ]
+            }
+        }
+    }
+]
