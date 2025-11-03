@@ -159,8 +159,8 @@ def format_print_smart(cmd_read_data, cmd_thread, print_type='normal', show_stat
         _print_return_status(cmd_thread.ata_status_return_descriptor)
     print ('')
     if print_type == 'normal' or print_type == 'json':
-        if smart_attr:
-            SMART_ATTR = smart_attr
+        if not smart_attr:
+            smart_attr = SMART_ATTR
         target = {"return_status": {"smart_read_data": cmd_read_data.ata_status_return_descriptor, "smart_thread": cmd_thread.ata_status_return_descriptor}, 
                   "content": {"vendor_spec": {}, "general_info": {}},
                   }
@@ -173,7 +173,7 @@ def format_print_smart(cmd_read_data, cmd_thread, print_type='normal', show_stat
         for i in range(0, 359, 12):
             ID = data[i]
             if ID:
-                target["content"]["vendor_spec"][ID] = {"AttrName": SMART_ATTR[ID] if ID in SMART_ATTR else 'Unknown_Attribute',
+                target["content"]["vendor_spec"][ID] = {"AttrName": smart_attr[ID] if ID in smart_attr else 'Unknown_Attribute',
                                                         "Flag": scsi_ba_to_int(data[i+1:i+3], 'little'),
                                                         "Value": data[i+3],
                                                         "Worst": data[i+4],

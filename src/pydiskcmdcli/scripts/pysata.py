@@ -674,9 +674,13 @@ def smart():
         fw = bytearray2string(translocate_bytearray(id_info[46:54]))
         mn = bytearray2string(translocate_bytearray(id_info[54:94])).strip().strip(invalid_symbol)
         from pydiskcmdcli.drivedb import get_drivedb_entry_by_mn,DriveSmartEntryAttr
-        _drivedb_entry = get_drivedb_entry_by_mn(mn, vs_smart_drivedb_path=VS_SMART_DRIVEDB_PATH)
+        try:
+            _drivedb_entry = get_drivedb_entry_by_mn(mn, vs_smart_drivedb_path=VS_SMART_DRIVEDB_PATH)
+            _smart_attr = {int(k):DriveSmartEntryAttr(v).attr_name for k,v in _drivedb_entry["presets"]["vs_attribute"].items()}
+        except:
+            _smart_attr = None
         #
-        format_print_smart(cmd_read_data, cmd_thread, print_type=options.output_format, show_status=options.show_status, smart_attr={int(k):DriveSmartEntryAttr(v).attr_name for k,v in _drivedb_entry["presets"]["vs_attribute"].items()})
+        format_print_smart(cmd_read_data, cmd_thread, print_type=options.output_format, show_status=options.show_status, smart_attr=_smart_attr)
     else:
         parser.print_help()
 

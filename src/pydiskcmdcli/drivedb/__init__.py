@@ -3,12 +3,17 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import os
 import inspect
+from pydiskcmdlib import os_type
 
 def get_drivedb_path():
     return os.path.dirname(inspect.getfile(get_drivedb_path))
 
 drivedb_path = get_drivedb_path()
 smart_drivedb_path = os.path.join(drivedb_path, "smart_drivedb.json")
+if os_type == 'Linux':
+    possible_smart_drivedb_path = (smart_drivedb_path, '/etc/pydiskcmd/smart_drivedb.json')
+else:
+    possible_smart_drivedb_path = (smart_drivedb_path,)
 
 def load_drivedb_file(json_file=smart_drivedb_path):
     import json
@@ -40,7 +45,12 @@ class DriveSmartEntryAttr(object):
 
 def get_drivedb_entry_by_mn(model, vs_smart_drivedb_path=None):
     import re
-    vs_smart_all = load_drivedb_file()
+    for f in possible_smart_drivedb_path:
+        if os.path.exists(f):
+            vs_smart_all = load_drivedb_file(json_file=f)
+            break
+    else:
+        raise FileNotFoundError("Can not find any drivedb file")
     if vs_smart_drivedb_path:
         vs_smart_all.extend(load_drivedb_file(json_file=vs_smart_drivedb_path))
     vs_smart = vs_smart_all[1].copy()
