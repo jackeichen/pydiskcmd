@@ -576,5 +576,5 @@ Support
 If any support or ideas, open an issue, or contact author by email: Eric-1128@outlook.com
 
 
-[Intel VROC]: https://www.intel.com/content/www/us/en/software/virtual-raid-on-cpu-vroc.html
+[Intel VROC]: https://graidtech.com/vroc
 [Intel RST]: https://www.intel.com/content/www/us/en/support/products/55005/technologies/intel-rapid-storage-technology-intel-rst.html
