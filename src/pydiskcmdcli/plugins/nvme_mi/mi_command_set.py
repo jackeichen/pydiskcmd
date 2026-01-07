@@ -108,11 +108,16 @@ def _check_support():
         script_check(options, admin_check=True)
         ## check device
         from pydiskcmdlib.pynvme.nvme_command import AdminCommandOpcode
+        from pydiskcmdcli.nvme_spec import nvme_id_ctrl_bit_mask
         dev = sys.argv[3].strip()
         mi_send_support = "Unkown"
         mi_recv_support = "Unkown"
+        smbus_support = "Unkown"
+        vdm_support = "Unkown"
         mi_cmds = []
         with NVMe(init_device(dev, open_t='nvme')) as d:
+            mec = d.ctrl_identify_info[nvme_id_ctrl_bit_mask["MEC"][1]]
+            nvme_major_ver = d.get_nvme_ver()[0]
             # First check commands supported and effects log
             cmd = d.commands_supported_and_effects_log()
             SC,SCT = cmd.check_return_status(fail_hint=False)
@@ -132,8 +137,18 @@ def _check_support():
                     mi_cmd = decode_mi_commands_supported_and_effects(cmd.data)
                     for opcode,_ in mi_cmd.items():
                         mi_cmds.append((opcode, get_nvme_mi_command_name(opcode)))
+        if (mec & 0x01):
+            smbus_support = "Yes"
+        elif nvme_major_ver > 1:
+            smbus_support = "No"
+        if (mec & 0x02):
+            vdm_support = "Yes"
+        elif nvme_major_ver > 1:
+            vdm_support = "No"
         print ("NVMe-Mi Send Command Support   : %s" % mi_send_support)
         print ("NVMe-Mi Receive Command Support: %s" % mi_recv_support)
+        print ("NVMe-Mi over SMBus/I2C Support : %s" % smbus_support)
+        print ("NVMe-Mi over VDM Support       : %s" % vdm_support)
         if mi_cmds:
             print_format = "  %-10s %s"
             print ('')

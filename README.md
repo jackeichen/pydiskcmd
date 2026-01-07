@@ -184,6 +184,18 @@ You can uninstall it by run:
 
     $ pip uninstall pydiskcmd
 
+No pip
+------
+If you are in the environment that pip Not Installed, you can install by run:
+
+    $ cd pydiskcmd
+    $ python3 setup.py install
+
+And you could manually create smart drivedb in Linux by:
+
+    $ mkdir /etc/pydiskcmd
+    $ cp src/pydiskcmdcli/drivedb/smart_drivedb.json /etc/pydiskcmd/
+
 
 Documents
 =========

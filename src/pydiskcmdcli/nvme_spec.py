@@ -58,6 +58,9 @@ nvme_id_ctrl_bit_mask = {"VID": ('b', 0, 2),
                          "CRDT1": ('b', 128, 2),
                          "CRDT2": ('b', 130, 2),
                          "CRDT3": ('b', 132, 2),
+                         "NVMSR": ('b', 253, 1),          ## NVM Subsystem Report, nvme spec 2.0
+                         "VMCI": ('b', 254, 1),           ## VPD Write Cycle Information, nvme spec 2.0
+                         "MEC": ('b', 255, 1),            ## Management Endpoint Capabilities, nvme spec 2.0
                          "OACS": ('b', 256, 2),           ## Optional Admin Command Support
                          "ACL": ('b', 258, 1),            ## Abort Command Limit
                          "AERL": ('b', 259, 1),           ## Asynchronous Event Request Limit
