@@ -29,6 +29,7 @@ if os_type == "Linux":
             :return: a NVMe LinCommand Object
             """
             cmd.cq_status = LinIOCTLDevice.execute(self, cmd.req_id, cmd.cdb)
+            cmd.result = cmd.cq_status
             return cmd
 
 elif os_type == "Windows":
@@ -46,16 +47,18 @@ elif os_type == "Windows":
             execute a IOCTL command
 
             :param cmd: a NVMe WinCommand Object
+            :param raise_if_fail: True to raise an exception if the command fails, False to return the result
             :return: a NVMe WinCommand Object
             """
             ## 
             if not cmd.cdb:
                 raise CommandDataStrucError("Invalid Command Data Structure %s" % cmd.cdb)
-            WinIOCTLDevice.execute(self, 
-                                   cmd.req_id,  # IOControl Code to use, from winioctlcon
-                                   cmd.cdb,      # datain
-                                   cmd.cdb,
-                                   BytesReturned=BytesReturnedStruc(0))
+            cmd.result = WinIOCTLDevice.execute(self, 
+                                                cmd.req_id,  # IOControl Code to use, from winioctlcon
+                                                cmd.cdb,      # datain
+                                                cmd.cdb,
+                                                BytesReturned=BytesReturnedStruc(0),
+                                                raise_if_fail=False)
             # Usually 0 if it goes into here.
             cmd.cq_status = 0
             return cmd

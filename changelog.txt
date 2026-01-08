@@ -6,6 +6,13 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
+Version 0.3.7 (Not Release)
+  * fix bug: an error raised when sending unsupport commands to
+    nvme deice in windows, and which
+  * resulted in a change of the low-level component for 
+    pydiskcmdlib.pynvme(change pynvme version to 0.4 and 
+    pydiskcmdlib version to 0.3.4)
+
 Version 0.3.6 (20260108)
   * Add nvme In-Band Tunneling Message Servicing Mode
   * Enable nvme read,write,flush in windows for pynvme

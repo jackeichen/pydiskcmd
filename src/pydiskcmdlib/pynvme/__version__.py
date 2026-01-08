@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 major = 0
-minor = 3
+minor = 4
 ## version format
 version_format = (major, minor)
 ## version in string format

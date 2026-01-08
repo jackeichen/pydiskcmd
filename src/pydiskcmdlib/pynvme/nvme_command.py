@@ -124,6 +124,8 @@ class NVMeCommand(object):
         self._byteorder = sys.byteorder
         ## init bitmap
         self.init_cdb_bitmap()
+        ## ioctl return value
+        self._result = None
 
     def print_cdb(self):
         """
@@ -173,6 +175,14 @@ class NVMeCommand(object):
     @property
     def metadata_buffer(self):
         return self.__metadata_buffer
+
+    @property
+    def result(self):
+        return self._result
+
+    @result.setter
+    def result(self, value: int):
+        self._result = value
 
     def marshall_cdb(self, cdb, cdb_len: int):
         """
@@ -554,7 +564,7 @@ class NVMeCommand(object):
                 SCT,SC = 16,4
                 if self._cdb.srbIoCtrl.ReturnCode != win_nvme_command.FIRMWARE_STATUS.FIRMWARE_STATUS_SUCCESS.value:
                     hint = "FirmwareUpgrade - firmware download failed. srbControl->ReturnCode %d." % self._cdb.srbIoCtrl.ReturnCode
-            elif  self._cdb and self._cdb.firmwareRequest.Function == win_nvme_command.FIRMWARE_FUNCTION.ACTIVATE.value:
+            elif self._cdb and self._cdb.firmwareRequest.Function == win_nvme_command.FIRMWARE_FUNCTION.ACTIVATE.value:
                 if self._cdb.srbIoCtrl.ReturnCode == win_nvme_command.FIRMWARE_STATUS.FIRMWARE_STATUS_SUCCESS.value:
                     hint = "FirmwareUpgrade - firmware activate succeeded."
                 elif self._cdb.srbIoCtrl.ReturnCode == win_nvme_command.FIRMWARE_STATUS.FIRMWARE_STATUS_POWER_CYCLE_REQUIRED.value:
@@ -573,9 +583,32 @@ class NVMeCommand(object):
         SCT    Status Code Type
             0-7     For Common: Completion Queue Entry Status Field Definition
             16      For Windows: Windows IOCTL status check error
+            17      For Windows: Windows IOCTL Return Value Error
         """
         ## 
-        # Step 1. Check SQ entry, sometimes do not work for windows 
+        # Step 1. If windows, check the return code.
+        if os_type == 'Windows':
+            # Step 1.1  check the result form ioctl
+            if self.result == 0:
+                import ctypes
+                SCT,SC = 17,1
+                hint = "Windows IOCTL Return Value Error: %s" % ctypes.get_last_error()
+                if fail_hint:
+                    print (hint)
+                if raise_if_fail:
+                    raise ctypes.WinError(ctypes.get_last_error())
+                return SC,SCT
+            # step 1.2  Check the return status from ioctl
+            SC,SCT,hint = self._win_execute_check()
+            if SCT != 0 or SC != 0:
+                if fail_hint:
+                    print (hint)
+                if raise_if_fail:
+                    raise CommandReturnStatusError("Windows IOCTL Check Error: %s" % hint if hint else "Unkonwn Error")
+                return SC,SCT
+            elif hint and success_hint:
+                print (hint)
+        # Step 2. Check SQ entry, sometimes do not work for windows 
         SC = (self.cq_status & 0xFF)
         SCT = ((self.cq_status >> 8) & 0x07)
         if SCT != 0 or SC != 0:
@@ -601,17 +634,6 @@ class NVMeCommand(object):
             if raise_if_fail:
                 raise CommandReturnStatusError(_hint)
             return SC,SCT
-        # Step 2. If windows, check the return code.
-        if os_type == 'Windows':
-            SC,SCT,hint = self._win_execute_check()
-            if SCT != 0 or SC != 0:
-                if fail_hint:
-                    print (hint)
-                if raise_if_fail:
-                    raise CommandReturnStatusError("Windows IOCTL Check Error: %s" % hint if hint else "Unkonwn Error")
-                return SC,SCT
-            elif hint and success_hint:
-                print (hint)
         # Should always SC,SCT = 0,0 here
         if success_hint:
             print ("Command Success")

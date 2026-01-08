@@ -12,6 +12,8 @@ and pydiskhealthd need more dependencies.
 
 If you still want to use it, keep your tool version less than 0.3.0.
 
+Be careful to update from 0.3.6 to 0.3.7, low level component changed!
+
 
 pydiskcmd
 =========
