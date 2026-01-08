@@ -6,7 +6,7 @@ Visit https://github.com/jackeichen/pydiskcmd to get current development
 versions of pydiskcmd and detailed changes.
 
 
-Version 0.3.6 (Not Released)
+Version 0.3.6 (20260108)
   * Add nvme In-Band Tunneling Message Servicing Mode
   * Enable nvme read,write,flush in windows for pynvme
   * Add smartmontools drivedb to pydiskcmdcli.drivedb
