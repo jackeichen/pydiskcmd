@@ -387,7 +387,7 @@ class NVMeCommand(object):
                 self._cdb = win_nvme_command.STORAGE_PROTOCOL_COMMAND.from_buffer(_cdb)
                 data_len = (self._cdb.DataToDeviceTransferLength or self._cdb.DataFromDeviceTransferLength) + self._cdb.ErrorInfoLength
                 if data_len > 0:
-                    _cdb = self.marshall_cdb(kwargs, win_nvme_command.sizeof(win_nvme_command.StorageQueryWithoutBuffer)+data_len)
+                    _cdb = self.marshall_cdb(kwargs, win_nvme_command.sizeof(win_nvme_command.STORAGE_PROTOCOL_COMMAND)+data_len)
                     self._cdb = win_nvme_command.GetStorageProtocolCommandWithBuffer(data_len).from_buffer(_cdb)
             # set feature request, data out command
             elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_SET_PROPERTY.value:
