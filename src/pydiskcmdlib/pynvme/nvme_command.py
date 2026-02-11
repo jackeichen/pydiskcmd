@@ -523,7 +523,7 @@ class NVMeCommand(object):
     @property
     def cq_cmd_spec(self):
         '''
-        Compeletion Queue DWORD 1
+        Compeletion Queue DWORD 0
         '''
         if self.cdb:
             return self.cdb.result
@@ -553,10 +553,10 @@ class NVMeCommand(object):
                     SCT,SC = 16,2
                     hint = 'DeviceNVMeQueryProtocolData: ProtocolData Offset/Length not valid.'
         elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_PROTOCOL_COMMAND.value:
-            if self._cdb.storage_protocal_command.ReturnStatus not in (StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_SUCCESS.value, StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_PENDING.value):
+            if self._cdb.ReturnStatus not in (StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_SUCCESS.value, StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_PENDING.value):
                 SCT,SC = 16,3
                 hint = "Unkown Storage Protocol Status"
-                status = enum_find(StorageProtocolStatus, value=self._cdb.storage_protocal_command.ReturnStatus)
+                status = enum_find(StorageProtocolStatus, value=self._cdb.ReturnStatus)
                 if status:
                     hint = status.name
         elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_SCSI_MINIPORT.value:
