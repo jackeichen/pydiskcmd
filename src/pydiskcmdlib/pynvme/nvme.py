@@ -47,7 +47,7 @@ class NVMe(object):
         self.device = dev
         ## the identify information
         ret = self.id_ctrl()
-        if max(ret.check_return_status()) > 0:
+        if max(ret.check_return_status(fail_hint=False)) > 0:
             raise ExecuteCmdErr("Identify Command failed!")
         self.__ctrl_identify_info = ret.data
         # self.__id_ns_info = {}
