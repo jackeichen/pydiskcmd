@@ -20,6 +20,8 @@ from .cdb_ocp_get_log_page import (SmartExtendedLog,
                                    TCGConfiguration,
                                    TelemetryStringLog,
                                    )
+from .cdb_ocp_features import GetErrorInjection
+
 
 ocp_plugin = {"SmartExtendedLog": SmartExtendedLog,
               "ErrorRecoveryLog": ErrorRecoveryLog,
@@ -29,6 +31,7 @@ ocp_plugin = {"SmartExtendedLog": SmartExtendedLog,
               "HardwareComponent": HardwareComponent,
               "TCGConfiguration": TCGConfiguration,
               "TelemetryStringLog": TelemetryStringLog,
+              "GetErrorInjection": GetErrorInjection,
               }
 
 def _ocp_print_help():
@@ -49,6 +52,8 @@ def _ocp_print_help():
         print ("  smart-add-log                 Retrieve extended SMART Information")
         print ("  error-recovery-log            Retrieve error recovery Information")
         print ("  latency-monitor               Retrieve latency monitor log page")
+        print ("  hardware-component            Retrieve hardware component log page")
+        print ("  get-error-injection           Get error injection log page")
         print ("  cloud-SSD-plugin-version      Shows cloud SSD plugin version")
         print ("  Help                          Display this help")
         print ("")
@@ -95,6 +100,7 @@ def _ocp_smart_extended_log():
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = ocp_plugin["SmartExtendedLog"]()
             d.execute(cmd)
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_ocp_smart_extended_log(cmd, options.output_format)
     else:
@@ -115,6 +121,7 @@ def _ocp_error_recovery_log():
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = ocp_plugin["ErrorRecoveryLog"]()
             d.execute(cmd)
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_ocp_error_recovery_log(cmd, options.output_format)
     else:
@@ -135,15 +142,66 @@ def _ocp_latency_monitor():
         with NVMe(init_device(dev, open_t='nvme')) as d:
             cmd = ocp_plugin["LatencyMonitor"]()
             d.execute(cmd)
+        cmd.check_return_status(raise_if_fail=True)
         ##
         nvme_format_print.format_print_ocp_latency_monitor_log(cmd, options.output_format)
     else:
         parser.print_help()
 
+def _ocp_hardware_component():
+    usage="usage: %prog ocp hardware-component <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-l", "--data-len", type="int", dest="data_len", action="store", default=64,
+        help="buffer len if data is returned through host memory buffer")
+    parser_update(parser)
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ## check device
+        dev = sys.argv[3]
+        ##
+        script_check(options, admin_check=True)
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = ocp_plugin["HardwareComponent"](options.data_len)
+            d.execute(cmd)
+        cmd.check_return_status(raise_if_fail=True)
+        ##
+        format_dump_bytes(cmd.data)
+    else:
+        parser.print_help()
+
+def _ocp_get_error_injection():
+    usage="usage: %prog ocp get-error-injection <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-s", "--sel", type="int", dest="sel", action="store", default=0,
+        help="[0-3]: current/default/saved/supported")
+    parser_update(parser)
+
+    if len(sys.argv) > 3:
+        (options, args) = parser.parse_args(sys.argv[3:])
+        ## check device
+        dev = sys.argv[3]
+        ##
+        script_check(options, admin_check=True)
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = ocp_plugin["GetErrorInjection"](options.sel)
+            d.execute(cmd)
+        cmd.check_return_status(raise_if_fail=True)
+        ##
+        print ("Number of outstanding enabled error injections: %d" % (cmd.cq_cmd_spec & 0x7f))
+        print ("")
+        format_dump_bytes(cmd.data)
+    else:
+        parser.print_help()
+
+
 plugin_ocp_commands_dict = {"ocp-check": _ocp_info_check,
                             "smart-add-log": _ocp_smart_extended_log,
                             "error-recovery-log": _ocp_error_recovery_log,
                             "latency-monitor": _ocp_latency_monitor,
+                            "hardware-component": _ocp_hardware_component,
+                            "get-error-injection": _ocp_get_error_injection,
                             "cloud-SSD-plugin-version": _ocp_print_ver,
                             "Help": _ocp_print_help,}
 

@@ -242,7 +242,7 @@ class HardwareComponent(NVMeCommand):
                                ProtocolType=win_nvme_command.StroageProtocolType.ProtocolTypeNvme.value,
                                DataType=win_nvme_command.StorageProtocolNVMeDataType.NVMeDataTypeLogPage.value,
                                ProtocolDataOffset=win_nvme_command.sizeof(win_nvme_command.StorageProtocolSpecificData),
-                               ProtocolDataLength=data_length,
+                               ProtocolDataLength=data_length if data_length > 512 else 512,
                                ProtocolDataRequestValue=lid)
 
 
