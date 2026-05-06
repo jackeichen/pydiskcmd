@@ -57,8 +57,10 @@ class SATA(object):
         self.device = dev
         self._blocksize = blocksize
         self.__init_opcode()
-        ##
-        self.__identify = self.identify().datain
+        ## check if SATA Device, raise error if not SATA Device
+        cmd = self.identify()
+        cmd.check_return_status(success_hint=False, fail_hint=False, raise_if_fail=True)
+        self.__identify = cmd.datain
         # auto detect blocksize
         # set blocksize if blocksize=0
         if self._blocksize == 0 and self.__identify[213] & 0xC0 == 0x40: # word 106 valid

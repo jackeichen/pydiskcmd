@@ -274,7 +274,7 @@ class ATACommand16(ATAPassThrough16):
                                         "%#x" % ata_status_return.get("error"),
                                         )
                 )
-            print ('')
+                print ('')
             if raise_if_fail:
                 raise CommandReturnStatusError("ATA Return Status Check Error: SCSI Sense Key(%#x), Error Bit(%d), device fault bit(%d)" % (decode_sense.data.get("sense_key"),
                                                                                                                                             ata_status_return.get("status") & 0x01,
