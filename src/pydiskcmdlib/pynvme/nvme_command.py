@@ -553,10 +553,11 @@ class NVMeCommand(object):
                     SCT,SC = 16,2
                     hint = 'DeviceNVMeQueryProtocolData: ProtocolData Offset/Length not valid.'
         elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_STORAGE_PROTOCOL_COMMAND.value:
-            if self._cdb.ReturnStatus not in (StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_SUCCESS.value, StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_PENDING.value):
+            _cdb = win_nvme_command.STORAGE_PROTOCOL_COMMAND.from_buffer_copy(bytearray(self.cdb_struc)) # cdb_struc
+            if _cdb.ReturnStatus not in (StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_SUCCESS.value, StorageProtocolStatus.STORAGE_PROTOCOL_STATUS_PENDING.value):
                 SCT,SC = 16,3
                 hint = "Unkown Storage Protocol Status"
-                status = enum_find(StorageProtocolStatus, value=self._cdb.ReturnStatus)
+                status = enum_find(StorageProtocolStatus, value=_cdb.ReturnStatus)
                 if status:
                     hint = status.name
         elif self._req_id == win_nvme_command.IOCTLRequest.IOCTL_SCSI_MINIPORT.value:

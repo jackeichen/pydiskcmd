@@ -784,6 +784,12 @@ def GetStorageProtocolCommandWithBuffer(buffer_len:int):
         def data_buf(self):
             return bytes(self.data_buffer)[self.storage_protocal_command.ErrorInfoLength:]
 
+        @data_buf.setter
+        def data_buf(self, value:bytes):
+            offset = self.storage_protocal_command.ErrorInfoLength
+            for i in range(min(len(value), len(self.data_buf))):
+                self.data_buffer[offset+i] = value[i]
+
         @property
         def data_len(self):
             return (self.data_buffer.size - self.storage_protocal_command.ErrorInfoLength)

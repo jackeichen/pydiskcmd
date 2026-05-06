@@ -2,9 +2,16 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-from pydiskcmdlib.pynvme.cdb_identify import IDCtrl,IDNS,IDActiveNS,IDAllocatedNS,IDCtrlListInSubsystem,IDCtrlListAttachedToNS,UUIDList
+from pydiskcmdlib.pynvme.cdb_identify import (
+    IDCtrl,
+    IDNS,
+    IDActiveNS,
+    IDAllocatedNS,
+    IDCtrlListInSubsystem,
+    IDCtrlListAttachedToNS,
+    UUIDList,
+)
 from pydiskcmdlib.pynvme.cdb_set_feature import SetFeature
-from pydiskcmdlib.pynvme.cdb_get_feature import GetFeature
 from pydiskcmdlib.pynvme.cdb_get_feature import GetFeature
 from pydiskcmdlib.pynvme.cdb_get_log_page import (
     GetLogPage,
@@ -121,7 +128,7 @@ class NVMe(object):
         """
         try:
             log.debug("Sending NVMe %s: %s" % ("command" if cmd.cdb_struc else "Request",
-                                               " ".join(["%X" % i for i in cmd.cdb_struc]) if cmd.cdb_struc else cmd.req_id,
+                                               " ".join([("%X" % i).zfill(2) for i in cmd.cdb_struc]) if cmd.cdb_struc else cmd.req_id,
                                               ))
             self.device.execute(cmd)
             if (cmd.cq_status is not None) and (cmd.cq_cmd_spec is not None):

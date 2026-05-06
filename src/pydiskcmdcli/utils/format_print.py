@@ -102,15 +102,22 @@ def deocde_format_bits(data_dict, check_dict):
 def json_print(json_object):
     print (json.dumps(json_object, sort_keys=False, indent=2))
 
-def format_print_pyobj(data, prefix="  "):
+def format_print_pyobj(data, prefix="  ", int_type=16):
     if isinstance(data, dict):
         for k,v in data.items():
             if isinstance(v, (dict, list, tuple)):
                 print ("%s%s: " % (prefix, k))
-                format_print_pyobj(v, prefix*2)
+                format_print_pyobj(v, prefix*2, int_type=int_type)
             else:
                 if isinstance(v, (int, float)):
-                    temp = "%#x" % v
+                    if int_type == 16:
+                        temp = "%#x" % v
+                    elif int_type == 10:
+                        temp = "%d" % v
+                    elif int_type == 2:
+                        temp = f'{v:b}'
+                    else:
+                        temp = "%#x" % v
                 elif isinstance(v, bytearray):
                     temp = bytes(v)
                 else:
@@ -120,10 +127,17 @@ def format_print_pyobj(data, prefix="  "):
         for v in data:
             if isinstance(v, (dict, list, tuple)):
                 print ("%s- " % prefix)
-                format_print_pyobj(v, prefix*2)
+                format_print_pyobj(v, prefix*2, int_type=int_type)
             else:
                 if isinstance(v, (int, float)):
-                    temp = "%#x" % v
+                    if int_type == 16:
+                        temp = "%#x" % v
+                    elif int_type == 10:
+                        temp = "%d" % v
+                    elif int_type == 2:
+                        temp = f'{v:b}'
+                    else:
+                        temp = "%#x" % v
                 elif isinstance(v, bytearray):
                     temp = bytes(v)
                 else:
