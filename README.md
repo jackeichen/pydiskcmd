@@ -170,7 +170,7 @@ Sofware Requirements:
 
 Python3 Module Requirements:
 
-    * cython-sgio(Optional, can skip, but need latest version from github if used in linux)
+    * cython-sgio(Only for Linux, Optional but Strongly Recommend, need latest version from [cython-sgio] if used)
 
 Online build and install from the repository:
 
@@ -592,3 +592,4 @@ If any support or ideas, open an issue, or contact author by email: Eric-1128@ou
 
 [Intel VROC]: https://graidtech.com/vroc
 [Intel RST]: https://www.intel.com/content/www/us/en/support/products/55005/technologies/intel-rapid-storage-technology-intel-rst.html
+[cython-sgio]: https://github.com/python-scsi/cython-sgio

@@ -1228,6 +1228,8 @@ def sanitize():
         help="Sanitize action.")
     parser.add_option("-p", "--ovrpat", type="int", dest="ovrpat", action="store", default=0,
         help="Overwrite pattern.")
+    parser.add_option("", "--cmd-type", type="choice", dest="cmd_type", action="store", choices=["nvme", "scsi"], default="scsi",
+        help="Only works on Windows, specify the command type to use in nvme|scsi, default is scsi.")
     parser_update(parser, add_force=True)
 
     if len(sys.argv) > 2:
@@ -1258,9 +1260,22 @@ def sanitize():
         else:
             parser.error("sanact should be 0-7")
         ##
-        with NVMe(init_device(dev, open_t='nvme')) as d:
-            cmd = d.sanitize(sanact, ause, owpass, oipbp, no_dealloc, ovrpat=options.ovrpat)
-        cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
+        if os_type == "Windows" and options.cmd_type == "scsi":
+            # Only works on Windows 10 version 1903 and later
+            if sanact == 2:
+                service_action = 0x02
+            elif sanact == 4:
+                service_action = 0x03
+            else:
+                parser.error("For scsi2nvme command type, only support BLOCK_ERASE_SANITIZE (2) and CRYPTO_ERASE_SANITIZE (4)")
+            with SCSI2NVMe(init_device(dev, open_t='scsi')) as d:
+                cmd = d.sanitize(service_action, ause, 0, 0)
+            cmd.check_nvme_return_status()
+        else:
+            # Only works on later than Windows 11, Windows Server 2022
+            with NVMe(init_device(dev, open_t='nvme')) as d:
+                cmd = d.sanitize(sanact, ause, owpass, oipbp, no_dealloc, ovrpat=options.ovrpat)
+            cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -1304,6 +1319,7 @@ def read():
                                options.block_count+1, 
                                fua=1 if options.fua else 0, 
                                rdprotect=rdprotect)
+            cmd.check_nvme_return_status()
             nvme_format_print.format_print_read_data(b'', cmd.datain, dev=d.device._file_name, print_type=options.output_format)
         else:
             with NVMe(init_device(dev, open_t='nvme')) as d:
@@ -1411,6 +1427,7 @@ def write():
                                 temp_data,
                                 fua=1 if options.fua else 0,
                                 wrprotect=wrprotect)
+            cmd.check_nvme_return_status()  
         else:
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.id_ns(options.namespace_id)
@@ -1456,6 +1473,7 @@ def flush():
         if os_type == 'Windows':
             with SCSI2NVMe(init_device(dev, open_t='scsi')) as d:
                 cmd = d.synchronizecache10(0, 0)
+            cmd.check_nvme_return_status()  
         else:
             with NVMe(init_device(dev, open_t='nvme')) as d:
                 cmd = d.flush(options.namespace_id)
@@ -1917,7 +1935,7 @@ def pynvme():
                 from pydiskcmdlib.exceptions import BaseError as lib_BaseError
                 from pydiskcmdcli.exceptions import BaseError as cli_BaseError
                 if not isinstance(e, (lib_BaseError, cli_BaseError)):
-                    e = NonpydiskcmdError(str(e))
+                    e = NonpydiskcmdError(("%s: %s" % (e.__class__.__name__, str(e))))
                 print (str(e))
                 import traceback
                 log.debug(traceback.format_exc())

@@ -59,12 +59,22 @@ else:
                 finally:
                     self.open()
             log.debug("Sending SCSi Command: %s" % " ".join(["%X" % i for i in cmd.cdb]))
-            result = sgio.execute(self._file, cmd.cdb, cmd.dataout, cmd.datain, return_sense_buffer=en_raw_sense)
-            if en_raw_sense:
-                resid,cmd.raw_sense_data = result
+            try:
+                result = sgio.execute(self._file, cmd.cdb, cmd.dataout, cmd.datain, return_sense_buffer=en_raw_sense)
+            except sgio.CheckConditionError as error:
+                self.CheckCondition(error.sense)
+                if en_raw_sense:
+                    cmd.raw_sense_data = error.sense
+            except sgio.UnspecifiedError as error:
+                self.CheckCondition(error.sense)
+                if en_raw_sense:
+                    cmd.raw_sense_data = error.sense
             else:
-                resid = result
-            log.debug("Sense Data: %s" % " ".join(["%X" % i for i in cmd.raw_sense_data]) if cmd.raw_sense_data else 'NA')
+                if en_raw_sense:
+                    resid,cmd.raw_sense_data = result
+                else:
+                    resid = result
+            log.debug("Sense Data: %s" % (" ".join(["%X" % i for i in cmd.raw_sense_data]) if cmd.raw_sense_data else 'NA'))
             return resid
 
 

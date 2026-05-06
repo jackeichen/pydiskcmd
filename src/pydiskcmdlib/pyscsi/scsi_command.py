@@ -7,6 +7,52 @@ from pydiskcmdlib.os import lin_ioctl_request,win_ioctl_request
 from pydiskcmdlib.device.win_device import ctypes
 from pydiskcmdlib.pyscsi.win_scsi_structures import SCSIPassThroughDirect,SCSIPassThroughDirectWithBuffer
 from pydiskcmdlib.exceptions import *
+from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
+
+def _check_return_status(self: _SCSICommand, success_hint: bool=False, fail_hint: bool = True, raise_if_fail: bool=True) -> bool:
+    _status  = False
+    _fail_hint = ''
+    sense_data = None
+    if self.sense:
+        sense_data = self.sense
+    elif self.raw_sense_data:
+        sense_data = self.raw_sense_data
+    else:
+        _status = True
+    ##
+    if sense_data:
+        sense = SCSICheckCondition(sense_data)
+        if sense.valid:
+            if sense.data:
+                if sense.data["sense_key"] == 0 and sense._ascq == 0:
+                    _status = True   
+                else:
+                    _fail_hint = str(sense)
+                    if fail_hint:
+                        _hint = """Command failed, and details bellow.
+- SCSI Status:
+  %-12s%-19s%s
+  %-12s%-19s%s
+            """ % ("Sense Key", "ASC", "ASCQ", 
+                   "0x%X" % sense.data.get("sense_key"), "0x%X" % sense.asc, "0x%X" % sense.ascq,
+                   )
+                        print (_hint)
+            else:
+                _fail_hint = "Invalid sense data format"
+        else:
+            _fail_hint = "Invalid sense data"
+    if _status:
+        if success_hint:
+            print ("Command Success")
+            print ('')
+    else:
+        if fail_hint:
+            print (_fail_hint)
+        if raise_if_fail:
+            raise CommandReturnStatusError(_fail_hint)
+    return _status
+
+_SCSICommand.check_return_status = _check_return_status
 
 
 class SCSICommand(_SCSICommand):

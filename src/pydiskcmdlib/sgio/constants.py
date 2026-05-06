@@ -10,7 +10,7 @@ SG_IO = IOCTLRequest.SG_IO_IOCTL.value
 # #define SG_INFO_OK 0x0          /* no sense, host nor driver "noise" */
 # #define SG_INFO_CHECK 0x1       /* something abnormal happened */
 SG_INFO_OK_MASK = 0x1
-SD_INFO_OK = 0x0
+SG_INFO_OK = 0x0
 SG_INFO_CHECK = 0x1
 
 

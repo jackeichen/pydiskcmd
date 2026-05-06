@@ -1069,7 +1069,7 @@ def pysata():
                 from pydiskcmdlib.exceptions import BaseError as lib_BaseError
                 from pydiskcmdcli.exceptions import BaseError as cli_BaseError
                 if not isinstance(e, (lib_BaseError, cli_BaseError)):
-                    e = NonpydiskcmdError(str(e))
+                    e = NonpydiskcmdError(("%s: %s" % (e.__class__.__name__, str(e))))
                 print (str(e))
                 import traceback
                 log.debug(traceback.format_exc())
@@ -1077,12 +1077,12 @@ def pysata():
             else:
                 if (ret is not None) and ret > 0:
                     # function return a number, and is not None and > 0
-                    e = UserDefinedError("pynvme command of <%s> error" % command, ret)
+                    e = UserDefinedError("pysata command of <%s> error" % command, ret)
                     print (str(e))
                     sys.exit(e.exit_code)
         else:
             print_help()
-            e = FunctionNotImplementError("pynvme command of <%s> Not Implement error" % command)
+            e = FunctionNotImplementError("pysata command of <%s> Not Implement error" % command)
             print ('')
             print (str(e))
             sys.exit(e.exit_code)

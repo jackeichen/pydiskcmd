@@ -6,6 +6,7 @@ from pydiskcmdcli.utils.format_print import format_dump_bytes,human_read_capacit
 
 def _inquiry_standard(s, options):
     cmd = s.inquiry(alloclen=options.alloclen)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         print('Standard INQUIRY')
@@ -53,6 +54,7 @@ def _inquiry_standard(s, options):
 
 def _inquiry_supported_vpd_pages(s, options):
     cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.SUPPORTED_VPD_PAGES, alloclen=options.alloclen)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         print('Supported VPD Pages, page_code=0x00')
@@ -69,6 +71,7 @@ def _inquiry_supported_vpd_pages(s, options):
 
 def _inquiry_block_limits(s, options):
     cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_LIMITS, alloclen=options.alloclen)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         print('Block Limits, page_code=0xb0 (SBC)')
@@ -90,6 +93,7 @@ def _inquiry_block_limits(s, options):
 
 def _inquiry_block_dev_char(s, options):
     cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS, alloclen=options.alloclen)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         print('Block Device Characteristics, page_code=0xb1 (SBC)')
@@ -108,6 +112,7 @@ def _inquiry_block_dev_char(s, options):
 
 def _inquiry_logical_block_prov(s, options):
     cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.LOGICAL_BLOCK_PROVISIONING, alloclen=options.alloclen)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         print('Logical Block Provisioning, page_code=0xb2 (SBC)')
@@ -131,6 +136,7 @@ def _inquiry_logical_block_prov(s, options):
 
 def _inquiry_unit_serial_number(s, options):
     cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.UNIT_SERIAL_NUMBER, alloclen=options.alloclen)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         print('Unit Serial Number, page_code=0x80')
@@ -143,6 +149,7 @@ def _inquiry_unit_serial_number(s, options):
 
 def _inquiry_device_identification(s, options):
     cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.DEVICE_IDENTIFICATION, alloclen=16383)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         print('Device Identification, page_code=0x83')
@@ -179,6 +186,7 @@ def _inquiry_ata_information(s, options):
     print('ATA Information, page_code=0x89')
     print('=============================================\n')
     cmd = s.inquiry(evpd=1, page_code=INQUIRY.VPD.ATA_INFORMATION, alloclen=options.alloclen)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         print('SAT Vendor Identification:', i['sat_vendor_identification'].decode(encoding="utf-8",
@@ -218,9 +226,10 @@ def _inquiry_ata_information(s, options):
         print (cmd.datain)
 
 def _no_match_inq(s, options):
-    print('No pretty print( for this page, page_code=0x%02x' % options.page_code)
+    print('No pretty print( for this page, page_code=0x%02x )' % options.page_code)
     print('=============================================\n')
     cmd = s.inquiry(evpd=1, page_code=options.page_code, alloclen=options.alloclen)
+    cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     if options.output_format == 'normal':
         i = cmd.result
         for k, v in i.items():

@@ -620,7 +620,7 @@ class NVMeCommand(object):
                 print ("Command failed, and details bellow.")
                 format_string = "%-15s%-20s%-8s%s"
                 print (format_string % ("Status Code", "Status Code Type", "More", "Do Not Retry"))
-                print (format_string % (SC, SCT, More, DNR))
+                print (format_string % ("0x%X" % SC, "0x%X" % SCT, More, DNR))
                 print ('')
                 print (StatusCodeDescription.get((SCT,SC)))
                 print ('')

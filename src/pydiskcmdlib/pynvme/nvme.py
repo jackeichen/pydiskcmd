@@ -404,6 +404,65 @@ class NVMe(object):
 from pydiskcmdlib.pyscsi.scsi import SCSI
 from pyscsi.pyscsi.scsi_command import SCSICommand
 from pydiskcmdlib import os_type
+from pyscsi.pyscsi.scsi_sense import SCSICheckCondition
+from pydiskcmdlib.pynvme.nvme_status_code import get_nvme_status_code_without_status_code,StatusCodeDescription
+
+def _check_nvme_return_status(self: SCSICommand, success_hint: bool=False, fail_hint: bool = True, raise_if_fail: bool=True) -> bool:
+    """
+    Check the return status of the NVMe command.
+
+    Until Now, IOCTL status code cannot be obtained by the library, so only check sense key, acs,ascq.
+    """
+    _status  = False
+    _fail_hint = ''
+    sense_data = None
+    if self.sense:
+        sense_data = self.sense
+    elif self.raw_sense_data:
+        sense_data = self.raw_sense_data
+    else:
+        _status = True
+    ##
+    if sense_data:
+        sense = SCSICheckCondition(sense_data)
+        if sense.valid:
+            if sense.data:
+                if sense.data["sense_key"] == 0 and sense._ascq == 0:
+                    _status = True   
+                else:
+                    _fail_hint = str(sense)
+                    if fail_hint:
+                        status_code = get_nvme_status_code_without_status_code(sense.data["sense_key"], sense.asc, sense.ascq)
+                        _hint = """Command failed, and details bellow.
+- SCSI Status:
+  %-12s%-19s%s
+  %-12s%-19s%s
+- Mapping to Possible NVMe Status Code:
+  %-20s%-18s%s""" % ("Sense Key", "ASC", "ASCQ", 
+                     "0x%X" % sense.data.get("sense_key"), "0x%X" % sense.asc, "0x%X" % sense.ascq,
+                     "Status Code Type", "Status Code", "Status Code Description",
+                    )
+                        print (_hint)
+                        if status_code:
+                            for i in status_code.values():
+                                for code in i:
+                                    print ("  %-20s%-18s%s" % ("0x%X" % code[0], "0x%X" % code[1], StatusCodeDescription.get(code)))
+                        else:
+                            print ("  %-20s%-18s%s" % ("Unknown", "Unknown", "Unknown"))
+            else:
+                _fail_hint = "Invalid sense data format"
+        else:
+            _fail_hint = "Invalid sense data"
+    if _status:
+        if success_hint:
+            print ("Command Success")
+            print ('')
+    else:
+        if fail_hint:
+            print (_fail_hint)
+        if raise_if_fail:
+            raise CommandReturnStatusError(_fail_hint)
+    return _status
 
 class SCSI2NVMe(SCSI):
     if os_type == "Windows":
@@ -434,6 +493,7 @@ class SCSI2NVMe(SCSI):
             0x3B,   # Write Buffer
             0x9E,   # internal used by pyscsi, user should not use it
         )
+        SCSICommand.check_nvme_return_status = _check_nvme_return_status
     else:
         # Support by 'NVM-Express-SCSI-Translation-Reference-1_1-Gold'
         support_commands = (

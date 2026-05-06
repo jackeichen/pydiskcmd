@@ -103,46 +103,33 @@ def inq():
         with SCSI(init_device(dev, open_t='scsi')) as d:
             print ('issuing inquiry command')
             print ("%s:" % d.device._file_name)
-            try:
-                d.testunitready()
+            d.testunitready()
                 ##
-                if not evpd:
-                    _inquiry_standard(d, options)
-                    return
+            if not evpd:
+                return _inquiry_standard(d, options)
 
-                if options.page_code == INQUIRY.VPD.SUPPORTED_VPD_PAGES:
-                    _inquiry_supported_vpd_pages(d, options)
-                    return
+            if options.page_code == INQUIRY.VPD.SUPPORTED_VPD_PAGES:
+                return _inquiry_supported_vpd_pages(d, options)
 
-                if options.page_code == INQUIRY.VPD.BLOCK_LIMITS:
-                    _inquiry_block_limits(d, options)
-                    return
+            if options.page_code == INQUIRY.VPD.BLOCK_LIMITS:
+                return _inquiry_block_limits(d, options)
 
-                if options.page_code == INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS:
-                    _inquiry_block_dev_char(d, options)
-                    return
+            if options.page_code == INQUIRY.VPD.BLOCK_DEVICE_CHARACTERISTICS:
+                return _inquiry_block_dev_char(d, options)
 
-                if options.page_code == INQUIRY.VPD.LOGICAL_BLOCK_PROVISIONING:
-                    _inquiry_logical_block_prov(d, options)
-                    return
+            if options.page_code == INQUIRY.VPD.LOGICAL_BLOCK_PROVISIONING:
+                return _inquiry_logical_block_prov(d, options)
 
-                if options.page_code == INQUIRY.VPD.UNIT_SERIAL_NUMBER:
-                    _inquiry_unit_serial_number(d, options)
-                    return
+            if options.page_code == INQUIRY.VPD.UNIT_SERIAL_NUMBER:
+                return _inquiry_unit_serial_number(d, options)
 
-                if options.page_code == INQUIRY.VPD.DEVICE_IDENTIFICATION:
-                    _inquiry_device_identification(d, options)
-                    return
+            if options.page_code == INQUIRY.VPD.DEVICE_IDENTIFICATION:
+                return _inquiry_device_identification(d, options)
 
-                if options.page_code == INQUIRY.VPD.ATA_INFORMATION:
-                    _inquiry_ata_information(d, options)
-                    return
+            if options.page_code == INQUIRY.VPD.ATA_INFORMATION:
+                return _inquiry_ata_information(d, options)
 
-                _no_match_inq(d, options)
-            except SCSICheckCondition as ex:
-                # if you want a print out of the sense data dict uncomment the next line
-                #ex.show_data = True
-                print(ex)
+            return _no_match_inq(d, options)
     else:
         parser.print_help()
 ############################ .decode(encoding="utf-8", errors="strict")
@@ -230,6 +217,7 @@ def getlbastatus():
                 print('LUN is fully provisioned.')
                 return
             cmd = d.getlbastatus(options.lba)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
         ##
         if options.output_format == "normal":
             r = cmd.result
@@ -264,6 +252,7 @@ def readcap():
             print ("")
             ##
             cmd = d.readcapacity16()
+            cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
             r = cmd.result
             if not r['lbpme']:
                 print('LUN is fully provisioned.')
@@ -306,7 +295,7 @@ def luns():
             print ("")
             ##
             cmd = d.reportluns(report=options.SR, alloclen=options.data_len)
-            r = d.reportluns(report=options.SR, alloclen=options.data_len).result
+            cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
         ##
         if options.output_format == "normal":
             r = cmd.result
@@ -346,6 +335,7 @@ def mode_sense():
             print ("")
             ##
             cmd = d.modesense10(options.page, sub_page_code=options.subpage, alloclen=options.alloclen)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
         ##
         if options.output_format == "normal":
             for k,v in cmd.result.items():
@@ -407,6 +397,7 @@ def log_sense():
                     # print ("Fixed alloclen %s->%s" % (options.alloclen, log_len))
                     cmd = d.logsense(options.page, sub_page_code=options.subpage, sp=0, pc=options.page_ctrl, parameter=0, alloclen=log_len, control=0)
         ##
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
         if options.output_format == "normal":
             log_page = LogSenseAttr.get((options.page, options.subpage))
             if not log_page:
@@ -474,6 +465,7 @@ def sync():
             print ("")
             ##
             cmd = d.synchronizecache16(options.start_lba, options.block_count, immed=options.immed, group_number=options.group_number)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -498,10 +490,12 @@ def read16():
         with SCSI(init_device(dev, open_t='scsi'), options.bs) as d:
             print ('issuing read16 command')
             print ("%s:" % d.device._file_name)
-            data = d.read16(options.slba, options.nlba).datain
-            print ("Data Length: %s" % len(data))
-            print ("")
-            print (data)
+            cmd = d.read16(options.slba, options.nlba)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
+        data = cmd.datain
+        print ("Data Length: %s" % len(data))
+        print ("")
+        print (data)
     else:
         parser.print_help()
 
@@ -552,6 +546,7 @@ def write16():
             print ('issuing write16 command')
             print ("%s:" % d.device._file_name)
             cmd = d.write16(options.slba, options.nlba, options.data)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
 
@@ -636,6 +631,7 @@ def cdb_passthru():
             print ('issuing cdb-passthru command')
             print ("%s:" % d.device._file_name)
             cmd = d.cdb_passthru(raw_cdb, dataout=dataout, datain_alloclen=datain_alloclen)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)    
         if options.direction == 1:
             if options.dfile:
                 with open(options.dfile, 'wb') as f:
@@ -672,6 +668,7 @@ def security_protocol_in():
             print ('issuing security protocol in command')
             print ("%s:" % d.device._file_name)
             cmd = d.security_protocol_in(options.protocol, options.sp, options.alloclen, INC_512=options.INC_512)
+        cmd.check_return_status(success_hint=False, fail_hint=True, raise_if_fail=True)
         if options.output_format == "hex":
             format_dump_bytes(cmd.datain)
         else:
@@ -801,7 +798,7 @@ def pyscsi():
                 from pydiskcmdlib.exceptions import BaseError as lib_BaseError
                 from pydiskcmdcli.exceptions import BaseError as cli_BaseError
                 if not isinstance(e, (lib_BaseError, cli_BaseError)):
-                    e = NonpydiskcmdError(str(e))
+                    e = NonpydiskcmdError("%s: %s" % (e.__class__.__name__, str(e)))
                 print (str(e))
                 import traceback
                 log.debug(traceback.format_exc())
@@ -809,12 +806,12 @@ def pyscsi():
             else:
                 if (ret is not None) and ret > 0:
                     # function return a number, and is not None and > 0
-                    e = UserDefinedError("pynvme command of <%s> error" % command, ret)
+                    e = UserDefinedError("pyscsi command of <%s> error" % command, ret)
                     print (str(e))
                     sys.exit(e.exit_code)
         else:
             print_help()
-            e = FunctionNotImplementError("pynvme command of <%s> Not Implement error" % command)
+            e = FunctionNotImplementError("pyscsi command of <%s> Not Implement error" % command)
             print ('')
             print (str(e))
             sys.exit(e.exit_code)

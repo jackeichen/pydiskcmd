@@ -167,3 +167,69 @@ should be retried after the transition is complete.",
     (0x03, 0x71): "Command Aborted By Host: The command was aborted as a result of host action (e.g., the host \
 disconnected the Fabric connection).",
 }
+
+from pydiskcmdlib.os.win_ioctl_utils import IOCTLStatusCode
+#####################################################################################
+# Linux IO team decided to remove SCSI-to-NVMe translations from kernel 4.12,
+# for device management as too much is lost in translation and the maintenance 
+# burden in keeping this kludgey layer around has been neglected such that 
+# much of the translations are completely broken.
+# Information from http://merlin.infradead.org/pipermail/linux-nvme/2017-June/011314.html
+#
+# Keep this exist because it is used from Windows 10 version 1903 to the latest Windows 11 version.
+#####################################################################################
+scsi2nvme_status_mapping = {
+    # (status_code, sense_key, additional_sense_code, additional_sense_code_qualifier): (status_code_type, status_code)
+    # Generic Command Status
+    "generic_command": {
+        (IOCTLStatusCode.GOOD.value, 0, 0): [(0, 0),],
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x20, 0x00): [(0, 0x01),],
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x05, 0x24, 0x00): [(0, 0x02),],
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x03, None, None): [(0, 0x04), (0, 0x81),],   # Data Transfer Error, Capacity Exceeded
+        (IOCTLStatusCode.TASK_ABORTED.value, 0x0B, 0x0B, 0x08): [(0, 0x05),],
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x04, 0x44, 0x00): [(0, 0x06),],   # internal Device Error
+        (IOCTLStatusCode.TASK_ABORTED.value, 0x0B, 0x0, 0x0): [(0, 0x07), (0, 0x08), (0, 0x09), (0, 0x0A),],     # Command Abort *
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x05, 0x20, 0x09): [(0, 0x0B),],   # Invalid Namespace or Format
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x05, 0x21, 0x00): [(0, 0x80),],   # LBA Out of Range
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x02, 0x04, 0x00): [(0, 0x82),],      # Namespace Not Ready, (Do Not Retry bit value 1)
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x02, 0x04, 0x01): [(0, 0x82),],      # Namespace Not Ready, (Do Not Retry bit value 0)
+        (IOCTLStatusCode.RESERVATION_CONFLICT.value, None, None, None): [(0, 0x83),],   # Reservation Conflict
+    },
+    # Command Specific Status
+    "command_specific": {
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x05, None, None): [(0x01, 0x00), (0x01, 0x03)],   # Completion Queue Invalid
+        # (None, None, None, None): [(0x01, 0x01),],   # Invalid Queue Identifier
+        # (None, None, None, None): [(0x01, 0x02),],   # Maximum Queue Size Exceeded
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x05, 0x31, 0x01): [(0x01, 0x0A),],   # Invalid Format
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x05, 0x24, 0x00): [(0x01, 0x80),],   # Conflicting Attributes
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x07, 0x27, 0x00): [(0x01, 0x82),],   # Attempted Write to Read-Only Range
+    },
+    "media_error": {
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x03, 0x03, 0x00): [(0x02, 0x80),],   # Write Fault
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x03, 0x11, 0x00): [(0x02, 0x81),],   # Unrecovered Read Error
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x03, 0x10, 0x01): [(0x02, 0x82),],   # End-to-end Guard Check Error
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x03, 0x10, 0x02): [(0x02, 0x83),],   # End-to-end Application Tag Check Error
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x03, 0x10, 0x03): [(0x02, 0x84),],   # End-to-end Reference Tag Check Error
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x0E, 0x10, 0x00): [(0x02, 0x85),],   # Compare Failure
+        (IOCTLStatusCode.CHECK_CONDITION.value, 0x07, 0x20, 0x02): [(0x02, 0x86),],   # Access Denied
+    },
+}
+
+def get_nvme_status_code(status_code, sense_key, asc, ascq):
+    """
+    Get the NVMe status code from the SCSI status code, sense key, additional sense code, and additional sense code qualifier
+    """
+    return {k: v.get((status_code, sense_key, asc, ascq)) for k,v in scsi2nvme_status_mapping.items() if (status_code, sense_key, asc, ascq) in v}
+
+def get_nvme_status_code_without_status_code(sense_key, asc, ascq):
+    """
+    Get the NVMe status code from the SCSI sense key, additional sense code, and additional sense code qualifier
+    """
+    result = {}
+    for k,v in scsi2nvme_status_mapping.items():
+        for scsi,nvme in v.items():
+            if (sense_key, asc, ascq) == scsi[1:]:
+                if k not in result:
+                    result[k] = []
+                result[k].extend(nvme)
+    return result

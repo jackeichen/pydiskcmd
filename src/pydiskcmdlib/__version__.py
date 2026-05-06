@@ -10,5 +10,5 @@ version_format = (major, minor, revision)
 ## version in string format
 version = '%s.%s.%s' % (major, minor, revision)
 
-# 0.3.2 -> 0.3.3
-# follow pynvme version changed
+## 0.3.2 -> 0.3.3
+# follow pynvme version changed & pyscsi version changed

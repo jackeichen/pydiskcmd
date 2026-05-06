@@ -66,6 +66,7 @@ class GetLogPage(NVMeCommand):
                      }
     elif os_type == "Windows":
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_QUERY_PROPERTY.value
+        ## see https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddstor/ne-ntddstor-_storage_protocol_nvme_data_type
         _cdb_bits = {"PropertyId": [0xFFFFFFFF, 0],
                      "QueryType": [0xFFFFFFFF, 4],
                      "ProtocolType": [0xFFFFFFFF, 8],

@@ -8,5 +8,8 @@ version_format = (major, minor)
 ## version in string format
 version = '%s.%s' % (major, minor)
 
-# 0.2->0.3
+## 0.2-> 0.3
 # add nvme mi in band support
+## 0.3 -> 0.4
+# 1. change of the low-level component;
+# 2. scsi to nvme transport enhancement;

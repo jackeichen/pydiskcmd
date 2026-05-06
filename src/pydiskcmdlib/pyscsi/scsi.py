@@ -8,6 +8,9 @@ from pydiskcmdlib.pyscsi.scsi_cdb_SecurityProtocolIn import SecurityProtocolIn
 from pydiskcmdlib.pyscsi.scsi_cdb_passthru import CDBPassthru
 from pydiskcmdlib.pyscsi.scsi_cdb_receivediagnosticresults import ReceiveDiagnosticResults # noqa
 from pydiskcmdlib.pyscsi.scsi_cdb_writebuffer import WriteBuffer
+from pydiskcmdlib.pyscsi.scsi_cdb_sanitize import Sanitize
+from pydiskcmdlib.exceptions import ProtocolSettingError
+from pyscsi.utils.converter import encode_dict
 
 
 class SCSI(_SCSI):
@@ -105,5 +108,50 @@ class SCSI(_SCSI):
     def write_buffer(self, mode, mode_spec, buffer_id, buffer_offset, para_list_length, data=None, control=0):
         opcode = self.device.opcodes.WRITE_BUFFER
         cmd = WriteBuffer(opcode, mode, mode_spec, buffer_id, buffer_offset, para_list_length, data=data, control=control)
+        self.execute(cmd)
+        return cmd
+
+    def sanitize(self, service_action: int, ause: int, znr: int, immed: int, control: int = 0, **kwargs):
+        """
+        Returns a Sanitize Instance
+
+        :param service_action: a integer representing Service action
+        :param ause: a integer representing Allow unrestricted sanitize exit
+        :param znr: a integer representing ZNR
+        :param immed: a integer representing Immediate
+        :param control: The CONTROL byte is defined in SAM-5
+        :param kwargs: a dict with key/value pairs, for Performing a sanitize overwrite operation
+                    Key  
+                    overwrite_count
+                    test
+                    invert
+                    pattern
+        :return: a Sanitize instance
+        """
+        opcode = self.device.opcodes.SANITIZE
+        data_ba =None
+        if service_action in (0x02, 0x03, 0x1F):
+            para_list_len = 0
+            if kwargs:
+                raise ProtocolSettingError("data is not allowed for service action 0x%x" % service_action)
+        elif service_action == 0x01:
+            if not kwargs:
+                raise ProtocolSettingError("kwargs is required for service action 0x%x" % service_action)
+            para_list_len = len(kwargs.get("pattern")) + 4
+            if not (4 < para_list_len < (self._blocksize + 5)):
+                raise ProtocolSettingError("Your data length must be between 4 and %d" % (self._blocksize + 5))
+            data_ba = bytearray(para_list_len)
+            overwrite_para_list_bits = {
+                "overwrite_count": [0x1F, 0],
+                "test": [0x60, 0],
+                "invert": [0x80, 0],
+                "pattern_length": [0xFFFF, 2],
+                "pattern": ('b', 4, len(kwargs.get("pattern"))),
+            }
+            encode_dict(kwargs, overwrite_para_list_bits, data_ba)
+        else:
+            # this will be Reserved field
+            raise ProtocolSettingError("service action 0x%x is reserved" % service_action)
+        cmd = Sanitize(opcode, service_action, ause, znr, immed, para_list_len, control=control, data=data_ba)
         self.execute(cmd)
         return cmd

@@ -30,6 +30,7 @@ if os_type == "Windows":
             execute a IOCTL command
 
             :param cmd: a Command Structure
+            :param en_raw_sense: Set it will return raw sense data even if no sense data is available
             """
             log.debug("Sending SCSi Command: %s" % " ".join(["%X" % i for i in cmd.cdb]))
             ## create SCSIPassThroughDirect Or SCSIPassThroughDirectWithBuffer
@@ -78,9 +79,11 @@ if os_type == "Windows":
             if cmd.datain: 
                 cmd.datain = bytearray(data_buffer)
             # SCSICheckCondition(bytearray(header_with_buffer.sense))
+            if header_with_buffer.sptd.scsi_status == 2: # Sense Data valid
+                cmd.sense = bytearray(header_with_buffer.sense)
             if en_raw_sense:
                 cmd.raw_sense_data = bytearray(header_with_buffer.sense)
-            log.debug("Sense Data: %s" % " ".join(["%X" % i for i in cmd.raw_sense_data]) if cmd.raw_sense_data else 'NA')
+            log.debug("Sense Data: %s" % (" ".join(["%X" % i for i in cmd.raw_sense_data]) if cmd.raw_sense_data else 'NA'))
             return cmd
 
 elif os_type == "Linux":

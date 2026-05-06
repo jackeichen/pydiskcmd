@@ -1,12 +1,32 @@
 import ctypes
 import fcntl
 
-from pydiskcmdlib.sgio.constants import SG_INFO_OK_MASK, SD_INFO_OK, SG_IO, TIMEOUT
+from pydiskcmdlib.sgio.constants import SG_INFO_OK_MASK, SG_INFO_OK, SG_IO, TIMEOUT
 from pydiskcmdlib.sgio.constants import SG_DXFER_TO_DEV, SG_DXFER_FROM_DEV, SG_DXFER_NONE
 from pydiskcmdlib.sgio.errors import UnspecifiedError, CheckConditionError
+from pydiskcmdlib import log
 
 # interface_id = ord('S')
 InterfaceID = 83
+
+class CheckConditionError(Exception):
+    """The target is reporting an error.
+
+    Send a Request Sense command to retrieve error information.
+
+    See https://en.wikipedia.org/wiki/SCSI_check_condition for details.
+    """
+
+    def __init__(self, sense):
+        super(CheckConditionError, self).__init__(
+            'SCSI Check Condition: %s' % sense.hex()
+        )
+        self.sense = sense
+
+
+class UnspecifiedError(Exception):
+    """Something went wrong."""
+
 
 class sgioHdr(ctypes.Structure):
     """
@@ -92,6 +112,21 @@ def execute(
     if result < 0:
         raise OSError('ioctl failed')
 
+    if io_hdr.info & SG_INFO_OK_MASK != SG_INFO_OK:
+        log.debug("SGIO: SG_INFO: %#x, sb_len_wr: %d, resid: %d" % ((io_hdr.info & SG_INFO_OK_MASK), io_hdr.sb_len_wr, io_hdr.resid))
+        log.debug("SGIO: sense data: %s" % bytes(sense_buffer))
+        if io_hdr.sb_len_wr > 0:
+            raise CheckConditionError(bytes(sense_buffer[:io_hdr.sb_len_wr]))
+        else:
+            log.debug("SGIO: host_status: %#x, driver_status: %#x, scsi status: %#x" % (io_hdr.host_status, io_hdr.driver_status, io_hdr.status))
+            if io_hdr.status == 0:
+                # Very Strange case for some vendors, that when do smart read data and smart read threshold data,
+                # one fo these command will return host_status: 0x102, driver_status: 0x1600, scsi status: 0x0.
+                # or host_status: 0x0, driver_status: 0x0, scsi status: 0x0, .etc.
+                # Only check scsi status, this work around may leave out a real error. 
+                pass
+            else:
+                raise UnspecifiedError()
     # Return the actual transfer written and any sense we got.
     if return_sense_buffer:
         return io_hdr.resid, bytes(sense_buffer)

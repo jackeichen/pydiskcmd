@@ -38,7 +38,8 @@ class Sanitize(NVMeCommand):
         _req_id = win_nvme_command.IOCTLRequest.IOCTL_STORAGE_PROTOCOL_COMMAND.value
         # use default _cdb_bits
         # From Windows 10, Version 2004 / May 2020 Update, Windows Server Version 2004 (Server Core). 
-        # WinPE only prior to Windows 11, Windows Server 2022 and only if the user uses
+        # WinPE only prior to Windows 11, Windows Server 2022 and only if the user uses 
+        # IOCTL_STORAGE_PROTOCOL_COMMAND.
 
     def __init__(self,
                  sanact,

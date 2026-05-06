@@ -260,9 +260,9 @@ class ATACommand16(ATAPassThrough16):
                 print ("- SCSI Status:")
                 format_string = "  %-12s%-7s%s"
                 print (format_string % ("Sense Key", "ASC", "ASCQ"))
-                print (format_string % (decode_sense.data.get("sense_key"),
-                                        decode_sense.data.get("additional_sense_code"),
-                                        decode_sense.data.get("additional_sense_code_qualifier"),
+                print (format_string % ("0x%x" % decode_sense.data.get("sense_key"),
+                                        "0x%x" % decode_sense.asc,
+                                        "0x%x" % decode_sense.ascq,
                                         )
                 )
                 print ('')
