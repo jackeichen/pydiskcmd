@@ -12,12 +12,15 @@ Version 0.3.7 (Not Release)
   * resulted in a change of the low-level component for 
     pydiskcmdlib.pynvme(change pynvme version to 0.4 and 
     pydiskcmdlib version to 0.3.4)
-  * improve error handle for scsi sense data 
   * enhence command return status check
   * fix bug:
     - an unexpected info posted when pynvme list on windows
   * New command for Windows pynvme
     - Sanitize
+    - OCP Features
+  * Update python-scsi source code to 2f2ea8e
+  * add check device type for sata device
+  * do some little improvement
 
 Version 0.3.6 (20260108)
   * Add nvme In-Band Tunneling Message Servicing Mode

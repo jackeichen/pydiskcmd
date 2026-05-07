@@ -9,7 +9,7 @@ pyscsi
 pyscsi is forked from python-scsi/pyscsi, Do Not change the code!
 Instead, update it from https://github.com/python-scsi/python-scsi
 
-Current Version: Commits a19dafa866d62e238c17a93acf0b2653f150f1bf
+Current Version: Commits 2f2ea8e46367b69ce9f2da0ad2e25804cee60950
 
 smart_drive_db.json
 ===================
