@@ -199,6 +199,8 @@ def getlbastatus():
     parser = optparse.OptionParser(usage)
     parser.add_option("-l", "--lba", type="int", dest="lba", action="store", default=0,
         help="the lba to get status")
+    parser.add_option("", "--no-check-max-lba", dest="no_check_max_lba", action="store_true", default=False,
+        help="Default to check the device limit for the given lba address, disable it when set")
     parser_update(parser, add_output=["normal", "hex", "raw"])
 
     if len(sys.argv) > 2:
@@ -209,6 +211,8 @@ def getlbastatus():
         script_check(options, admin_check=True)
         ##
         with SCSI(init_device(dev, open_t='scsi')) as d:
+            if (not options.no_check_max_lba) and d.device_max_lba > 0 and options.lba > d.device_max_lba:
+                parser.error("lba %d is out of device limit %d" % (options.lba, d.device_max_lba))
             print ('issuing getlbastatus command')
             print ("%s:" % d.device._file_name)
             ##
@@ -449,6 +453,8 @@ def sync():
         help="Whether wait the command finish or not, default 0: wait")
     parser.add_option("-g", "--group-number", type="int", dest="group_number", action="store", default=0,
         help="The group into which attributes associated with the command")
+    parser.add_option("", "--no-check-max-lba", dest="no_check_max_lba", action="store_true", default=False,
+        help="Default to check the device limit for the given lba address, disable it when set")
     parser_update(parser, add_debug=True)
 
 
@@ -460,6 +466,8 @@ def sync():
         script_check(options, admin_check=True)
         ##
         with SCSI(init_device(dev, open_t='scsi')) as d:
+            if (not options.no_check_max_lba) and d.device_max_lba > 0 and (options.start_lba + options.block_count) > d.device_max_lba:
+                parser.error("lba [%d, %d) is out of device limit %d" % (options.start_lba, options.start_lba + options.block_count, d.device_max_lba))
             print ('issuing SynchronizeCache16 command')
             print ("%s:" % d.device._file_name)
             print ("")
@@ -478,6 +486,8 @@ def read16():
         help="Transfer Length in blocks. Default 1")
     parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
         help="To fix the block size of the device. Default 0")
+    parser.add_option("", "--no-check-max-lba", dest="no_check_max_lba", action="store_true", default=False,
+        help="Default to check the device limit for the given lba address, disable it when set")
     parser_update(parser, add_debug=True)
 
     if len(sys.argv) > 2:
@@ -488,6 +498,8 @@ def read16():
         script_check(options, admin_check=True)
         ##
         with SCSI(init_device(dev, open_t='scsi'), options.bs) as d:
+            if (not options.no_check_max_lba) and d.device_max_lba > 0 and (options.slba + options.nlba) > d.device_max_lba:
+                parser.error("lba [%d, %d) is out of device limit %d" % (options.slba, options.slba + options.nlba, d.device_max_lba))
             print ('issuing read16 command')
             print ("%s:" % d.device._file_name)
             cmd = d.read16(options.slba, options.nlba)
@@ -512,6 +524,8 @@ def write16():
         help="File(Read first) containing the block to write")
     parser.add_option("-b", "--block-size", type="int", dest="bs", action="store", default=0,
         help="To fix the block size of the device. Default 0")
+    parser.add_option("", "--no-check-max-lba", dest="no_check_max_lba", action="store_true", default=False,
+        help="Default to check the device limit for the given lba address, disable it when set")
     parser_update(parser, add_force=True)
 
     if len(sys.argv) > 2:
@@ -522,6 +536,8 @@ def write16():
         script_check(options, danger_check=True, admin_check=True)
         ##
         with SCSI(init_device(dev, open_t='scsi'), options.bs) as d:
+            if (not options.no_check_max_lba) and d.device_max_lba > 0 and (options.slba + options.nlba) > d.device_max_lba:
+                parser.error("lba [%d, %d) is out of device limit %d" % (options.slba, options.slba + options.nlba, d.device_max_lba))
             # check data
             if options.data:
                 options.data = bytearray(options.data, 'utf-8')

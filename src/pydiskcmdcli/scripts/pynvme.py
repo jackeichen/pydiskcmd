@@ -75,6 +75,8 @@ def print_help():
         print ("  device-self-test      Perform the necessary tests to observe the performance")
         print ("  pcie                  Get device PCIe status, show it(Obseleted, see plugin pci)")
         print ("  show-regs             Shows the controller registers or properties. Requires character device")
+        print ("  admin-passthru        Submit an arbitrary admin command, return results")
+        print ("  io-passthru           Submit an arbitrary IO command, return results")
         print ("  flush                 Submit a flush command, return results")
         print ("  read                  Submit a read command, return results")
         print ("  verify                Submit a verify command, return results")
@@ -1736,6 +1738,190 @@ def show_regs():
     else:
         parser.print_help()
 
+def admin_passthru():
+    usage="usage: %prog admin-passthru <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--opcode", type="int", dest="opcode", action="store", default=-1,
+        help="opcode (required)")
+    parser.add_option("-f", "--flags", type="int", dest="flags", action="store", default=0,
+        help="command flags")
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="desired namespace")
+    parser.add_option("-2", "--cdw2", type="int", dest="cdw2", action="store", default=0,
+        help="command dword 2 value")
+    parser.add_option("-3", "--cdw3", type="int", dest="cdw3", action="store", default=0,
+        help="command dword 3 value")
+    parser.add_option("-4", "--cdw10", type="int", dest="cdw10", action="store", default=0,
+        help="command dword 10 value")
+    parser.add_option("-5", "--cdw11", type="int", dest="cdw11", action="store", default=0,
+        help="command dword 11 value")
+    parser.add_option("-6", "--cdw12", type="int", dest="cdw12", action="store", default=0,
+        help="command dword 12 value")
+    parser.add_option("-7", "--cdw13", type="int", dest="cdw13", action="store", default=0,
+        help="command dword 13 value")
+    parser.add_option("-8", "--cdw14", type="int", dest="cdw14", action="store", default=0,
+        help="command dword 14 value")
+    parser.add_option("-9", "--cdw15", type="int", dest="cdw15", action="store", default=0,
+        help="command dword 15 value")
+    parser.add_option("-l", "--data-len", type="int", dest="data_len", action="store", default=0,
+        help="data I/O length (bytes)")
+    parser.add_option("-m", "--metadata-len", type="int", dest="metadata_len", action="store", default=0,
+        help="metadata seg. length (bytes)")
+    parser.add_option("-t", "--timeout", type="int", dest="timeout", action="store", default=60000,
+        help="command timeout, in milliseconds")
+    parser.add_option("-i", "--input-file", type="str", dest="input_file", action="store", default='',
+        help="data input or output file")
+    parser.add_option("-M", "--metadata", type="str", dest="metadata_file", action="store", default='',
+        help="metadata input or output file")
+    parser.add_option("-D", "--dxfer-direction", type="int", dest="dxfer_direction", action="store", default=0,
+        help="data transfer direction: 0=no data, 1=host-to-device, 2=device-to-host, default 0")
+    parser.add_option("-O", "--output-format", type="choice", dest="output_format", action="store", choices=['hex', 'raw'], default='hex',
+        help="Output format: hex|raw, default hex")
+    parser.add_option("", "--dry-run", dest="dry_run", action="store_true", default=False,
+        help="Dry run mode: do not execute the command, only print the command")
+    parser_update(parser)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, admin_check=True)
+        #
+        if options.opcode < 0:
+            raise ValueError("opcode is required")
+        #
+        data = None
+        metadata = None
+        if options.dxfer_direction == 1:  # data to device
+            if os.path.isfile(options.input_file):
+                with open(options.input_file, 'rb') as f:
+                    data = f.read()
+            else:
+                raise ValueError("input_file is required")
+            if os.path.isfile(options.metadata_file):
+                with open(options.metadata_file, 'rb') as f:
+                    metadata = f.read()
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.admin_passthru(options.opcode, options.flags, options.namespace_id, options.cdw2, options.cdw3, 
+                                   options.cdw10, options.cdw11, options.cdw12, options.cdw13, options.cdw14, options.cdw15,
+                                   metadata, data, options.metadata_len, options.data_len, 
+                                   dxfer_direction=options.dxfer_direction, timeout=options.timeout, real_run=not options.dry_run)
+        if not options.dry_run:
+            cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
+            print ("Admin command DW0(Command Specific): 0x%s" % ("%x" % cmd.cq_cmd_spec).zfill(8))
+            print("")
+            #
+            if options.dxfer_direction == 2 and cmd.data:
+                if cmd.metadata and options.metadata_file: 
+                    with open(options.metadata_file, 'wb') as f:
+                        f.write(cmd.metadata)
+                if options.input_file:
+                    with open(options.input_file, 'wb') as f:
+                        f.write(cmd.data)
+                elif options.output_format =='hex':
+                    nvme_format_print.format_print_read_data(cmd.metadata, cmd.data, dev=d.device.device_name, print_type='hex')
+                elif options.output_format == 'raw':
+                    nvme_format_print.format_print_read_data(cmd.metadata, cmd.data, dev=d.device.device_name, print_type='raw')
+        else:
+            print ("Sending Admin command:")
+            print (" ".join([("%X" % i).zfill(2) for i in cmd.cdb_struc]) if cmd.cdb_struc else cmd.req_id)
+    else:
+        parser.print_help()
+
+def io_passthru():
+    usage="usage: %prog io-passthru <device> [OPTIONS]"
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-o", "--opcode", type="int", dest="opcode", action="store", default=-1,
+        help="opcode (required)")
+    parser.add_option("-f", "--flags", type="int", dest="flags", action="store", default=0,
+        help="command flags")
+    parser.add_option("-n", "--namespace-id", type="int", dest="namespace_id", action="store", default=0,
+        help="desired namespace")
+    parser.add_option("-2", "--cdw2", type="int", dest="cdw2", action="store", default=0,
+        help="command dword 2 value")
+    parser.add_option("-3", "--cdw3", type="int", dest="cdw3", action="store", default=0,
+        help="command dword 3 value")
+    parser.add_option("-4", "--cdw10", type="int", dest="cdw10", action="store", default=0,
+        help="command dword 10 value")
+    parser.add_option("-5", "--cdw11", type="int", dest="cdw11", action="store", default=0,
+        help="command dword 11 value")
+    parser.add_option("-6", "--cdw12", type="int", dest="cdw12", action="store", default=0,
+        help="command dword 12 value")
+    parser.add_option("-7", "--cdw13", type="int", dest="cdw13", action="store", default=0,
+        help="command dword 13 value")
+    parser.add_option("-8", "--cdw14", type="int", dest="cdw14", action="store", default=0,
+        help="command dword 14 value")
+    parser.add_option("-9", "--cdw15", type="int", dest="cdw15", action="store", default=0,
+        help="command dword 15 value")
+    parser.add_option("-l", "--data-len", type="int", dest="data_len", action="store", default=0,
+        help="data I/O length (bytes)")
+    parser.add_option("-m", "--metadata-len", type="int", dest="metadata_len", action="store", default=0,
+        help="metadata seg. length (bytes)")
+    parser.add_option("-t", "--timeout", type="int", dest="timeout", action="store", default=60000,
+        help="command timeout, in milliseconds")
+    parser.add_option("-i", "--input-file", type="str", dest="input_file", action="store", default='',
+        help="data input or output file")
+    parser.add_option("-M", "--metadata", type="str", dest="metadata_file", action="store", default='',
+        help="metadata input or output file")
+    parser.add_option("-D", "--dxfer-direction", type="int", dest="dxfer_direction", action="store", default=0,
+        help="data transfer direction: 0=no data, 1=host-to-device, 2=device-to-host, default 0")
+    parser.add_option("-O", "--output-format", type="choice", dest="output_format", action="store", choices=['hex', 'raw'], default='hex',
+        help="Output format: hex|raw, default hex")
+    parser.add_option("", "--dry-run", dest="dry_run", action="store_true", default=False,
+        help="Dry run mode: do not execute the command, only print the command")
+    parser_update(parser)
+
+    if len(sys.argv) > 2:
+        (options, args) = parser.parse_args(sys.argv[2:])
+        ## check device
+        dev = sys.argv[2]
+        ##
+        script_check(options, admin_check=True)
+        #
+        if options.opcode < 0:
+            raise ValueError("opcode is required")
+        #
+        data = None
+        metadata = None
+        if options.dxfer_direction == 1:  # data from host to device
+            if os.path.isfile(options.input_file):
+                with open(options.input_file, 'rb') as f:
+                    data = f.read()
+            else:
+                raise ValueError("input_file is required")
+            if os.path.isfile(options.metadata_file):
+                with open(options.metadata_file, 'rb') as f:
+                    metadata = f.read()
+        ##
+        with NVMe(init_device(dev, open_t='nvme')) as d:
+            cmd = d.nvm_passthru(options.opcode, options.flags, options.namespace_id, options.cdw2, options.cdw3, 
+                                 options.cdw10, options.cdw11, options.cdw12, options.cdw13, options.cdw14, options.cdw15,
+                                 metadata, data, options.metadata_len, options.data_len, 
+                                 dxfer_direction=options.dxfer_direction, timeout=options.timeout, real_run=not options.dry_run)
+        if not options.dry_run:
+            cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
+            print ("Admin command DW0(Command Specific): 0x%s" % ("%x" % cmd.cq_cmd_spec).zfill(8))
+            print("")
+            #
+            if options.dxfer_direction == 2 and cmd.data:
+                if cmd.metadata and options.metadata_file: 
+                    with open(options.metadata_file, 'wb') as f:
+                        f.write(cmd.metadata)
+                if options.input_file:
+                    with open(options.input_file, 'wb') as f:
+                        f.write(cmd.data)
+                elif options.output_format == 'hex':
+                    nvme_format_print.format_print_read_data(cmd.metadata, cmd.data, dev=d.device.device_name, print_type='hex')
+                elif options.output_format == 'raw':
+                    nvme_format_print.format_print_read_data(cmd.metadata, cmd.data, dev=d.device.device_name, print_type='raw')
+        else:
+            print ("Sending NVM command:")
+            print (" ".join([("%X" % i).zfill(2) for i in cmd.cdb_struc]) if cmd.cdb_struc else cmd.req_id)
+    else:
+        parser.print_help()
+
 def compare():
     usage="usage: %prog compare <device> [OPTIONS]"
     parser = optparse.OptionParser(usage)
@@ -1875,6 +2061,8 @@ commands_dict = {"list": _list,
                  "mi-commands-se-log": mi_commands_supported_and_effects,
                  "pcie": pcie,
                  "show-regs": show_regs,
+                 "admin-passthru": admin_passthru,
+                 "io-passthru": io_passthru,
                  "flush": flush,
                  "read": read,
                  "verify": verify,

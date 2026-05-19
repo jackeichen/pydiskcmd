@@ -65,6 +65,7 @@ class CommandBuildErrorCode(ExitCode):
                            3: 'Build SCSI Command Error',
                            4: 'Build ATA Command Error',
                            5: 'Build NVMe Command Error',
+                           6: 'Parameter Incorrect',
                            15: 'Unknown Error'})
 
 
@@ -159,6 +160,10 @@ class BuildSCSICommandError(BaseError):
 class BuildNVMeCommandError(BaseError):
     def __init__(self, message):
         super(BuildNVMeCommandError, self).__init__(message, 4, 5)
+
+class ParameterIncorrect(BaseError):
+    def __init__(self, message):
+        super(ParameterIncorrect, self).__init__(message, 4, 6)
 
 class ExecuteCmdErr(BaseError):
     def __init__(self, message):

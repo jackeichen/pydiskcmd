@@ -126,7 +126,7 @@ class IDCtrl(Identify):
     def __init__(self, uuid=0):
         Identify.__init__(self,
                           0,  # nsid
-                         CNSValue.IdentifyController.value,  # cns
+                          CNSValue.IdentifyController.value,  # cns
                           0,  # cntid
                           0,  # nvmsetid
                           uuid,  # uuid

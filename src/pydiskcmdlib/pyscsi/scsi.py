@@ -9,7 +9,7 @@ from pydiskcmdlib.pyscsi.scsi_cdb_passthru import CDBPassthru
 from pydiskcmdlib.pyscsi.scsi_cdb_receivediagnosticresults import ReceiveDiagnosticResults # noqa
 from pydiskcmdlib.pyscsi.scsi_cdb_writebuffer import WriteBuffer
 from pydiskcmdlib.pyscsi.scsi_cdb_sanitize import Sanitize
-from pydiskcmdlib.exceptions import ProtocolSettingError
+from pydiskcmdlib.exceptions import ProtocolSettingError, ParameterIncorrect
 from pyscsi.utils.converter import encode_dict
 
 
@@ -19,13 +19,19 @@ class SCSI(_SCSI):
                  blocksize=0):
         super(SCSI, self).__init__(dev, blocksize=blocksize)
         # auto detect blocksize
+        self._max_lba = 0
         if self._blocksize == 0:
             cap = self.readcapacity16().result
             self._blocksize = cap["block_length"]
+            self._max_lba = cap["returned_lba"]
 
     def __del__(self):
         if self.device:
             self.device.close()
+
+    @property
+    def device_max_lba(self):
+        return self._max_lba
 
     def cdb_passthru(self, raw_cdb, dataout=b'', datain_alloclen=0):
         """

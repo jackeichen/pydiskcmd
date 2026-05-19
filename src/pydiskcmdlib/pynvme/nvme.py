@@ -45,6 +45,7 @@ from pydiskcmdlib.pynvme.cdb_nvme_get_lba_status import GetLBAStatus
 from pydiskcmdlib.pynvme.cdb_nvme_reset import Reset
 from pydiskcmdlib.pynvme.cdb_nvme_subsys_reset import SubsysReset
 from pydiskcmdlib.pynvme.cdb_nvme_mi import NVMeMISend, NVMeMIRecv
+from pydiskcmdlib.pynvme.cdb_nvme_passthru import AdminPassthru, NVMPassthru, NVMEDXFER
 from pydiskcmdlib.exceptions import *
 from pydiskcmdlib.pynvme.data_buffer import DataBuffer
 from pydiskcmdlib import log
@@ -147,6 +148,60 @@ class NVMe(object):
     def subsystem_reset(self):
         cmd = SubsysReset()
         self.execute(cmd, check_return_status=False)
+        return cmd
+
+    def admin_passthru(self, 
+                       opcode, 
+                       flags, 
+                       nsid,
+                       cdw2,
+                       cdw3, 
+                       cdw10, 
+                       cdw11, 
+                       cdw12, 
+                       cdw13, 
+                       cdw14, 
+                       cdw15,
+                       metadata,
+                       data,
+                       metadata_len,
+                       data_len,
+                       dxfer_direction: int = NVMEDXFER.NVME_DXFER_NONE.value,
+                       timeout: int = 600000,
+                       real_run: bool = True):
+        cmd = AdminPassthru(opcode, flags, nsid, cdw2, cdw3,
+                            metadata, data, metadata_len, data_len,
+                            cdw10, cdw11, cdw12, cdw13, cdw14, cdw15,
+                            dxfer_direction=dxfer_direction, timeout=timeout)
+        if real_run:
+            self.execute(cmd)
+        return cmd
+
+    def nvm_passthru(self, 
+                     opcode, 
+                     flags, 
+                     nsid,
+                     cdw2,
+                     cdw3, 
+                     cdw10, 
+                     cdw11, 
+                     cdw12, 
+                     cdw13, 
+                     cdw14, 
+                     cdw15,
+                     metadata,
+                     data,
+                     metadata_len,
+                     data_len,
+                     dxfer_direction: int = NVMEDXFER.NVME_DXFER_NONE.value,
+                     timeout: int = 600000,
+                     real_run: bool = True):
+        cmd = NVMPassthru(opcode, flags, nsid, cdw2, cdw3,
+                          metadata, data, metadata_len, data_len,
+                          cdw10, cdw11, cdw12, cdw13, cdw14, cdw15,
+                          dxfer_direction=dxfer_direction, timeout=timeout)
+        if real_run:
+            self.execute(cmd)
         return cmd
 
     def id_ctrl(self, uuid=0):
