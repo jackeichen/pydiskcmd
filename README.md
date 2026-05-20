@@ -13,6 +13,7 @@ and pydiskhealthd need more dependencies.
 If you still want to use it, keep your tool version less than 0.3.0.
 
 Be careful to update from 0.3.6 to 0.3.7, low level component changed!
+Only debug request is allowed for 0.3.7. The work will focus on 0.4.0.
 
 
 pydiskcmd
@@ -217,7 +218,7 @@ command to get help:
     $ pynvme help
 
 ```
-pynvme-0.3.6
+pynvme-0.3.7
 usage: pynvme <command> [<device>] [<args>]
 
 The '<device>' may be either an NVMe character device (ex: /dev/nvme0) or an
@@ -239,6 +240,7 @@ The following are all implemented sub-commands:
   smart-log             Retrieve SMART Log, show it
   error-log             Retrieve Error Log, show it
   commands-se-log       Retrieve Commands Supported and Effects Log, and show it
+  mi-commands-se-log    Retrieve NVMe-MI Commands Supported and Effects Log, and show it
   fw-log                Retrieve FW Log, show it
   sanitize-log          Retrieve Sanitize Log, show it
   self-test-log         Retrieve the SELF-TEST Log, show it
@@ -255,6 +257,8 @@ The following are all implemented sub-commands:
   device-self-test      Perform the necessary tests to observe the performance
   pcie                  Get device PCIe status, show it(Obseleted, see plugin pci)
   show-regs             Shows the controller registers or properties. Requires character device
+  admin-passthru        Submit an arbitrary admin command, return results
+  io-passthru           Submit an arbitrary IO command, return results
   flush                 Submit a flush command, return results
   read                  Submit a read command, return results
   verify                Submit a verify command, return results
@@ -290,7 +294,7 @@ commands inside. Use bellow command to get help:
     $ pysata help
 
 ```
-pysata-0.3.6
+pysata-0.3.7
 usage: pysata <command> [<device>] [<args>]
 
 The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
@@ -340,7 +344,7 @@ commands inside. Use bellow command to get help:
     $ pyscsi help
 
 ```
-pyscsi 0.3.6
+pyscsi 0.3.7
 usage: pyscsi <sub-command> [<device>] [<args>]
 
 The '<device>' is usually a character device (ex: /dev/sdb or physicaldrive1).
