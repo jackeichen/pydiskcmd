@@ -29,7 +29,7 @@ from pydiskcmdlib.pynvme.cdb_get_log_page import (
 from pydiskcmdlib.pynvme.cdb_fw_download import FWImageDownload
 from pydiskcmdlib.pynvme.cdb_fw_commit import FWCommit
 from pydiskcmdlib.pynvme.cdb_format import Format
-from pydiskcmdlib.pynvme.cdb_nvme_sanitize import Sanitize
+from pydiskcmdlib.pynvme.cdb_nvme_sanitize import Sanitize,CommandTimeout
 from pydiskcmdlib.pynvme.cdb_self_test import SelfTest
 from pydiskcmdlib.pynvme.cdb_ns_management import NSCreate,NSDelete
 from pydiskcmdlib.pynvme.cdb_ns_attachment import NSAttachment
@@ -328,8 +328,8 @@ class NVMe(object):
         self.execute(cmd)
         return cmd
 
-    def sanitize(self, action, ause, owpass, oipbp, no_deallocate, ovrpat=0):
-        cmd = Sanitize(action, ause, owpass, oipbp, no_deallocate, ovrpat=ovrpat)
+    def sanitize(self, action, ause, owpass, oipbp, no_deallocate, ovrpat=0, timeout=CommandTimeout.admin.value):
+        cmd = Sanitize(action, ause, owpass, oipbp, no_deallocate, ovrpat=ovrpat, timeout=timeout)
         self.execute(cmd)
         return cmd
 

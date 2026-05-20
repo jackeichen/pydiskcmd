@@ -30,8 +30,10 @@ def script_check(options, danger_check=False, admin_check=False, delay_act=False
             print (str(e))
             print ("")
             sys.exit(e.exit_code)
-    if danger_check and hasattr(options, 'force') and (not options.force):
-        if delay_act:
+    if danger_check:
+        if hasattr(options, 'force') and options.force:
+            pass  # force mode, no hint
+        elif delay_act:
             try:
                 for i in range(3):
                     print ("This is a dangerous operation, it will continue after 15s. You can break with CTRL+C")

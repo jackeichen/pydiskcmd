@@ -24,8 +24,9 @@ Version 0.3.7 (Not Release)
   * Update python-scsi source code to 2f2ea8e
   * add check device type for sata device
   * do some little improvement
-  * check scsi device lba range limit, walk around the case that no 
+  * check scsi device lba range limit, work around the case that no 
     error raise when lba is out of range
+  * add command timeout for sanitize command in Linux
 
 Version 0.3.6 (20260108)
   * Add nvme In-Band Tunneling Message Servicing Mode

@@ -69,7 +69,7 @@ class Sanitize(NVMeCommand):
                                          "oipbp": (0x01, 1, oipbp), 
                                          "no_deallocate": (0x02, 1, no_deallocate)})  
             self.build_command(Flags=win_nvme_command.STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST,
-                               TimeOutValue=10,
+                               TimeOutValue=int(timeout/1000),
                                CommandSpecific=win_nvme_command.STORAGE_PROTOCOL_SPECIFIC_NVME_ADMIN_COMMAND,
                                OPC=CmdOPCode,
                                CDW10=cdw10,

@@ -1230,6 +1230,8 @@ def sanitize():
         help="Sanitize action.")
     parser.add_option("-p", "--ovrpat", type="int", dest="ovrpat", action="store", default=0,
         help="Overwrite pattern.")
+    parser.add_option("-t", "--timeout", type="int", dest="timeout", action="store", default=60000,
+        help="timeout value, in milliseconds.")
     parser.add_option("", "--cmd-type", type="choice", dest="cmd_type", action="store", choices=["nvme", "scsi"], default="scsi",
         help="Only works on Windows, specify the command type to use in nvme|scsi, default is scsi.")
     parser_update(parser, add_force=True)
@@ -1274,9 +1276,9 @@ def sanitize():
                 cmd = d.sanitize(service_action, ause, 0, 0)
             cmd.check_nvme_return_status()
         else:
-            # Only works on later than Windows 11, Windows Server 2022
+            # When windows, only works on later than Windows 11, Windows Server 2022
             with NVMe(init_device(dev, open_t='nvme')) as d:
-                cmd = d.sanitize(sanact, ause, owpass, oipbp, no_dealloc, ovrpat=options.ovrpat)
+                cmd = d.sanitize(sanact, ause, owpass, oipbp, no_dealloc, ovrpat=options.ovrpat, timeout=options.timeout)
             cmd.check_return_status(success_hint=True, fail_hint=True, raise_if_fail=True)
     else:
         parser.print_help()
